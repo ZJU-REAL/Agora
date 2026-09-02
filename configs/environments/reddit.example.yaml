@@ -1,0 +1,4 @@
+world_id: reddit-demo
+preset: reddit
+seed: 42
+data_root: data/worlds

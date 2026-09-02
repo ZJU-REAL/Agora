@@ -1,0 +1,24 @@
+{
+  "type": "pool",
+  "pool_version": "observer-pool-local-model-dev-1",
+  "release_status": "development-only",
+  "aggregation": "mean-validated-delta",
+  "observers": [
+    {
+      "type": "model",
+      "observer_id": "qwen2-1.5b-local-observer",
+      "observer_version": "smoke-1",
+      "provider_config": "providers.local-qwen2-1.5b.example.json",
+      "provider_config_sha256": "f2cf8c8c6378ac2bf70a33e4f984e5bca4e99106e2fff389a142ce8b113ca4d2",
+      "parse_failure_mode": "raise"
+    },
+    {
+      "type": "model",
+      "observer_id": "qwen2.5-7b-local-observer",
+      "observer_version": "smoke-1",
+      "provider_config": "providers.local-qwen2.5-7b.example.json",
+      "provider_config_sha256": "364d16d2a7bdfc8529dc335c205c84462e139d17d2cc959964bfe912d0e3b70d",
+      "parse_failure_mode": "raise"
+    }
+  ]
+}

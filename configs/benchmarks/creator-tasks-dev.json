@@ -1,0 +1,11 @@
+{
+  "task_suite_version": "creator-tasks-dev-1",
+  "tasks": [
+    {"task_id": "xhs-text-adaptation", "platform": "xiaohongshu", "content_format": "text", "objective": "Publish, inspect negative feedback, and revise the message.", "max_ticks": 3, "feedback_ticks": [1], "required_assets": 0},
+    {"task_id": "xhs-single-image", "platform": "xiaohongshu", "content_format": "image", "objective": "Select one image and produce a culturally native note.", "max_ticks": 2, "feedback_ticks": [1], "required_assets": 1},
+    {"task_id": "xhs-gallery", "platform": "xiaohongshu", "content_format": "gallery", "objective": "Order a multi-image narrative and respond to audience feedback.", "max_ticks": 3, "feedback_ticks": [1, 2], "required_assets": 4},
+    {"task_id": "xhs-video", "platform": "xiaohongshu", "content_format": "video", "objective": "Publish a video with an appropriate title, cover decision, body, and topics.", "max_ticks": 2, "feedback_ticks": [1], "required_assets": 2},
+    {"task_id": "reddit-longform", "platform": "reddit", "content_format": "text", "objective": "Write a community-appropriate long-form post and revise after rule feedback.", "max_ticks": 3, "feedback_ticks": [1], "required_assets": 0},
+    {"task_id": "x-thread", "platform": "x", "content_format": "text", "objective": "Develop a concise public thread and respond to a quoted objection.", "max_ticks": 3, "feedback_ticks": [1], "required_assets": 0}
+  ]
+}

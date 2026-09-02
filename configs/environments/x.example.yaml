@@ -1,0 +1,4 @@
+world_id: x-demo
+preset: x
+seed: 42
+data_root: data/worlds

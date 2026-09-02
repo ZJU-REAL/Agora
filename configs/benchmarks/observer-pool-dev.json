@@ -1,0 +1,11 @@
+{
+  "type": "pool",
+  "pool_version": "observer-pool-dev-1",
+  "release_status": "development-only",
+  "aggregation": "mean-validated-delta",
+  "observers": [
+    {"type": "scripted", "observer_id": "scripted-deescalation", "observer_version": "1", "family": "lexical-rule", "locale": "zh-CN", "weight": 1.0},
+    {"type": "scripted", "observer_id": "scripted-boundary", "observer_version": "1", "family": "interaction-rule", "locale": "zh-CN", "weight": 1.0},
+    {"type": "scripted", "observer_id": "scripted-evidence", "observer_version": "1", "family": "evidence-rule", "locale": "multilingual", "weight": 1.0}
+  ]
+}

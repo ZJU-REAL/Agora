@@ -1,0 +1,9 @@
+world_id: xhs-demo
+preset: xiaohongshu
+seed: 42
+data_root: data/worlds
+
+media:
+  max_image_bytes: 20971520
+  max_video_bytes: 524288000
+  max_video_duration_ms: 600000
