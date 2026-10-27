@@ -1,0 +1,4 @@
+# AgoraOasis and agora-benchmark; upstream CAMEL agents and ML recommenders
+# use the full dependencies in pyproject.toml instead.
+pillow==10.3.0
+requests>=2.32,<3

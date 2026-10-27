@@ -1,0 +1,18 @@
+{
+  "provider": "openai-compatible",
+  "base_url": "https://maas.devops.beta.xiaohongshu.com/mtinfer-rednotemtx-copy/v1",
+  "auth_style": "both",
+  "trust_env": false,
+  "api_key_env": "AGORA_MAAS_API_KEY",
+  "model_id": "glm5.1-fp8-redslim",
+  "supports_vision": false,
+  "extra_body": {
+    "top_p": 0.8,
+    "chat_template_kwargs": {"enable_thinking": false}
+  },
+  "limits": {
+    "timeout_seconds": 30,
+    "max_requests": 2,
+    "max_output_tokens": 192
+  }
+}

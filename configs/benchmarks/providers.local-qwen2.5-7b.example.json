@@ -1,0 +1,11 @@
+{
+  "provider": "local-transformers",
+  "model_path": "/mnt/tidal-alsh01/dataset/redtrans/models/opensource/Qwen2.5-7B",
+  "model_id": "Qwen2.5-7B-local",
+  "supports_vision": false,
+  "limits": {
+    "timeout_seconds": 90,
+    "max_requests": 2,
+    "max_output_tokens": 160
+  }
+}
