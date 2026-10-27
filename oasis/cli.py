@@ -4,7 +4,7 @@ import argparse
 import asyncio
 import json
 
-from oasis import AgoraOasis, DatasetImporter
+from oasis import AgoraOasis, AssetInput, DatasetImporter
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,6 +26,30 @@ def build_parser() -> argparse.ArgumentParser:
     inspect = commands.add_parser("world-inspect",
                                   help="Show world entity counts")
     inspect.add_argument("world_id")
+
+    user = commands.add_parser("user-create", help="Create a local user")
+    user.add_argument("world_id")
+    user.add_argument("handle")
+    user.add_argument("--display-name")
+
+    post = commands.add_parser("post-create", help="Publish text or media")
+    post.add_argument("world_id")
+    post.add_argument("--author-id", type=int, required=True)
+    post.add_argument("--body", default="")
+    post.add_argument("--title")
+    post.add_argument("--image", action="append", default=[],
+                      help="Image path; repeat to publish an ordered gallery")
+    post.add_argument("--video", help="Video path")
+    post.add_argument("--cover", help="Optional video cover image path")
+    post.add_argument("--topic", action="append", default=[])
+    post.add_argument("--location")
+    post.add_argument("--community")
+    post.add_argument("--language")
+
+    view = commands.add_parser("post-view", help="Read a post and its media")
+    view.add_argument("world_id")
+    view.add_argument("post_id", type=int)
+    view.add_argument("--user-id", type=int, required=True)
 
     run = commands.add_parser("run", help="Advance scripted AI creators")
     run.add_argument("world_id")
@@ -57,6 +81,33 @@ def main(argv: list[str] | None = None) -> int:
             output = report.__dict__
         elif args.command == "world-inspect":
             output = _world_summary(sandbox)
+        elif args.command == "user-create":
+            user_id = sandbox.create_user(
+                args.handle, args.display_name or args.handle)
+            output = {"user_id": user_id, "handle": args.handle}
+        elif args.command == "post-create":
+            if args.video and args.image:
+                raise ValueError("--video cannot be combined with --image")
+            if args.cover and not args.video:
+                raise ValueError("--cover requires --video")
+            if args.video:
+                post_type = "video"
+                assets = [AssetInput(args.video)]
+                if args.cover:
+                    assets.append(AssetInput(args.cover, role="cover"))
+            else:
+                post_type = ("gallery" if len(args.image) > 1 else
+                             "image" if args.image else "text")
+                assets = [AssetInput(path) for path in args.image]
+            post_id = sandbox.create_post(
+                args.author_id, body=args.body, title=args.title,
+                post_type=post_type, assets=assets, topics=args.topic,
+                location=args.location, community=args.community,
+                language=args.language)
+            output = {"success": True, "post_id": post_id,
+                      "post_type": post_type, "asset_count": len(assets)}
+        elif args.command == "post-view":
+            output = sandbox.view_post(args.user_id, args.post_id)
         elif args.command == "run":
             if args.ticks < 1:
                 raise ValueError("--ticks must be at least 1")

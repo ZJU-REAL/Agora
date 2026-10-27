@@ -74,6 +74,16 @@ CREATE TABLE IF NOT EXISTS topic (
     name TEXT NOT NULL UNIQUE
 );
 
+CREATE TABLE IF NOT EXISTS audience_relationship (
+    audience_user_id INTEGER NOT NULL,
+    author_user_id INTEGER NOT NULL,
+    state_json TEXT NOT NULL,
+    history_json TEXT NOT NULL DEFAULT '[]',
+    PRIMARY KEY(audience_user_id, author_user_id),
+    FOREIGN KEY(audience_user_id) REFERENCES user(user_id),
+    FOREIGN KEY(author_user_id) REFERENCES user(user_id)
+);
+
 CREATE TABLE IF NOT EXISTS post_topic (
     post_id INTEGER NOT NULL,
     topic_id INTEGER NOT NULL,

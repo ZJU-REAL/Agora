@@ -28,9 +28,6 @@ from oasis.social_platform.database import (create_db,
                                             fetch_rec_table_as_matrix,
                                             fetch_table_from_db)
 from oasis.social_platform.platform_utils import PlatformUtils
-from oasis.social_platform.recsys import (rec_sys_personalized_twh,
-                                          rec_sys_personalized_with_trace,
-                                          rec_sys_random, rec_sys_reddit)
 from oasis.social_platform.typing import ActionType, RecsysType
 
 # Create log directory if it doesn't exist
@@ -328,6 +325,12 @@ class Platform:
             return {"success": False, "error": str(e)}
 
     async def update_rec_table(self):
+        # The Agora sandbox has its own deterministic feed. Load the upstream
+        # ML stack only when its recommendation engine is explicitly requested.
+        from oasis.social_platform.recsys import (rec_sys_personalized_twh,
+                                                rec_sys_personalized_with_trace,
+                                                rec_sys_random, rec_sys_reddit)
+
         # Recsys(trace/user/post table), refresh rec table
         twitter_log.info("Starting to refresh recommendation system cache...")
         user_table = fetch_table_from_db(self.db_cursor, "user")
@@ -436,14 +439,27 @@ class Platform:
                         "Video notes require a video and optional cover.")
                 if post_type == "text" and not str(body).strip():
                     raise ValueError("Text notes require content.")
+                if post_type == "text" and asset_ids:
+                    raise ValueError("Text notes cannot contain media assets.")
                 if asset_ids:
                     placeholders = ",".join("?" for _ in asset_ids)
-                    count = self.db.execute(
-                        f"SELECT COUNT(*) FROM media_asset WHERE asset_id IN "
+                    media_rows = self.db.execute(
+                        f"SELECT asset_id, media_type FROM media_asset "
+                        f"WHERE asset_id IN "
                         f"({placeholders}) AND status = 'ready'", asset_ids
-                    ).fetchone()[0]
-                    if count != len(set(asset_ids)):
+                    ).fetchall()
+                    if len(media_rows) != len(set(asset_ids)):
                         raise ValueError("One or more media assets are invalid.")
+                    media_types = dict(media_rows)
+                    if post_type in {"image", "gallery"} and any(
+                            media_types[key] != "image" for key in asset_ids):
+                        raise ValueError("Image notes only accept image assets.")
+                    if post_type == "video" and (
+                            media_types[asset_ids[0]] != "video" or
+                            (len(asset_ids) == 2 and
+                             media_types[asset_ids[1]] != "image")):
+                        raise ValueError(
+                            "Video notes require a video then optional image cover.")
 
             post_insert_query = (
                 "INSERT INTO post (user_id, content, created_at, num_likes, "

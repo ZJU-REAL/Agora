@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 from oasis import ActionType, DefaultPlatformType
 from oasis.social_platform.platform import Platform
 
@@ -80,3 +82,35 @@ def test_native_xiaohongshu_platform_actions(tmp_path):
 
     platform.db_cursor.close()
     platform.db.close()
+
+
+@pytest.mark.parametrize("post_type,asset_ids", [
+    ("image", ["video"]),
+    ("gallery", ["image", "video"]),
+    ("video", ["image"]),
+    ("video", ["video", "video"]),
+    ("text", ["image"]),
+])
+def test_native_notes_reject_wrong_media_types(tmp_path, post_type, asset_ids):
+    platform = Platform(str(tmp_path / "invalid-media.db"),
+                        platform_style="xiaohongshu")
+    try:
+        asyncio.run(platform.sign_up(1, ("creator", "博主", "")))
+        platform.db.executemany(
+            "INSERT INTO media_asset "
+            "(asset_id, media_type, object_key, mime_type, byte_size, "
+            "checksum_sha256) VALUES (?, ?, ?, ?, 10, 'abc')",
+            [("image", "image", "image.png", "image/png"),
+             ("video", "video", "video.mp4", "video/mp4")])
+        platform.db.commit()
+        outcome = asyncio.run(platform.create_post(1, {
+            "content": "图文正文", "post_type": post_type,
+            "asset_ids": asset_ids}))
+        assert outcome["success"] is False
+        assert platform.db.execute(
+            "SELECT COUNT(*) FROM post").fetchone()[0] == 0
+        assert platform.db.execute(
+            "SELECT COUNT(*) FROM post_asset").fetchone()[0] == 0
+    finally:
+        platform.db_cursor.close()
+        platform.db.close()

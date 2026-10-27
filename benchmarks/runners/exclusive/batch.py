@@ -39,7 +39,8 @@ class ExclusiveBatchRunner:
                   seeds: list[int],
                   candidate_factory: Callable[[], CandidatePolicy],
                   observer_factory: Callable[[], ObserverPolicy] | None = None,
-                  run_prefix: str | None = None) -> tuple[BatchItemResult, ...]:
+                  run_prefix: str | None = None,
+                  audience_factory: Callable | None = None) -> tuple[BatchItemResult, ...]:
         if not seeds or len(seeds) != len(set(seeds)):
             raise ValueError("Seeds must be a non-empty unique list")
         semaphore = asyncio.Semaphore(self.max_concurrency)
@@ -53,7 +54,8 @@ class ExclusiveBatchRunner:
                 try:
                     result: RunResult = await runner.run(
                         manifest, candidate_factory(),
-                        observer_factory() if observer_factory else None)
+                        observer_factory() if observer_factory else None,
+                        audience_policy=audience_factory() if audience_factory else None)
                     return BatchItemResult(seed, run_id, result.status,
                                            result.output_dir)
                 except Exception as error:

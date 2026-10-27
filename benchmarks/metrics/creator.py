@@ -17,7 +17,7 @@ class CreatorAccountMetrics:
     cover_completion_rate: float
     timing_adherence: float
     mean_engagement: float
-    feedback_adaptation: float
+    feedback_adaptation: float | None
     low_response_rate: float
     follower_gain: int
     persona_consistency: float
@@ -46,8 +46,17 @@ def compute_creator_account_metrics(
         publish_ticks = []
         for post_id, post_type, title, body, likes, shares, created_at in rows:
             comments = connection.execute(
-                "SELECT COUNT(*) FROM comment WHERE post_id = ?",
-                (post_id, )).fetchone()[0]
+                "SELECT COUNT(*) FROM comment WHERE post_id = ? AND user_id != ?",
+                (post_id, candidate_user_id)).fetchone()[0]
+            likes = connection.execute(
+                "SELECT COUNT(*) FROM like WHERE post_id = ? AND user_id != ?",
+                (post_id, candidate_user_id)).fetchone()[0]
+            shares = connection.execute(
+                "SELECT COUNT(*) FROM post WHERE original_post_id = ? AND user_id != ?",
+                (post_id, candidate_user_id)).fetchone()[0]
+            collections = connection.execute(
+                "SELECT COUNT(*) FROM collection WHERE post_id = ? AND user_id != ?",
+                (post_id, candidate_user_id)).fetchone()[0]
             topics = connection.execute(
                 "SELECT COUNT(*) FROM post_topic WHERE post_id = ?",
                 (post_id, )).fetchone()[0]
@@ -57,7 +66,7 @@ def compute_creator_account_metrics(
             covers = connection.execute(
                 "SELECT COUNT(*) FROM post_asset WHERE post_id = ? "
                 "AND role = 'cover'", (post_id, )).fetchone()[0]
-            engagements.append(float(likes + shares + comments))
+            engagements.append(float(likes + shares + comments + collections))
             title_complete += int(bool(title and title.strip()))
             body_complete += int(bool(body and body.strip()))
             topic_complete += int(topics > 0)
@@ -73,8 +82,6 @@ def compute_creator_account_metrics(
             consistent += int(not persona_keywords or any(
                 keyword.lower() in content for keyword in persona_keywords))
         count = len(rows)
-        adaptation = (engagements[-1] - engagements[0]
-                      if len(engagements) >= 2 else 0.0)
         return CreatorAccountMetrics(
             posts_created=count,
             format_diversity=len({row[1] for row in rows}),
@@ -90,7 +97,7 @@ def compute_creator_account_metrics(
                               if expected_publish_ticks else 1.0),
             mean_engagement=round(statistics.fmean(engagements), 6)
             if engagements else 0.0,
-            feedback_adaptation=round(adaptation, 6),
+            feedback_adaptation=None,
             low_response_rate=round(sum(value == 0 for value in engagements)
                                     / count, 6) if count else 0.0,
             follower_gain=(int(followers[0]) - initial_followers

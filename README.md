@@ -38,7 +38,7 @@ data/                  本地世界和 Artifact（默认忽略）
 安装后提供两个命令行入口：
 
 - `agora-oasis`：管理模拟世界（`world-create`、`data-import`、`world-inspect`、`run`、
-  `snapshot`）。
+  `snapshot`），创建用户及发布/查看图文（`user-create`、`post-create`、`post-view`）。
 - `agora-benchmark`：运行评测（`artifact-create`、`scenario-build`、`episode-init`、`run`、
   `batch-run`、`aggregate` 等）。
 
@@ -67,4 +67,5 @@ agora-benchmark --help
 - [快速开始](docs/quickstart.md)：安装、建世界、导入和运行。
 - [数据准备](docs/data.md)：详细字段、JSONL 示例、Persona、媒体、匿名化和交付验收。
 - [验证状态](docs/validation.md)：测试范围和实验限制。
+- [社会反馈闭环](docs/social-feedback.md)：受众关系记忆、反馈条件、模型受众、预算与匿名校准。
 - [上游说明](docs/upstream.md)：OASIS 来源和 Agora 扩展边界。

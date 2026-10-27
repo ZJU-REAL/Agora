@@ -16,6 +16,8 @@ class ScenarioUser:
     display_name: str
     role: str
     bio: str = ""
+    locale: str | None = None
+    culture: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -52,7 +54,8 @@ class ConflictScenario:
                         for item in value["posts"]),
             max_ticks=int(value.get("max_ticks", 3)),
             expected_outcomes=dict(value.get("expected_outcomes", {})),
-            metadata=dict(value.get("metadata", {})),
+            metadata={**value.get("metadata", {}),
+                      **({"culture": value["culture"]} if "culture" in value else {})},
         )
 
 
@@ -82,8 +85,9 @@ def materialize_scenario(scenario: ConflictScenario,
             user_ids[user.actor_id] = sandbox.add_persona(PersonaProfile(
                 profile_id=f"{scenario.scenario_id}-{user.actor_id}",
                 handle=user.handle, display_name=user.display_name,
-                bio=user.bio, locale=("zh-CN" if platform == "xiaohongshu"
-                                      else "en-US")))
+                bio=user.bio, locale=user.locale or (
+                    "zh-CN" if platform == "xiaohongshu" else "en-US"),
+                culture={**scenario.metadata.get("culture", {}), **user.culture}))
         else:
             user_ids[user.actor_id] = sandbox.create_user(
                 user.handle, user.display_name, user.bio)

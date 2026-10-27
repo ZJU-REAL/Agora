@@ -85,6 +85,10 @@ class JsonModelCandidate:
         user_payload = json.dumps({
             "scenario_id": context["scenario_id"],
             "step": context["step"],
+            "task": context.get("task", {}),
+            "culture": context.get("culture", {}),
+            "history": context.get("history", []),
+            "remaining_budget": context.get("remaining_budget", {}),
             "available_actions": sorted(allowed),
             "action_schemas": {
                 name: ACTION_SCHEMAS[name] for name in sorted(allowed)
@@ -110,8 +114,12 @@ class JsonModelCandidate:
             "content": user_content,
         }]
         last_error: Exception | None = None
-        for attempt in range(1, self.max_attempts + 1):
+        remaining_calls = context.get("remaining_budget", {}).get("model_calls")
+        attempts = (min(self.max_attempts, remaining_calls)
+                    if remaining_calls is not None else self.max_attempts)
+        for attempt in range(1, attempts + 1):
             started = time.monotonic()
+            response = None
             try:
                 response = await self.client.complete(messages)
                 if (self.expected_model_id is not None
@@ -140,7 +148,11 @@ class JsonModelCandidate:
                 self._records.append(ModelCallRecord(
                     attempt, "failed",
                     round((time.monotonic() - started) * 1000, 3),
-                    None, None, None, None, type(error).__name__, str(error)))
+                    response.model_id if response else None,
+                    response.input_tokens if response else None,
+                    response.output_tokens if response else None,
+                    response.provider_request_id if response else None,
+                    type(error).__name__, str(error)))
                 messages.append({
                     "role": "user",
                     "content": "Previous output was invalid. Return only a valid "
@@ -170,6 +182,8 @@ class JsonModelCandidate:
     def _normalize_arguments(action_type: str,
                              arguments: dict[str, Any]) -> dict[str, Any]:
         normalized = dict(arguments)
+        if action_type == "create_post" and "body" not in normalized and "content" in normalized:
+            normalized["body"] = normalized.pop("content")
         if action_type in {"create_comment", "reply_comment"}:
             if "content" not in normalized and "body" in normalized:
                 normalized["content"] = normalized.pop("body")
@@ -188,10 +202,24 @@ class JsonModelCandidate:
             required = {"comment_id"}
         else:
             required = set()
-        missing = sorted(required - normalized.keys())
+        required |= set(ACTION_SCHEMAS.get(action_type, {}).get("required", []))
+        missing = sorted(name for name in required if normalized.get(name) is None)
         if missing:
             raise ValueError(
                 f"Action {action_type} is missing arguments: {missing}")
+        schema = ACTION_SCHEMAS.get(action_type)
+        if schema:
+            unknown = normalized.keys() - set(schema["required"]) - set(schema["optional"])
+            if unknown:
+                raise ValueError(f"Unexpected action arguments: {sorted(unknown)}")
+        for name in ("post_id", "parent_comment_id", "followee_id", "comment_id", "reply_to_post_id"):
+            if name in normalized and normalized[name] is not None and (
+                    not isinstance(normalized[name], int) or isinstance(normalized[name], bool)
+                    or normalized[name] < 1):
+                raise ValueError(f"{name} must be a positive integer")
+        if action_type in {"create_comment", "reply_comment"} and (
+                not isinstance(normalized["content"], str) or not normalized["content"].strip()):
+            raise ValueError("Comments require non-empty text")
         return normalized
 
     def drain_call_records(self) -> list[dict[str, Any]]:

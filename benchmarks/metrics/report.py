@@ -7,6 +7,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from benchmarks.metrics.validation import load_validated_main_run
+from benchmarks.metrics.creator import compute_creator_account_metrics
+from benchmarks.metrics.feedback import feedback_windows
 
 
 @dataclass(frozen=True)
@@ -79,14 +81,14 @@ def compute_run_metrics(run_dir: str | Path) -> RunMetrics:
             ticks += 1
             actions += 1
             action_types.append(record["action"]["action_type"])
-            for call in record.get("model_calls", []):
-                model_calls += 1
-                input_tokens += int(call.get("input_tokens") or 0)
-                output_tokens += int(call.get("output_tokens") or 0)
-            for call in record.get("observer_calls", []):
-                observer_calls += 1
-                observer_input_tokens += int(call.get("input_tokens") or 0)
-                observer_output_tokens += int(call.get("output_tokens") or 0)
+        for call in record.get("model_calls", []):
+            model_calls += 1
+            input_tokens += int(call.get("input_tokens") or 0)
+            output_tokens += int(call.get("output_tokens") or 0)
+        for call in record.get("observer_calls", []):
+            observer_calls += 1
+            observer_input_tokens += int(call.get("input_tokens") or 0)
+            observer_output_tokens += int(call.get("output_tokens") or 0)
         for transition in record.get("state_transitions", []):
             for name in totals:
                 totals[name] += (transition["after"][name]
@@ -121,8 +123,43 @@ def compute_run_metrics(run_dir: str | Path) -> RunMetrics:
 def write_run_report(run_dir: str | Path) -> Path:
     run_dir = Path(run_dir)
     path = run_dir / "metrics.json"
-    path.write_text(json.dumps(asdict(compute_run_metrics(run_dir)), indent=2)
-                    + "\n", encoding="utf-8")
+    report = asdict(compute_run_metrics(run_dir))
+    manifest = load_validated_main_run(run_dir / "manifest.json")
+    records = [json.loads(line) for line in (run_dir / "trajectory.jsonl").read_text().splitlines()]
+    steps = [record for record in records if record.get("record_type") == "step"]
+    candidate = next(actor for actor in manifest["actors"] if actor["role"] == "candidate")
+    report["evaluation_status"] = "uncalibrated-development"
+    report["legacy_proxy_metrics"] = ["dialogue_progress", "conflict_handling", "timing_judgment"]
+    report["feedback_adaptation"] = feedback_windows(records)
+    database = run_dir / "world" / "sandbox.db"
+    if database.is_file():
+        report["creator_metrics"] = asdict(compute_creator_account_metrics(
+            database, candidate["user_id"],
+            initial_followers=steps[0].get("initial_followers", 0) if steps else 0))
+    exposed = {item["user_id"] for row in steps for item in row.get("environment_actions", [])
+               if item["action"] == "audience_reaction" and item.get("focused_action")}
+    report["exposed_audience_count"] = len(exposed)
+    reactions = [item for row in steps for item in row.get("environment_actions", [])
+                 if item["action"] == "audience_reaction" and item.get("focused_action")]
+    report["behavioral_metrics"] = {"exposure_opportunities": len(reactions)}
+    for name in ("like_post", "unlike_post", "collect_post", "create_comment",
+                 "follow_user", "unfollow_user"):
+        count = sum(action["action"] == name for item in reactions
+                    for action in item["public_actions"])
+        report["behavioral_metrics"][name] = {
+            "count": count, "per_exposure": count / len(reactions) if reactions else None}
+    report["token_usage_complete"] = all(
+        call.get("input_tokens") is not None and call.get("output_tokens") is not None
+        for row in records for call in row.get("model_calls", []))
+    audience_calls = [call for row in records for call in row.get("audience_calls", [])]
+    report["audience_usage"] = {
+        "calls": len(audience_calls),
+        "input_tokens": sum(call.get("input_tokens") or 0 for call in audience_calls),
+        "output_tokens": sum(call.get("output_tokens") or 0 for call in audience_calls),
+        "usage_complete": all(call.get("input_tokens") is not None and
+                              call.get("output_tokens") is not None for call in audience_calls),
+    }
+    path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     attributions = compute_action_attributions(run_dir)
     (run_dir / "attribution.json").write_text(json.dumps({
         "most_positive": [asdict(item) for item in sorted(
@@ -179,10 +216,22 @@ def aggregate_runs(run_dirs: list[str | Path]) -> AggregateReport:
                        "world_artifact_id", "candidate_id", "platform",
                        "scenario_id", "observer_pool_version",
                        "exposure_mode", "exposure_policy_version")
+    provenances = []
+    for directory in map(Path, run_dirs):
+        path = directory / "provenance.json"
+        provenance = json.loads(path.read_text()) if path.is_file() else {}
+        provenances.append(tuple(provenance.get(field) for field in (
+            "engine_version", "audience_policy_id", "audience_policy_version",
+            "artifact_manifest_sha256", "runtime_fingerprint", "source_fingerprint")))
+    if len(set(provenances)) > 1:
+        raise ValueError("Cannot aggregate different simulation engines or audience policies")
     baseline = manifests[0]
     for manifest in manifests[1:]:
         changed = [field for field in identity_fields
                    if manifest.get(field) != baseline.get(field)]
+        for field in ("budget", "task", "culture", "feedback_condition", "feedback_schedule"):
+            if manifest.get("metadata", {}).get(field) != baseline.get("metadata", {}).get(field):
+                changed.append(f"metadata.{field}")
         if changed:
             raise ValueError(f"Cannot aggregate incompatible runs: {changed}")
     if not metrics:

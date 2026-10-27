@@ -3,7 +3,7 @@
 本目录展示 `manifest.json` 及 users、personas、posts、comments JSONL 的最小导入格式。
 
 ```bash
-agora-oasis --data-root data/worlds world-create xhs-demo --seed 42
+agora-oasis --data-root data/worlds world-create xhs-demo --preset xiaohongshu --seed 42
 agora-oasis --data-root data/worlds data-import xhs-demo manifest.json
 agora-oasis --data-root data/worlds world-inspect xhs-demo
 ```

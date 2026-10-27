@@ -22,7 +22,7 @@ from benchmarks.providers import load_provider_config
 from benchmarks.provider_smoke import smoke_test_observer
 from benchmarks.reproducibility import compare_reproductions
 from benchmarks.runners.exclusive import ExclusiveBatchRunner, ExclusiveRunner
-from benchmarks.runtime import candidate_factory, observer_factory
+from benchmarks.runtime import candidate_factory, observer_factory, audience_factory
 from benchmarks.scenarios import load_scenario_suite, materialize_scenario
 from oasis import AgoraOasis
 
@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--observer-id", default="model-observer")
     configure.add_argument("--observer-version", default="1")
     configure.add_argument("--candidate-actor-id", default="candidate")
-    configure.add_argument("--protocol-version", default="agora-dev-1")
+    configure.add_argument("--protocol-version", default="agora-feedback-dev-2")
     configure.add_argument("--run-id", required=True)
     configure.add_argument("--seed", type=int, default=0)
     configure.add_argument("--max-ticks", type=int, default=3)
@@ -116,6 +116,8 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_result = commands.add_parser("calibration-report")
     calibration_result.add_argument("judgments")
     calibration_result.add_argument("--output")
+    calibration_result.add_argument("--private-key",
+                                    help="Private alignment key from calibration-export")
 
     ablations = commands.add_parser("ablation-init")
     ablations.add_argument("output")
@@ -258,6 +260,8 @@ def main(argv: list[str] | None = None) -> int:
                     scenario_suite_version=suite_version,
                     resources=resources,
                     metadata={"scenario_id": args.scenario_id,
+                              "task": {"objective": matches[0].description},
+                              "culture": matches[0].metadata.get("culture", {}),
                               "actor_user_ids": user_ids,
                               "actor_roles": {
                                   user.actor_id: user.role
@@ -397,6 +401,7 @@ def main(argv: list[str] | None = None) -> int:
         artifact = WorldArtifact(value["artifact_dir"])
         output_root = value.get("output_root", "benchmarks/outputs")
         make_observer = observer_factory(value, args.config)
+        make_audience = audience_factory(value, args.config)
         if make_observer:
             observer_probe = make_observer()
             observer_spec = value.get("observer")
@@ -421,7 +426,7 @@ def main(argv: list[str] | None = None) -> int:
                 result = asyncio.run(runner.run(
                     manifest, candidate,
                     observer_probe if make_observer else None,
-                    resume=args.resume))
+                    resume=args.resume, audience_policy=make_audience()))
                 output = {**result.__dict__,
                           "output_dir": str(result.output_dir)}
         else:
@@ -430,7 +435,7 @@ def main(argv: list[str] | None = None) -> int:
                 artifact, output_root, args.max_concurrency)
             results = asyncio.run(runner.run(
                 manifest, seeds, make_candidate, make_observer,
-                args.run_prefix))
+                args.run_prefix, audience_factory=make_audience))
             output = {"runs": [
                 {**asdict(item), "output_dir": str(item.output_dir)}
                 for item in results]}
@@ -456,7 +461,7 @@ def main(argv: list[str] | None = None) -> int:
         output = {"calibration_sample": str(path)}
     elif args.command == "calibration-report":
         report = asdict(calibration_report(
-            load_calibration_judgments(args.judgments)))
+            load_calibration_judgments(args.judgments, args.private_key)))
         if args.output:
             Path(args.output).write_text(
                 json.dumps(report, ensure_ascii=False, indent=2) + "\n",

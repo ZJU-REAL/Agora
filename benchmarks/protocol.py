@@ -104,6 +104,24 @@ class EpisodeManifest:
         actor_ids = [actor.actor_id for actor in self.actors]
         if len(actor_ids) != len(set(actor_ids)):
             raise ValueError("Actor IDs must be unique")
+        user_ids = [actor.user_id for actor in self.actors if actor.user_id is not None]
+        if len(user_ids) != len(set(user_ids)):
+            raise ValueError("Actors must not share sandbox user IDs")
+        from benchmarks.budget import EpisodeBudget
+        EpisodeBudget(self.metadata.get("budget", {}), self.max_ticks)
+        if self.metadata.get("feedback_condition", "visible") not in {"visible", "hidden"}:
+            raise ValueError("feedback_condition must be visible or hidden")
+        npc_ids = {actor.actor_id for actor in self.actors
+                   if actor.role == ActorRole.NPC and actor.user_id is not None}
+        for event in self.metadata.get("feedback_schedule", []):
+            if (not isinstance(event.get("tick"), int) or isinstance(event.get("tick"), bool) or event["tick"] < 0
+                    or event.get("actor_id") not in npc_ids
+                    or not isinstance(event.get("content"), str)
+                    or not event["content"].strip()
+                    or event.get("valence", "negative") not in {"positive", "negative", "neutral"}
+                    or not (isinstance(event.get("post_id"), int) and not isinstance(event.get("post_id"), bool)
+                            or event.get("post_id") == "latest_candidate")):
+                raise ValueError("Invalid feedback schedule event")
 
     def write(self, path: str | Path) -> None:
         self.validate()

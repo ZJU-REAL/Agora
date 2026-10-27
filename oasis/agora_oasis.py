@@ -18,7 +18,7 @@ import random
 import re
 import sqlite3
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,7 @@ from oasis.social_platform.media_store import (ImportedMedia, LocalMediaStore,
                                                 MediaLimits,
                                                 media_record_values)
 from oasis.social_platform.platform import Platform
+from oasis.audience import ScriptedDevelopmentAudience
 
 
 @dataclass(frozen=True)
@@ -343,7 +344,7 @@ class AgoraOasis:
 
     def view_post(self, user_id: int, post_id: int) -> dict[str, Any]:
         feed_item = next((item for item in self.get_feed(
-            user_id, 200, record_impressions=False)
+            user_id, 1, record_impressions=False, eligible_post_ids=[post_id])
                           if item["post_id"] == post_id), None)
         if feed_item is None:
             raise KeyError(f"Unknown post_id: {post_id}")
@@ -509,7 +510,7 @@ class AgoraOasis:
             "(SELECT COUNT(*) FROM collection c WHERE c.post_id = p.post_id), "
             "(SELECT COUNT(*) FROM comment cm WHERE cm.post_id = p.post_id), "
             "p.community, p.location, p.original_post_id, p.quote_content, "
-            "p.reply_to_post_id, p.num_dislikes "
+            "p.reply_to_post_id, p.num_dislikes, p.language "
             "FROM post p JOIN user u ON u.user_id = p.user_id "
             f"{following_clause}"
             f"{visibility_clause}"
@@ -568,6 +569,7 @@ class AgoraOasis:
             "quote_body": row[15],
             "reply_to_post_id": row[16],
             "num_dislikes": row[17],
+            "language": row[18],
         } for score, row, reason in selected]
         if record_impressions:
             for rank, item in enumerate(feed):
@@ -633,12 +635,15 @@ class AgoraOasis:
             self,
             content_pool_post_ids: list[int] | tuple[int, ...] | None = None,
             actor_user_ids: list[int] | tuple[int, ...] | None = None,
-            feed_limit: int = 10) -> TickResult:
+            feed_limit: int = 10,
+            audience_policy=None,
+            reaction_action: dict | None = None) -> TickResult:
         tick = self.current_tick
         seed = self.platform.db.execute(
             "SELECT seed FROM simulation_state WHERE singleton = 1").fetchone()[0]
         rng = random.Random(f"{seed}:{tick}")
         actions = []
+        audience_policy = audience_policy or ScriptedDevelopmentAudience()
         if content_pool_post_ids is None:
             content_pool_post_ids = tuple(int(row[0]) for row in
                                           self.platform.db.execute(
@@ -652,6 +657,17 @@ class AgoraOasis:
         if actor_user_ids is not None:
             allowed_actors = set(actor_user_ids)
             rows = [row for row in rows if row[0] in allowed_actors]
+            for missing in sorted(allowed_actors - {row[0] for row in rows}):
+                user = self.platform.db.execute(
+                    "SELECT user_name, name, bio FROM user WHERE user_id = ?",
+                    (missing,)).fetchone()
+                if user is None:
+                    raise ValueError(f"Unknown NPC user: {missing}")
+                profile = PersonaProfile(
+                    f"user-{missing}", user[0], user[1] or user[0],
+                    bio=user[2] or "", posting_probability=0,
+                    locale="zh-CN" if self.preset.name == "xiaohongshu" else "en-US")
+                rows.append((missing, json.dumps(asdict(profile))))
         rng.shuffle(rows)
         self._record_event("npc_order_frozen", None, "tick", tick, {
             "actor_user_ids": [row[0] for row in rows],
@@ -669,21 +685,90 @@ class AgoraOasis:
                 "action": "observe_feed", "user_id": user_id,
                 "post_ids": [post["post_id"] for post in feed],
                 "content_pool_post_ids": list(content_pool_post_ids),
+                "persona": asdict(profile),
             })
-            if candidates and rng.random() < profile.like_probability:
-                target = candidates[0]
-                if self.like_post(user_id, target["post_id"]):
-                    actions.append({"action": "like_post",
-                                    "user_id": user_id,
-                                    "post_id": target["post_id"]})
-            if candidates and rng.random() < profile.comment_probability:
-                target = candidates[0]
-                content = f"{profile.display_name} 看到了这条内容并留下了回应。"
-                result = await self.create_comment(user_id,
-                                                   target["post_id"],
-                                                   content)
-                actions.append({"action": "create_comment",
-                                "user_id": user_id, **result})
+            focused = next((post for post in feed if reaction_action and
+                            post["post_id"] == reaction_action.get("post_id")
+                            and reaction_action.get("content")), None)
+            target = focused or (candidates[0] if candidates else None)
+            if target is not None:
+                author_id = (reaction_action["author_id"] if focused
+                             else target["author_id"])
+                if author_id != user_id:
+                    before, history = self.audience_relationship(user_id, author_id)
+                    content = (reaction_action["content"] if focused else
+                               f"{target.get('title') or ''} {target['body']}")
+                    reaction = await audience_policy.react({
+                        "tick": tick, "platform": self.preset.name,
+                        "audience_user_id": user_id, "author_user_id": author_id,
+                        "persona": asdict(profile), "post": target,
+                        "content": content, "relationship": before,
+                        "history": history,
+                    })
+                    after = {
+                        "attitude": max(-1, min(1, before["attitude"]
+                                                + reaction.valence * 0.15)),
+                        "trust": max(-1, min(1, before["trust"]
+                                             + reaction.trust_delta)),
+                        "engagement_intent": max(-1, min(1,
+                            before["engagement_intent"] + reaction.engagement_delta)),
+                    }
+                    multiplier = max(0, min(2, 1 + reaction.valence
+                                            + before["trust"]))
+                    likes = (reaction.like if reaction.like is not None else
+                             reaction.valence > -0.5 and rng.random() <
+                             profile.like_probability * multiplier)
+                    public = []
+                    scripted_behavior = getattr(audience_policy, "uses_behavior_probabilities", True)
+                    if reaction.unlike or (scripted_behavior and reaction.valence < -0.5):
+                        if self.unlike_post(user_id, target["post_id"]):
+                            public.append({"action": "unlike_post", "user_id": user_id,
+                                           "post_id": target["post_id"]})
+                    if likes and self.like_post(user_id, target["post_id"]):
+                        public.append({"action": "like_post", "user_id": user_id,
+                                       "post_id": target["post_id"]})
+                    if reaction.comment and (not getattr(audience_policy,
+                            "uses_behavior_probabilities", True) or rng.random() < min(1,
+                            profile.comment_probability *
+                            max(0.1, 1 + before["engagement_intent"]))):
+                        result = await self.create_comment(
+                            user_id, target["post_id"], reaction.comment)
+                        public.append({"action": "create_comment",
+                                       "user_id": user_id, **result,
+                                       "content": reaction.comment})
+                    if self.preset.allow_collect and (reaction.collect or
+                            (scripted_behavior and after["trust"] >= 0.3)):
+                        if self.collect_post(user_id, target["post_id"]):
+                            public.append({"action": "collect_post", "user_id": user_id,
+                                           "post_id": target["post_id"]})
+                    if reaction.unfollow or (scripted_behavior and after["trust"] <= -0.35):
+                        if self.unfollow_user(user_id, author_id):
+                            public.append({"action": "unfollow_user", "user_id": user_id,
+                                           "followee_id": author_id})
+                    elif reaction.follow or (scripted_behavior and after["trust"] >= 0.35):
+                        if self.follow_user(user_id, author_id):
+                            public.append({"action": "follow_user", "user_id": user_id,
+                                           "followee_id": author_id})
+                    actions.extend(public)
+                    published_comment = next((item["content"] for item in public
+                                              if item["action"] == "create_comment"), "")
+                    history = [*history, {"tick": tick, "content": content,
+                                         "comment": published_comment,
+                                         "public_actions": public}][-20:]
+                    self.platform.db.execute(
+                        "INSERT OR REPLACE INTO audience_relationship VALUES (?, ?, ?, ?)",
+                        (user_id, author_id, json.dumps(after), json.dumps(history)))
+                    actions.append({
+                        "action": "audience_reaction", "user_id": user_id,
+                        "author_id": author_id, "post_id": target["post_id"],
+                        "focused_action": bool(focused),
+                        "before": before, "after": after,
+                        "public_actions": public,
+                        "policy_id": audience_policy.policy_id,
+                        "policy_version": audience_policy.policy_version,
+                    })
+                    self._record_event("audience_reacted", user_id, "post",
+                                       target["post_id"], actions[-1])
             if rng.random() < profile.posting_probability:
                 body = (profile.example_posts[tick % len(profile.example_posts)]
                         if profile.example_posts else
@@ -704,6 +789,14 @@ class AgoraOasis:
         return TickResult(tick=tick,
                           actions=actions,
                           events=self.events(tick=tick))
+
+    def audience_relationship(self, audience_id: int, author_id: int):
+        row = self.platform.db.execute(
+            "SELECT state_json, history_json FROM audience_relationship "
+            "WHERE audience_user_id = ? AND author_user_id = ?",
+            (audience_id, author_id)).fetchone()
+        return ((json.loads(row[0]), json.loads(row[1])) if row else
+                ({"attitude": 0.0, "trust": 0.0, "engagement_intent": 0.0}, []))
 
     def events(self, tick: int | None = None) -> list[dict[str, Any]]:
         query = ("SELECT event_id, tick, event_sequence, event_type, "

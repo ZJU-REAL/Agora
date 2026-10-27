@@ -10,6 +10,8 @@ from benchmarks.observers import (ConfiguredScriptedObserver,
                                   ScriptedDevelopmentObserver)
 from benchmarks.policies import POLICIES
 from benchmarks.providers import build_model_client, load_provider_config
+from benchmarks.audience import JsonModelAudience
+from oasis.audience import ScriptedDevelopmentAudience
 
 
 def _resolve_provider_config(spec: dict[str, Any], config_dir: Path) -> dict:
@@ -81,7 +83,8 @@ def observer_factory(value: dict[str, Any],
 
         def create_pool():
             return ObserverPool(spec["pool_version"], tuple(
-                factory() for factory in member_factories if factory))
+                factory() for factory in member_factories if factory),
+                weights=[member.get("weight", 1.0) for member in spec["observers"]])
 
         return create_pool
     if spec.get("type") == "scripted":
@@ -97,6 +100,19 @@ def observer_factory(value: dict[str, Any],
         return JsonModelObserver(
             observer_id, observer_version, build_model_client(provider),
             parse_failure_mode=spec.get("parse_failure_mode", "raise"),
-            supports_vision=bool(provider.get("supports_vision", False)))
+            supports_vision=bool(provider.get("supports_vision", False)),
+            expected_model_id=provider["model_id"])
 
     return create
+
+
+def audience_factory(value: dict[str, Any], config_path: str | Path):
+    spec = value.get("audience", {"type": "scripted-development"})
+    if spec.get("type") == "scripted-development":
+        return ScriptedDevelopmentAudience
+    if spec.get("type") != "model":
+        raise ValueError("Audience must be model or scripted-development")
+    provider = _resolve_provider_config(spec, Path(config_path).parent)
+    return lambda: JsonModelAudience(
+        spec["policy_id"], spec["policy_version"], build_model_client(provider),
+        supports_vision=bool(provider.get("supports_vision", False)))

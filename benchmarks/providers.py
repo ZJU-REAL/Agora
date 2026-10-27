@@ -52,6 +52,7 @@ class ProviderLimits:
 class _BudgetedClient:
     def __init__(self, limits: ProviderLimits):
         self.limits = limits
+        self.configured_limits = limits
         self.request_count = 0
 
     def _consume_request(self) -> None:
@@ -124,6 +125,8 @@ class OpenAICompatibleClient(_BudgetedClient):
         self.auth_style = auth_style
         self.trust_env = trust_env
         self.extra_body = dict(extra_body or {})
+        if set(self.extra_body) & {"model", "messages", "max_tokens", "max_completion_tokens", "n", "stream"}:
+            raise ValueError("extra_body cannot override model, messages or request budgets")
 
     async def complete(self, messages: list[dict[str, str]]) -> ModelResponse:
         return await asyncio.to_thread(self._complete_sync, messages)

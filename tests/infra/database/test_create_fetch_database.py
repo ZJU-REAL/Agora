@@ -26,10 +26,14 @@ parent_folder = osp.dirname(osp.abspath(__file__))
 db_filepath = osp.join(parent_folder, "test.db")
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_session():
+@pytest.fixture(scope="module", autouse=True)
+def setup_session(tmp_path_factory):
+    global db_filepath
+    db_filepath = str(tmp_path_factory.mktemp("database") / "test.db")
     # Create a mock database:
-    create_db(db_filepath)
+    conn, cursor = create_db(db_filepath)
+    cursor.close()
+    conn.close()
     yield
     if osp.exists(db_filepath):
         os.remove(db_filepath)

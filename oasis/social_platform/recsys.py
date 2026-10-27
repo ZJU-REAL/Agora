@@ -22,11 +22,6 @@ from datetime import datetime
 from math import log
 from typing import Any, Dict, List
 
-import numpy as np
-import torch
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
 from .typing import ActionType, RecsysType
 
 rec_log = logging.getLogger(name='social.rec')
@@ -36,11 +31,6 @@ rec_log.setLevel('DEBUG')
 model = None
 twhin_tokenizer = None
 twhin_model = None
-
-# Create the TF-IDF model
-tfidf_vectorizer = TfidfVectorizer()
-# Prepare the twhin model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # All historical tweets and the most recent tweet of each user
 user_previous_post_all = {}
@@ -78,6 +68,8 @@ def get_twhin_model(device):
 
 
 def load_model(model_name):
+    import torch
+
     try:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if model_name == 'paraphrase-MiniLM-L6-v2':
@@ -108,14 +100,6 @@ def get_recsys_model(recsys_type: str = None):
         return None
     else:
         raise ValueError(f"Unknown recsys type: {recsys_type}")
-
-
-# Move model to GPU if available
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-if model is not None:
-    model.to(device)
-else:
-    pass
 
 
 # Reset global variables
@@ -200,6 +184,8 @@ def get_recommendations(
     score,
     top_n=100,
 ):
+    import numpy as np
+
     similarities = np.array(cosine_similarities[user_index])
     similarities = similarities * score
     top_item_indices = similarities.argsort()[::-1][:top_n]
@@ -275,6 +261,9 @@ def rec_sys_personalized(user_table: List[Dict[str, Any]],
     Returns:
         List[List]: Updated recommendation matrix.
     """
+    import torch
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     global model
     if model is None or isinstance(model, tuple):
         model = get_recsys_model(recsys_type="twitter")
@@ -385,6 +374,8 @@ def get_like_post_id(user_id, action, trace_table):
 
 # Calculate the average cosine similarity between liked posts and target posts
 def calculate_like_similarity(liked_vectors, target_vectors):
+    import numpy as np
+
     # Calculate the norms of the vectors
     liked_norms = np.linalg.norm(liked_vectors, axis=1)
     target_norms = np.linalg.norm(target_vectors, axis=1)
@@ -426,6 +417,10 @@ def rec_sys_personalized_twh(
         recall_only: bool = False,
         enable_like_score: bool = False,
         use_openai_embedding: bool = False) -> List[List]:
+    import numpy as np
+    import torch
+    from sklearn.metrics.pairwise import cosine_similarity
+
     global twhin_model, twhin_tokenizer
     if twhin_model is None or twhin_tokenizer is None:
         twhin_tokenizer, twhin_model = get_recsys_model(
@@ -713,6 +708,7 @@ def rec_sys_personalized_with_trace(
     Returns:
         List[List]: Updated recommendation matrix.
     """
+    import numpy as np
 
     start_time = time.time()
 

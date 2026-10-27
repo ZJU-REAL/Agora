@@ -56,6 +56,7 @@ class PersonaProfile:
     tone: tuple[str, ...] = ("natural", )
     example_posts: tuple[str, ...] = ()
     policy_type: str = "scripted"
+    culture: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PersonaProfile":
@@ -92,6 +93,7 @@ class PersonaProfile:
             example_posts=tuple(
                 style.get("example_posts", data.get("example_posts", []))),
             policy_type=data.get("policy_type", "scripted"),
+            culture=dict(data.get("culture", {})),
         )
 
 
