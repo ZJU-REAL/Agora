@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from benchmarks.protocol import CandidateAction
 
 
@@ -71,10 +73,41 @@ class SelectiveResponseCandidate:
         }, "Respond to substantive concerns only")
 
 
+class FeedbackAdaptiveDevelopmentCandidate:
+    """Literal offline transfer fixture, not an estimate of LLM ability."""
+
+    policy_id = "feedback-adaptive-development"
+    policy_version = "1"
+
+    async def act(self, observation, context):
+        def comments(nodes):
+            for node in nodes:
+                yield node
+                yield from comments(node.get("replies", []))
+        feedback = [(post, comment) for post in observation.feed
+                    for comment in comments(post.get("comments", []))
+                    if comment["author_id"] != observation.user["user_id"]]
+        current = " ".join(comment["content"] for _, comment in feedback)
+        prior = json.dumps(context.get("transfer_experience", {}), ensure_ascii=False)
+        text = current if current else prior
+        if "请提供来源" in text:
+            body = "我会修正建议，补充来源与适用限制。"
+        elif "请先肯定" in text:
+            body = "先肯定你的努力，我会调整建议并继续讨论。"
+        else:
+            body = "推荐周末去城市周边散步。"
+        if context["step"] and feedback:
+            post, comment = feedback[-1]
+            return CandidateAction("reply_comment", {"post_id": post["post_id"],
+                "parent_comment_id": comment["comment_id"], "content": body})
+        return CandidateAction("create_post", {"title": "旅行建议", "body": body, "topics": ["旅行"]})
+
+
 POLICIES = {
     "do-nothing": DoNothingCandidate,
     "template-deescalation": TemplateDeescalationCandidate,
     "template-apology": TemplateApologyCandidate,
     "hard-rebuttal": HardRebuttalCandidate,
     "selective-response": SelectiveResponseCandidate,
+    "feedback-adaptive-development": FeedbackAdaptiveDevelopmentCandidate,
 }

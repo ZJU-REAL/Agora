@@ -72,8 +72,8 @@ def paired_transfer_report(pairs: list[TransferPair]) -> dict:
         mean = statistics.fmean(values)
         margin = (1.96 * statistics.stdev(values) / math.sqrt(len(values))
                   if len(values) > 1 else None)
-        return {"mean": mean, "confidence_interval_95": (
-            [mean - margin, mean + margin] if margin is not None else None)}
+        return {"mean": round(mean, 12), "confidence_interval_95": (
+            [round(mean - margin, 12), round(mean + margin, 12)] if margin is not None else None)}
     return {"source_context": contexts[0], "target_context": contexts[1],
             "pair_count": len(pairs), "dimensions": {name: {
                 "initial_transfer_drop": summarize([

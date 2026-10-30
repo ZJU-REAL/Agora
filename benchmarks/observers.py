@@ -172,7 +172,7 @@ class ScriptedDevelopmentObserver:
     """Deterministic development observer; never use it for published scores."""
 
     observer_id = "scripted-development"
-    observer_version = "2"
+    observer_version = "3"
 
     async def judge(self, action, outcome, context):
         target = context["target_actor_id"]
@@ -183,10 +183,13 @@ class ScriptedDevelopmentObserver:
         else:
             content = str(action.arguments.get("content",
                                                action.arguments.get("body", "")))
+            norms = context.get("culture", {})
             hostile = any(token in content.casefold() for token in
-                          ("闭嘴", "不在乎", "愚蠢", "idiot", "shut up"))
+                          ("闭嘴", "不在乎", "愚蠢", "idiot", "shut up",
+                           *[word.casefold() for word in norms.get("avoid_phrases", [])]))
             deescalation = not hostile and any(token in content.casefold() for token in
-                ("说清楚", "确认事实", "核对", "依据", "修正", "限制", "证据", "source", "correct"))
+                ("说清楚", "确认事实", "核对", "依据", "修正", "限制", "证据", "source", "correct",
+                 *[word.casefold() for word in norms.get("prefer_phrases", [])]))
             delta = (StateDelta(attitude=0.15, arousal=-0.2, trust=0.1,
                                 engagement_intent=0.1)
                      if deescalation else

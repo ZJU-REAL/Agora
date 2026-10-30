@@ -67,6 +67,9 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--seed", type=int, default=0)
     build.add_argument("--observer-pool-version", default="scripted-dev-1")
     build.add_argument("--observer-pool-config")
+    for command in (create, build):
+        command.add_argument("--context-config", help="Freeze platform/culture/domain/language JSON")
+        command.add_argument("--transfer-pair-id", help="Matched task pair ID for transfer")
 
     configure = commands.add_parser("episode-init")
     configure.add_argument("artifact_dir")
@@ -134,6 +137,11 @@ def build_parser() -> argparse.ArgumentParser:
     smoke = commands.add_parser("observer-smoke")
     smoke.add_argument("provider_config")
     smoke.add_argument("--output")
+
+    transfer = commands.add_parser("transfer-run", help="Run paired source/target transfer experiments")
+    transfer.add_argument("config")
+    transfer.add_argument("--output-root")
+    transfer.add_argument("--resume", action="store_true")
     return parser
 
 
@@ -151,9 +159,55 @@ def _episode_from_config(value: dict) -> EpisodeManifest:
     })
 
 
+def _transfer_annotation(args, platform):
+    if bool(args.context_config) != bool(args.transfer_pair_id):
+        raise ValueError("--context-config and --transfer-pair-id must be supplied together")
+    if not args.context_config:
+        return {}
+    from benchmarks.experience import validate_context
+    context = load_provider_config(args.context_config)
+    validate_context(context)
+    if context["platform"] != platform:
+        raise ValueError("Context platform does not match the world")
+    return {"context": context, "transfer_pair_id": args.transfer_pair_id}
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.command == "artifact-create":
+    if args.command == "transfer-run":
+        from benchmarks.transfer import TransferPlan, TransferRunner
+        value = load_provider_config(args.config)
+        base = Path(args.config).resolve().parent
+        templates, artifacts, contexts = {}, {}, {}
+        for kind in ("source", "target"):
+            path = Path(value[kind]["episode_config"])
+            path = path if path.is_absolute() else base / path
+            episode = load_provider_config(str(path))
+            templates[kind] = _episode_from_config(episode)
+            artifact_path = Path(episode["artifact_dir"])
+            artifacts[kind] = WorldArtifact(artifact_path if artifact_path.is_absolute() else path.parent / artifact_path)
+            contexts[kind] = value[kind]["context"]
+        preparation, evaluation = value["preparation"], value["evaluation"]
+        plan = TransferPlan(value["experiment_id"], value["pair_id"], value["axis"],
+            contexts["source"], contexts["target"], tuple(value["seeds"]),
+            preparation_ticks=preparation["max_ticks"], evaluation_ticks=evaluation["max_ticks"],
+            probe_ticks=evaluation.get("probe_ticks", 1),
+            preparation_budget=preparation.get("budget", {}), evaluation_budget=evaluation.get("budget", {}),
+            memory_max_chars=value.get("memory_max_chars", 12000))
+        runtime = value["runtime"]
+        make_candidate, _, _ = candidate_factory(runtime, args.config)
+        make_observer = observer_factory(runtime, args.config)
+        make_audience = audience_factory(runtime, args.config)
+        output_root = (Path(args.output_root) if args.output_root else
+                       base / value.get("output_root", f"outputs/{plan.experiment_id}"))
+        report = asyncio.run(TransferRunner(artifacts["source"], artifacts["target"], output_root).run(
+            plan, templates["source"], templates["target"], make_candidate, make_observer,
+            make_audience, resume=args.resume))
+        print(json.dumps({"report": str(output_root / "transfer-report.json"),
+            "successful_pairs": report["successful_pairs"], "failed_seeds": report["failed_seeds"],
+            "incomplete_seeds": report["incomplete_seeds"]}, ensure_ascii=False, indent=2))
+        return 1 if report["failed_seeds"] or report["incomplete_seeds"] else 0
+    elif args.command == "artifact-create":
         sandbox = AgoraOasis.local(args.world_id, args.data_root)
         try:
             resources = {}
@@ -165,7 +219,8 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("Candidate asset keys must be unique")
                 resources[key] = source
             metadata = {"scenario_id": args.scenario_id or args.world_id,
-                        "candidate_asset_keys": list(resources)}
+                        "candidate_asset_keys": list(resources),
+                        **_transfer_annotation(args, sandbox.preset.name)}
             content_topics = list(dict.fromkeys(
                 topic.strip().lstrip("#") for topic in args.content_topic
                 if topic.strip().lstrip("#")))
@@ -260,6 +315,7 @@ def main(argv: list[str] | None = None) -> int:
                     scenario_suite_version=suite_version,
                     resources=resources,
                     metadata={"scenario_id": args.scenario_id,
+                              **_transfer_annotation(args, sandbox.preset.name),
                               "task": {"objective": matches[0].description},
                               "culture": matches[0].metadata.get("culture", {}),
                               "actor_user_ids": user_ids,

@@ -296,11 +296,13 @@ class ExclusiveRunner:
                         "seed": manifest.seed,
                         "step": step,
                         "task": task,
+                        **({"transfer_experience": json.loads(json.dumps(manifest.metadata["transfer_experience"]))}
+                           if "transfer_experience" in manifest.metadata else {}),
                         "culture": culture,
                         "history": (
                             self._hide_feedback(history, candidate_actor.user_id)
                             if manifest.metadata.get("feedback_condition") == "hidden"
-                            else history
+                            else json.loads(json.dumps(history))
                         ),
                         "remaining_budget": budget.remaining(),
                         "available_actions": sandbox.available_actions(),

@@ -1,5 +1,18 @@
 # 验证状态
 
+## 2026-10-30 跨语境协议
+
+新增 `agora-transfer-v1` 和 `transfer-run`，把源经验、无经验、目标经验及隐藏评论反馈条件接到
+实际 episode。语境和任务对在 Artifact 中冻结；每次评测从新世界与新客户端开始，公开经验
+去除旧 ID/路径、隐藏评分和未被后续动作看到的工具结果，并有统一字符上限和校验和。
+
+完整回归命令 `.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database`
+得到 **157 passed**，没有跳过或失败。新增测试覆盖七阶段执行、经验隔离、预算/准备成本、
+恢复不重复调用、语境混杂拒绝、客户端复用拒绝，以及缺失判断/提前停止不伪造零分。
+
+命令行和配对设计见 [跨语境实验](transfer.md)。离线 toy 示例只用于开发验证；本次没有调用
+外部模型、采集真人反馈或完成真实文化一致性校准。
+
 ## 社会反馈 P0 修复
 
 完整回归命令为 `.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database`，

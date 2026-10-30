@@ -21,4 +21,5 @@ data/datasets/*
 !data/worlds/.gitkeep
 !data/datasets/.gitkeep
 benchmarks/outputs/
+configs/benchmarks/outputs/
 data/artifacts/

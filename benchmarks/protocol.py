@@ -109,6 +109,11 @@ class EpisodeManifest:
             raise ValueError("Actors must not share sandbox user IDs")
         from benchmarks.budget import EpisodeBudget
         EpisodeBudget(self.metadata.get("budget", {}), self.max_ticks)
+        if "transfer_experience" in self.metadata:
+            from benchmarks.experience import content_hash, validate_experience
+            validate_experience(self.metadata["transfer_experience"])
+            if self.metadata.get("transfer_experience_sha256") != content_hash(self.metadata["transfer_experience"]):
+                raise ValueError("Transfer experience checksum mismatch")
         if self.metadata.get("feedback_condition", "visible") not in {"visible", "hidden"}:
             raise ValueError("feedback_condition must be visible or hidden")
         npc_ids = {actor.actor_id for actor in self.actors
