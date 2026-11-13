@@ -28,6 +28,9 @@ def main(argv=None):
     console.add_argument("world_id")
     console.add_argument("--port", type=int, default=8765)
     console.add_argument(
+        "--api-port", type=int, help="AI account API port (default console port + 1)"
+    )
+    console.add_argument(
         "--bootstrap",
         action="store_true",
         help="Create a synthetic source world when empty",
@@ -94,7 +97,13 @@ def main(argv=None):
                 Path(path).stem: load_provider_config(path)
                 for path in args.provider_config
             }
-            serve(world, port=args.port, providers=providers)
+            serve(
+                world,
+                port=args.port,
+                api_port=args.api_port,
+                providers=providers,
+                bootstrap=args.bootstrap,
+            )
             return 0
         elif args.command == "simulate":
             config = (

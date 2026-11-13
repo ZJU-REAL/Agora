@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS post (
     visibility TEXT NOT NULL DEFAULT 'public'
         CHECK(visibility IN ('public', 'followers', 'private', 'group')),
     language TEXT,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    edited_at_tick INTEGER,
+    removed_by INTEGER REFERENCES user(user_id),
+    link_url TEXT,
     community TEXT,
     location TEXT,
     reply_to_post_id INTEGER REFERENCES post(post_id),
@@ -53,6 +57,8 @@ CREATE TABLE IF NOT EXISTS comment (
     root_comment_id INTEGER,
     reply_to_user_id INTEGER,
     is_pinned INTEGER NOT NULL DEFAULT 0,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    edited_at_tick INTEGER,
     FOREIGN KEY(post_id) REFERENCES post(post_id),
     FOREIGN KEY(user_id) REFERENCES user(user_id),
     FOREIGN KEY(parent_comment_id) REFERENCES comment(comment_id),
@@ -95,6 +101,8 @@ CREATE TABLE IF NOT EXISTS post_asset (
     role TEXT NOT NULL DEFAULT 'content'
         CHECK(role IN ('content', 'cover', 'thumbnail', 'attachment')),
     caption TEXT,
+    alt_text TEXT,
+    transcript TEXT,
     PRIMARY KEY(post_id, position),
     UNIQUE(post_id, asset_id, role),
     FOREIGN KEY(post_id) REFERENCES post(post_id),
@@ -174,7 +182,9 @@ CREATE TABLE IF NOT EXISTS persona (
 CREATE TABLE IF NOT EXISTS simulation_state (
     singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
     current_tick INTEGER NOT NULL DEFAULT 0,
-    seed INTEGER NOT NULL DEFAULT 0
+    seed INTEGER NOT NULL DEFAULT 0,
+    current_time_ms INTEGER NOT NULL DEFAULT 0,
+    tick_duration_ms INTEGER NOT NULL DEFAULT 60000
 );
 
 INSERT OR IGNORE INTO simulation_state(singleton, current_tick, seed)
@@ -272,6 +282,8 @@ CREATE INDEX IF NOT EXISTS idx_notification_recipient ON notification(recipient_
 CREATE TABLE IF NOT EXISTS creator_asset (
     user_id INTEGER NOT NULL REFERENCES user(user_id),
     asset_id TEXT NOT NULL REFERENCES media_asset(asset_id),
+    alt_text TEXT,
+    transcript TEXT,
     PRIMARY KEY(user_id, asset_id)
 );
 CREATE TABLE IF NOT EXISTS agent_memory (
@@ -356,10 +368,41 @@ CREATE TABLE IF NOT EXISTS agent_model_call (
  session_id INTEGER NOT NULL REFERENCES agora_session(session_id),
  step INTEGER NOT NULL, tick INTEGER NOT NULL,
  status TEXT NOT NULL, model_id TEXT, input_tokens INTEGER, output_tokens INTEGER,
- elapsed_ms REAL, error_type TEXT, request_id TEXT
+ elapsed_ms REAL, error_type TEXT, request_id TEXT, decision_id TEXT, ordinal INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO creator_asset(user_id, asset_id)
  SELECT p.user_id, pa.asset_id FROM post_asset pa JOIN post p ON p.post_id = pa.post_id;
 
 CREATE INDEX IF NOT EXISTS idx_agora_like_user_post ON "like"(user_id, post_id);
 CREATE INDEX IF NOT EXISTS idx_agora_like_post_user ON "like"(post_id, user_id);
+
+CREATE TABLE IF NOT EXISTS community (
+ name TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+ rules_json TEXT NOT NULL DEFAULT '[]', creator_id INTEGER REFERENCES user(user_id),
+ visibility TEXT NOT NULL DEFAULT 'public' CHECK(visibility IN ('public','restricted','private'))
+);
+CREATE TABLE IF NOT EXISTS community_member (
+ community TEXT NOT NULL REFERENCES community(name), user_id INTEGER NOT NULL REFERENCES user(user_id),
+ role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('member','moderator')), approved INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(community,user_id)
+);
+CREATE TABLE IF NOT EXISTS collection_folder (
+ folder_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES user(user_id),
+ name TEXT NOT NULL, UNIQUE(user_id,name)
+);
+CREATE TABLE IF NOT EXISTS folder_post (
+ folder_id INTEGER NOT NULL REFERENCES collection_folder(folder_id), post_id INTEGER NOT NULL REFERENCES post(post_id), PRIMARY KEY(folder_id,post_id)
+);
+CREATE TABLE IF NOT EXISTS agent_decision (
+ decision_id TEXT PRIMARY KEY, session_id INTEGER NOT NULL REFERENCES agora_session(session_id),
+ user_id INTEGER NOT NULL REFERENCES user(user_id), tick INTEGER NOT NULL,
+ status TEXT NOT NULL CHECK(status IN ('pending','ready','succeeded','failed')),
+ action_json TEXT, result_json TEXT, request_hash TEXT, step INTEGER,
+ before_json TEXT NOT NULL, after_json TEXT, model_records_json TEXT NOT NULL DEFAULT '[]', failure_type TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_call_decision ON agent_model_call(decision_id,ordinal);
+CREATE TABLE IF NOT EXISTS agent_api_token (
+ token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES user(user_id), revoked INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS client_asset (
+ user_id INTEGER NOT NULL REFERENCES user(user_id), asset_id TEXT NOT NULL REFERENCES media_asset(asset_id), PRIMARY KEY(user_id,asset_id)
+);

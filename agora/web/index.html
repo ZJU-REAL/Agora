@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Agora · 社交模拟实验室</title>
+    <title>Agora · AI 社媒账号</title>
+    <link rel="stylesheet" href="/static/native.css" />
     <style>
       :root {
         --bg: #f5f4f0;
@@ -711,6 +712,7 @@
         </div>
       </form>
     </div>
+    <script src="/static/native.js"></script>
     <script>
       const $ = (id) => document.getElementById(id),
         esc = (v) =>
@@ -728,7 +730,8 @@
       const urlParams = new URLSearchParams(location.search),
         runId = urlParams.get("run"),
         initialActor = urlParams.get("actor");
-      let world = {},
+      let selectedPlatform = urlParams.get("platform"),
+        world = {},
         data = null,
         sessionId = null,
         frame = -1,
@@ -765,6 +768,11 @@
         setTimeout(() => ($("toast").style.display = "none"), 3200);
       }
       async function api(path, value) {
+        if (!runId && selectedPlatform && path.startsWith("/api/"))
+          path +=
+            (path.includes("?") ? "&" : "?") +
+            "platform=" +
+            encodeURIComponent(selectedPlatform);
         if (runId) {
           if (value) throw Error("实验观察页面只用于查看，操作由 AI 执行。");
           if (path === "/api/world")
@@ -852,12 +860,7 @@
         return `<button data-action="${name}" data-args="${esc(JSON.stringify(args))}" ${!editable() ? "disabled" : ""}>${text}</button>`;
       }
       function media(asset) {
-        const src = runId
-          ? "/api/run-media?run=" +
-            encodeURIComponent(runId) +
-            "&id=" +
-            encodeURIComponent(asset.asset_id)
-          : "/media/" + encodeURIComponent(asset.asset_id);
+        const src = nativeMediaUrl(asset);
         return asset.media_type === "video"
           ? `<video src="${src}" controls preload="metadata"></video>`
           : `<img src="${src}" alt="${esc(asset.alt_text || "帖子图片")}" loading="lazy">`;
@@ -900,7 +903,7 @@
           "profileButton",
           "notificationsButton",
         ])
-          $(id).disabled = !can;
+          if ($(id)) $(id).disabled = !can;
         document
           .querySelectorAll(".tabs button,.searchbar button")
           .forEach((b) => (b.disabled = !can));
@@ -954,6 +957,7 @@
             intro +
             `<div class="feed">${o.cards.map((p) => `<article class="post-card" data-post="${p.post_id}" tabindex="0"><div class="cover">${p.assets.length ? media(p.assets[0]) : "<span>" + esc(p.topics[0] || "Agora") + "</span>"}</div><div class="post-info"><div class="post-title">${esc(p.title || p.body.slice(0, 55))}</div><div class="post-meta"><span>${esc(p.author_name)}</span><span>♡ ${p.num_likes}</span>${actionButton("not_interested", { post_id: p.post_id }, "隐藏")}</div><div class="tags">${p.topics.map((t) => "#" + esc(t)).join(" ")}</div></div></article>`).join("") || '<div class="empty">暂时没有内容<br>试试刷新、切换关注或搜索话题。</div>'}</div><div class="feed-footer">${actionButton("scroll", {}, "继续往下看 ↓")}</div>`;
         }
+        nativeRender(o);
         const end = frame < 0 ? data.trajectory.length - 1 : frame;
         $("replayRange").max = Math.max(0, data.trajectory.length - 1);
         $("replayRange").value = end;
@@ -989,6 +993,9 @@
                 "start_session",
                 "refresh",
                 "search",
+                "view_community",
+                "view_saved",
+                "view_collection",
                 "view_profile",
                 "open_notifications",
               ].includes(e.action.action_type),
@@ -1094,12 +1101,16 @@
         const b = e.target.closest("[data-action]");
         if (b) {
           e.stopPropagation();
-          act(b.dataset.action, JSON.parse(b.dataset.args));
+          nativeAction(b.dataset.action, JSON.parse(b.dataset.args));
           return;
         }
         const p = e.target.closest("[data-post]");
         if (p) act("open_post", { post_id: Number(p.dataset.post) });
       };
+      document.addEventListener("click", (e) => {
+        const b = e.target.closest("#nativeNav [data-action]");
+        if (b) nativeAction(b.dataset.action, JSON.parse(b.dataset.args));
+      });
       $("content").onkeydown = (e) => {
         if (e.key === "Enter" && e.target.matches("[data-post]"))
           act("open_post", { post_id: Number(e.target.dataset.post) });
@@ -1143,6 +1154,35 @@
       function openEditor(o) {
         const draft = o.draft || {};
         $("postTitle").value = draft.title || "";
+        $("postTitle").hidden = o.platform === "x";
+        document.querySelector("label[for=postTitle]").hidden =
+          o.platform === "x";
+        $("postTitle").maxLength = o.contract?.title_limit || 200;
+        $("postTopics").hidden = o.platform !== "xiaohongshu";
+        document.querySelector("label[for=postTopics]").hidden =
+          o.platform !== "xiaohongshu";
+        let communityField = $("postCommunity"),
+          urlField = $("postUrl");
+        if (!communityField) {
+          communityField = document.createElement("select");
+          communityField.id = "postCommunity";
+          communityField.className = "native-editor-field";
+          $("postTitle").after(communityField);
+          urlField = document.createElement("input");
+          urlField.id = "postUrl";
+          urlField.placeholder = "链接地址（可选）";
+          urlField.className = "native-editor-field";
+          communityField.after(urlField);
+        }
+        communityField.hidden = urlField.hidden = o.platform !== "reddit";
+        communityField.innerHTML = (o.communities || [])
+          .map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`)
+          .join("");
+        communityField.value =
+          draft.community || o.community?.name || communityField.value;
+        urlField.value = draft.url || "";
+        $("postBody").maxLength =
+          o.platform === "x" ? 10000 : o.contract?.body_limit || 10000;
         $("postBody").value = draft.body || "";
         $("postTopics").value = (draft.topics || []).join(", ");
         let catalog = $("assetPicker");
@@ -1154,7 +1194,7 @@
         catalog.innerHTML =
           '<p class="hint">选择图片，勾选顺序即发布顺序</p>' +
           o.asset_library
-            .filter((a) => a.media_type === "image")
+            .filter((a) => ["image", "video"].includes(a.media_type))
             .slice(0, 20)
             .map(
               (a) =>
@@ -1186,15 +1226,31 @@
         const assets = JSON.parse($("assetPicker")?.dataset.order || "[]").map(
           (asset_id) => ({ asset_id }),
         );
-        await act("save_draft", {
-          title: $("postTitle").value,
-          body: $("postBody").value,
-          topics: $("postTopics")
+        const o = current(),
+          args = { body: $("postBody").value, assets };
+        if (o.platform !== "x") args.title = $("postTitle").value;
+        if (o.platform === "xiaohongshu")
+          args.topics = $("postTopics")
             .value.split(/[,，]/)
             .map((t) => t.trim())
-            .filter(Boolean),
-          assets,
-        });
+            .filter(Boolean);
+        if (o.platform === "reddit") {
+          args.community = $("postCommunity").value;
+          if ($("postUrl").value) args.url = $("postUrl").value;
+        }
+        const hasVideo = assets.some(
+          (s) =>
+            o.asset_library.find((a) => a.asset_id === s.asset_id)
+              ?.media_type === "video",
+        );
+        if (hasVideo)
+          for (const spec of assets)
+            spec.role =
+              o.asset_library.find((a) => a.asset_id === spec.asset_id)
+                ?.media_type === "image"
+                ? "cover"
+                : "content";
+        await act("save_draft", args);
         $("publishModal").style.display = "none";
       };
       navigate(async () => {

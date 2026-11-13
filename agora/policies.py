@@ -48,6 +48,28 @@ class PersonaPolicy:
                 "topics": [topic],
                 "assets": [{"asset_id": asset["asset_id"]} for asset in selected],
             }
+            if observation["platform"] == "x":
+                args.pop("title", None)
+                args.pop("topics", None)
+                args["body"] += " #" + topic
+            elif observation["platform"] == "reddit":
+                args.pop("topics", None)
+                communities = observation.get("communities", [])
+                if not communities:
+                    return choice(
+                        "create_community",
+                        {
+                            "name": f"demo_{observation['user_id']}",
+                            "title": "Community discussions",
+                        },
+                        "先创建一个可供发布和讨论的社区。",
+                    )
+                args["community"] = next(
+                    (item["name"] for item in communities if item["joined"]),
+                    communities[0]["name"],
+                )
+            else:
+                args["title"] = args["title"][:20]
             return choice(
                 "save_draft",
                 args,
@@ -67,7 +89,9 @@ class PersonaPolicy:
             post = observation["post"]
             if not post["liked"] and post["author_id"] != observation["user_id"]:
                 return choice(
-                    "like_post",
+                    "upvote_post"
+                    if observation["platform"] == "reddit"
+                    else "like_post",
                     {"post_id": post["post_id"]},
                     "这条内容与当前浏览兴趣相关，表达一次认可。",
                 )
@@ -89,7 +113,13 @@ class PersonaPolicy:
                     "content": "这个经验很具体。你会建议第一次尝试的人从哪一步开始？",
                 }
                 return choice(
-                    "create_comment", args, "阅读后提出一个具体问题，尝试继续交流。"
+                    "reply_post"
+                    if observation["platform"] == "x"
+                    else "create_comment",
+                    {"post_id": post["post_id"], "body": args["content"]}
+                    if observation["platform"] == "x"
+                    else args,
+                    "阅读后提出一个具体问题，尝试继续交流。",
                 )
             if self.rng.random() < 0.3:
                 return choice(

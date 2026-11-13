@@ -448,6 +448,11 @@
   <body>
     <header>
       <div class="brand">Agora<i>.</i></div>
+      <select
+        id="platformSelect"
+        aria-label="选择社媒平台"
+        style="width: auto; max-width: 170px"
+      ></select>
       <div class="tagline">
         社交实验工作台<br />AI SOCIAL SIMULATION WORKBENCH
       </div>
@@ -481,8 +486,7 @@
             <option value="400">慢速观察</option></select
           ><label class="field" for="goal">模型任务目标</label
           ><textarea id="goal">
-浏览社区，选择合适的素材创作内容，根据公开评论与反馈调整后续行为。</textarea
-          >
+浏览社区，选择合适的素材创作内容，根据公开评论与反馈调整后续行为。</textarea>
           <div class="row">
             <div>
               <label class="field" for="ticks">模拟轮数</label
@@ -559,7 +563,7 @@
             <strong id="postMetric">0</strong><small>本次新发布内容</small>
           </div>
           <div class="metric">
-            <strong id="commentMetric">0</strong><small>本次评论互动</small>
+            <strong id="commentMetric">0</strong><small>本次评论 / 回复</small>
           </div>
           <div class="metric">
             <strong id="exposureMetric">0</strong
@@ -618,8 +622,7 @@
         <details class="panel">
           <summary>实验配置与复现信息</summary>
           <pre class="config" id="config">
-选择实验后显示配置、种子及世界指纹。</pre
-          >
+选择实验后显示配置、种子及世界指纹。</pre>
         </details>
       </section>
     </main>
@@ -638,7 +641,8 @@
                 "'": "&#39;",
               })[c],
           );
-      let selected = null,
+      let selectedPlatform = null,
+        selected = null,
         world = null,
         currentRun = null,
         actor = "all",
@@ -682,6 +686,15 @@
         setTimeout(() => ($("toast").style.display = "none"), 3500);
       }
       async function api(path, value) {
+        if (
+          selectedPlatform &&
+          path.startsWith("/api/") &&
+          path !== "/api/platforms"
+        )
+          path +=
+            (path.includes("?") ? "&" : "?") +
+            "platform=" +
+            encodeURIComponent(selectedPlatform);
         const r = await fetch(
           path,
           value
@@ -775,7 +788,8 @@
           `${run.config.user_ids.length} 个账号 · seed ${run.config.seed} · ${run.model} · 独立沙盒 ${run.run_id}`;
         $("tickMetric").textContent = run.completed_ticks;
         $("postMetric").textContent = run.metrics.created_posts;
-        $("commentMetric").textContent = run.metrics.comments;
+        $("commentMetric").textContent =
+          run.metrics.comments + (run.metrics.replies || 0);
         $("exposureMetric").textContent = run.metrics.exposures;
         $("runState").textContent =
           states[run.status] + (run.error_type ? " · " + run.error_type : "");
@@ -933,8 +947,40 @@
         a.click();
         URL.revokeObjectURL(url);
       };
+      async function loadPlatform() {
+        world = await api("/api/world");
+        $("sourceLabel").textContent =
+          `源世界 ${world.world_id} · ${world.preset} · ${world.users.length} 个账号`;
+        $("agents").innerHTML = world.users
+          .map(
+            (u, i) =>
+              `<label class="agent-choice"><input name="agent" type="checkbox" value="${u.user_id}" ${i < 4 ? "checked" : ""}><span>${esc(u.name)}</span></label>`,
+          )
+          .join("");
+        document.querySelector(".header-links a").href =
+          "/account?platform=" + encodeURIComponent(selectedPlatform);
+        selected = null;
+        currentRun = null;
+        actor = "all";
+        $("viewer").hidden = true;
+        $("viewerEmpty").hidden = false;
+        await refresh();
+      }
+      $("platformSelect").onchange = async () => {
+        selectedPlatform = $("platformSelect").value;
+        await loadPlatform();
+      };
       (async () => {
         try {
+          const platforms = await api("/api/platforms");
+          selectedPlatform = platforms.default;
+          $("platformSelect").innerHTML = platforms.platforms
+            .map(
+              (p) =>
+                `<option value="${p.platform}">${esc(p.display_name)}</option>`,
+            )
+            .join("");
+          $("platformSelect").value = selectedPlatform;
           world = await api("/api/world");
           $("sourceLabel").textContent =
             `源世界 ${world.world_id} · ${world.preset} · ${world.users.length} 个账号`;

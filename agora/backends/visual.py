@@ -29,9 +29,19 @@ def session_visual_parts(world, observation):
             if observation["screen"] == "detail"
             else observation["cards"]
         )
+    references = [
+        post["original_post"]
+        for post in posts
+        if post.get("original_post") and not post["original_post"].get("unavailable")
+    ]
+    posts += references
     visible = []
     for post in posts:
-        asset_ids = {asset["asset_id"] for asset in post["assets"]}
+        asset_ids = set(
+            post.get(
+                "visible_asset_ids", [asset["asset_id"] for asset in post["assets"]]
+            )
+        )
         assets = (
             post["assets"]
             if post["post_id"] == "素材库"
@@ -41,7 +51,13 @@ def session_visual_parts(world, observation):
                 if asset["asset_id"] in asset_ids
             ]
         )
-        visible.append({"post_id": post["post_id"], "assets": assets})
+        visible.append(
+            {
+                "post_id": post["post_id"],
+                "assets": assets,
+                "video_position_ms": post.get("video_position_ms"),
+            }
+        )
     proxy = type("MediaObservation", (), {"feed": visible})()
     parts = []
     count = 0

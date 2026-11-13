@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import heapq
 import json
 import random
 import time
 
+from agora.decisions import DecisionJournal
 from agora.memory import AgentMemory
 from agora.policies import PersonaPolicy
 from agora.session import SocialSession
@@ -178,9 +180,15 @@ async def run_sessions(
         )
         sessions[user] = SocialSession.start(world, user, config)
     memory = AgentMemory(world)
+    journal = DecisionJournal(world)
     failures, applied = [], []
     attempted, completed_ticks = 0, 0
     canceled = False
+    duration_ms = world.db.execute(
+        "SELECT tick_duration_ms FROM simulation_state WHERE singleton=1"
+    ).fetchone()[0]
+    start_time = world.current_time_ms
+    available_at = {user: start_time for user in user_ids}
 
     def progress(actor=None):
         if on_progress:
@@ -214,83 +222,81 @@ async def run_sessions(
                 )
         order = list(user_ids)
         random.Random(f"{seed}:{world.current_tick}:sessions").shuffle(order)
-        for user in order:
-            session = sessions[user]
-            for step in range(steps_per_tick):
-                if control and not control():
-                    canceled = True
-                    break
-                if session.state["status"] != "active":
-                    break
-                history = session.trajectory(limit=8)
-                context = {
-                    "history": [
-                        {"action": item["action"], "result": item["result"]}
-                        for item in history
-                    ],
-                    "memory": memory.retrieve(
-                        user,
-                        " ".join(policies[user].persona.get("interests", {}))
-                        if hasattr(policies[user], "persona")
-                        else "",
-                    ),
-                    "remaining_actions_this_tick": steps_per_tick - step,
-                    "remaining_total_actions": ticks * steps_per_tick
-                    - relative_tick * steps_per_tick
-                    - step,
-                }
-                attempted += 1
-                try:
-                    action = await policies[user].act(session.observe(), context)
-                    result = await session.act(
-                        action["action_type"],
-                        action.get("arguments", {}),
-                        action.get("rationale"),
-                    )
-                    memory.remember(user, session.session_id, action, result)
-                except Exception as error:  # noqa: BLE001 - isolate account failures
-                    failure = {
-                        "user_id": user,
-                        "tick": world.current_tick,
-                        "error_type": type(error).__name__,
-                        "error": "Model provider or action failed"
-                        if isinstance(policies[user], JsonSessionPolicy)
-                        else str(error),
-                    }
-                    failures.append(failure)
-                    session._event(
-                        {"action_type": "policy_failure", "arguments": {}},
-                        {"success": False, **failure},
-                    )
-                    break
-                finally:
-                    if hasattr(policies[user], "drain_call_records"):
-                        for record in policies[user].drain_call_records():
-                            world.db.execute(
-                                "INSERT INTO agent_model_call(session_id, step, tick, status, model_id, input_tokens, output_tokens, elapsed_ms, error_type, request_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                (
-                                    session.session_id,
-                                    session.state["step"],
-                                    world.current_tick,
-                                    record["status"],
-                                    record["model_id"],
-                                    record["input_tokens"],
-                                    record["output_tokens"],
-                                    record["elapsed_ms"],
-                                    record["error_type"],
-                                    record["request_id"],
-                                ),
-                            )
-                        world.db.commit()
-                    progress(user)
-            if canceled:
+        period_start = start_time + relative_tick * duration_ms
+        period_end = period_start + duration_ms
+        queue = [
+            (max(period_start, available_at[user]), index, user)
+            for index, user in enumerate(order)
+        ]
+        heapq.heapify(queue)
+        slots = {user: 0 for user in user_ids}
+        failed = set()
+        while queue:
+            due, priority, user = heapq.heappop(queue)
+            if due >= period_end:
                 break
+            if control and not control():
+                canceled = True
+                break
+            session = sessions[user]
+            if session.state["status"] != "active" or user in failed:
+                continue
+            world.set_time(max(world.current_time_ms, due))
+            step = slots[user]
+            history = session.trajectory(limit=8)
+            context = {
+                "history": [
+                    {"action": item["action"], "result": item["result"]}
+                    for item in history
+                ],
+                "memory": memory.retrieve(
+                    user,
+                    " ".join(
+                        getattr(policies[user], "persona", {}).get("interests", {})
+                    ),
+                ),
+                "remaining_actions_this_tick": steps_per_tick - step,
+                "remaining_total_actions": ticks * steps_per_tick
+                - relative_tick * steps_per_tick
+                - step,
+                "remaining_time_this_tick_ms": period_end - due,
+            }
+            attempted += 1
+            before_elapsed = session.state["elapsed_ms"]
+            decision_id = (
+                f"session:{session.session_id}:period:{relative_tick}:slot:{step}"
+            )
+            journal.begin(session, decision_id)
+            try:
+                action = await policies[user].act(session.observe(), context)
+                records = (
+                    policies[user].drain_call_records()
+                    if hasattr(policies[user], "drain_call_records")
+                    else []
+                )
+                receipt = await journal.execute(session, decision_id, action, records)
+            except Exception as error:  # noqa: BLE001 - persist policy and provider failures
+                records = (
+                    policies[user].drain_call_records()
+                    if hasattr(policies[user], "drain_call_records")
+                    else []
+                )
+                receipt = journal.fail(session, decision_id, error, records)
+            slots[user] += 1
+            available_at[user] = due + max(
+                300, session.state["elapsed_ms"] - before_elapsed
+            )
+            if receipt["status"] == "failed":
+                failures.append(
+                    {"user_id": user, "tick": world.current_tick, **receipt["result"]}
+                )
+                failed.add(user)
+            progress(user)
+            if slots[user] < steps_per_tick and user not in failed:
+                heapq.heappush(queue, (available_at[user], priority, user))
         if canceled:
             break
-        world.db.execute(
-            "UPDATE simulation_state SET current_tick = current_tick + 1 WHERE singleton = 1"
-        )
-        world.db.commit()
+        world.set_time(period_end)
         completed_ticks += 1
         progress()
     for session in sessions.values():

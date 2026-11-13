@@ -28,7 +28,9 @@ def image_part(path: Path, *, detail: str = "low") -> dict[str, Any]:
     }
 
 
-def video_frame_parts(path: Path, *, frame_count: int = 3) -> list[dict[str, Any]]:
+def video_frame_parts(
+    path: Path, *, frame_count: int = 3, position_ms=None
+) -> list[dict[str, Any]]:
     """Extract deterministic representative JPEG frames without persistent files."""
     probe = subprocess.run(
         [
@@ -53,6 +55,8 @@ def video_frame_parts(path: Path, *, frame_count: int = 3) -> list[dict[str, Any
             duration * 0.95 * index / (frame_count - 1) for index in range(frame_count)
         ]
     )
+    if position_ms is not None:
+        times = [min(max(0, position_ms / 1000), max(0, duration - 0.05))]
     parts: list[dict[str, Any]] = []
     for index, timestamp in enumerate(times):
         frame = subprocess.run(
@@ -113,7 +117,9 @@ def sandbox_observation_parts(sandbox, observation) -> list[dict[str, Any]]:
                 parts.append(image_part(path))
                 visual_count += 1
             elif asset["media_type"] == "video":
-                parts.extend(video_frame_parts(path))
+                parts.extend(
+                    video_frame_parts(path, position_ms=post.get("video_position_ms"))
+                )
                 visual_count += 3
             if asset.get("transcript"):
                 parts.append(

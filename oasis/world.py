@@ -39,6 +39,7 @@ from oasis.media import (
     MediaLimits,
     media_record_values,
 )
+from oasis.platform_actions import PlatformActions
 from oasis.storage import WorldStore
 
 
@@ -80,7 +81,7 @@ class WorldConfig:
         return self.world_dir / "media"
 
 
-class AgoraWorld:
+class AgoraWorld(PlatformActions):
     """Agora social world with owned storage, deterministic time and atomic actions."""
 
     def __init__(self, config: WorldConfig):
@@ -231,13 +232,6 @@ class AgoraWorld:
         self._validate_post(post_type, body, assets)
         imported_assets = [(self.import_media(item.path), item) for item in assets]
         self._validate_imported_assets(post_type, imported_assets)
-        for media, asset_input in imported_assets:
-            if asset_input.alt_text is not None or asset_input.transcript is not None:
-                self.db.execute(
-                    "UPDATE media_asset SET alt_text = ?, transcript = ? "
-                    "WHERE asset_id = ?",
-                    (asset_input.alt_text, asset_input.transcript, media.asset_id),
-                )
         cursor = self.db.execute(
             "INSERT INTO post (user_id, content, created_at, num_likes, "
             "num_dislikes, num_shares, post_type, title, visibility, "
@@ -259,19 +253,26 @@ class AgoraWorld:
         post_id = cursor.lastrowid
         for position, (media, asset_input) in enumerate(imported_assets):
             self.db.execute(
-                "INSERT OR IGNORE INTO creator_asset(user_id, asset_id) VALUES (?, ?)",
-                (author_id, media.asset_id),
+                "INSERT INTO creator_asset(user_id,asset_id,alt_text,transcript) VALUES (?, ?, ?, ?) ON CONFLICT(user_id,asset_id) DO UPDATE SET alt_text=COALESCE(excluded.alt_text,creator_asset.alt_text), transcript=COALESCE(excluded.transcript,creator_asset.transcript)",
+                (
+                    author_id,
+                    media.asset_id,
+                    asset_input.alt_text,
+                    asset_input.transcript,
+                ),
             )
             self.db.execute(
                 "INSERT INTO post_asset "
-                "(post_id, asset_id, position, role, caption) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "(post_id, asset_id, position, role, caption,alt_text,transcript) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     post_id,
                     media.asset_id,
                     position,
                     asset_input.role,
                     asset_input.caption,
+                    asset_input.alt_text,
+                    asset_input.transcript,
                 ),
             )
         for topic_name in dict.fromkeys(topics or []):
@@ -315,7 +316,7 @@ class AgoraWorld:
                 "duration_ms": row[5],
             }
             for row in self.db.execute(
-                "SELECT m.asset_id, m.media_type, m.alt_text, m.width, m.height, m.duration_ms FROM creator_asset ca JOIN media_asset m ON m.asset_id = ca.asset_id WHERE ca.user_id = ? ORDER BY m.asset_id",
+                "SELECT m.asset_id, m.media_type, ca.alt_text, m.width, m.height, m.duration_ms FROM creator_asset ca JOIN media_asset m ON m.asset_id = ca.asset_id WHERE ca.user_id = ? ORDER BY m.asset_id",
                 (user_id,),
             )
         ]
@@ -332,7 +333,7 @@ class AgoraWorld:
             }:
                 raise ValueError("Asset entries use asset_id, role and caption")
             row = self.db.execute(
-                "SELECT m.object_key, m.alt_text, m.transcript FROM creator_asset ca JOIN media_asset m ON m.asset_id = ca.asset_id WHERE ca.user_id = ? AND m.asset_id = ?",
+                "SELECT m.object_key, ca.alt_text, ca.transcript FROM creator_asset ca JOIN media_asset m ON m.asset_id = ca.asset_id WHERE ca.user_id = ? AND m.asset_id = ?",
                 (user_id, spec.get("asset_id")),
             ).fetchone()
             if row is None:
@@ -384,7 +385,7 @@ class AgoraWorld:
             ).fetchone()
             if row is None:
                 return {"success": False, "error": "Unknown post"}
-            if row[1] == "repost":
+            if row[1] == "repost" and self.preset.name != "reddit":
                 post_id = row[0]
             if not self.get_feed(
                 author_id, 1, record_impressions=False, eligible_post_ids=[post_id]
@@ -462,6 +463,8 @@ class AgoraWorld:
 
     @atomic_action
     def like_post(self, user_id: int, post_id: int) -> bool:
+        if self.preset.name == "reddit":
+            return self.vote_post(user_id, post_id, 1)
         existing = self.db.execute(
             'SELECT 1 FROM "like" WHERE user_id = ? AND post_id = ?', (user_id, post_id)
         ).fetchone()
@@ -549,6 +552,7 @@ class AgoraWorld:
             (followee_id,),
         )
         self._record_event("user_followed", follower_id, "user", followee_id, {})
+        self.notify(followee_id, follower_id, "follow")
         self.db.commit()
         return True
 
@@ -625,6 +629,8 @@ class AgoraWorld:
 
     @atomic_action
     def dislike_post(self, user_id: int, post_id: int) -> bool:
+        if self.preset.name == "reddit":
+            return self.vote_post(user_id, post_id, -1)
         if not self.preset.allow_dislike:
             raise ValueError(f"Dislikes are disabled for {self.preset.name}.")
         if self.db.execute(
@@ -658,6 +664,24 @@ class AgoraWorld:
             "SELECT 1 FROM post WHERE post_id = ?", (post_id,)
         ).fetchone():
             raise KeyError(f"Unknown post_id: {post_id}")
+        original = self.require_post(user_id, post_id)
+        if self.preset.name == "x":
+            visited = set()
+            while (
+                original["post_type"] == "repost"
+                and original.get("original_post_id")
+                and post_id not in visited
+            ):
+                visited.add(post_id)
+                post_id = original["original_post_id"]
+                original = self.require_post(user_id, post_id)
+            if not quote_body:
+                existing = self.db.execute(
+                    "SELECT post_id FROM post WHERE user_id=? AND original_post_id=? AND post_type='repost' AND deleted=0",
+                    (user_id, post_id),
+                ).fetchone()
+                if existing:
+                    return existing[0]
         post_type = "quote" if quote_body else "repost"
         cursor = self.db.execute(
             "INSERT INTO post(user_id, original_post_id, content, quote_content, "
@@ -725,7 +749,7 @@ class AgoraWorld:
         rows = self.db.execute(
             "SELECT comment_id, user_id, content, created_at, num_likes, "
             "num_dislikes, parent_comment_id, root_comment_id, "
-            "reply_to_user_id, is_pinned FROM comment WHERE post_id = ? "
+            "reply_to_user_id, is_pinned, deleted, edited_at_tick FROM comment WHERE post_id = ? "
             "ORDER BY is_pinned DESC, created_at, comment_id",
             (post_id,),
         ).fetchall()
@@ -741,6 +765,8 @@ class AgoraWorld:
                 "root_comment_id": row[7],
                 "reply_to_user_id": row[8],
                 "is_pinned": bool(row[9]),
+                "deleted": bool(row[10]),
+                "edited_at_tick": row[11],
                 "replies": [],
             }
             for row in rows
@@ -790,11 +816,13 @@ class AgoraWorld:
             )
             params = (user_id,)
         visibility_clause = (
-            "WHERE (p.visibility = 'public' OR p.user_id = ? OR "
+            "WHERE p.deleted = 0 AND p.removed_by IS NULL AND (p.visibility = 'public' OR p.user_id = ? OR "
             "(p.visibility = 'followers' AND EXISTS (SELECT 1 FROM follow vf "
             "WHERE vf.follower_id = ? AND vf.followee_id = p.user_id))) "
         )
         params = (*params, user_id, user_id)
+        visibility_clause += "AND NOT EXISTS (SELECT 1 FROM community nc WHERE nc.name = p.community AND nc.visibility = 'private' AND NOT EXISTS (SELECT 1 FROM community_member nm WHERE nm.community = nc.name AND nm.user_id = ?)) "
+        params += (user_id,)
         if eligible_post_ids is not None:
             # JSON's table-valued function avoids SQLite's placeholder limit
             # for large controlled pools and filters before hydration/scoring.
@@ -806,7 +834,7 @@ class AgoraWorld:
             "(SELECT COUNT(*) FROM collection c WHERE c.post_id = p.post_id), "
             "(SELECT COUNT(*) FROM comment cm WHERE cm.post_id = p.post_id), "
             "p.community, p.location, p.original_post_id, p.quote_content, "
-            "p.reply_to_post_id, p.num_dislikes, p.language "
+            "p.reply_to_post_id, p.num_dislikes, p.language, p.edited_at_tick, p.link_url "
             "FROM post p JOIN user u ON u.user_id = p.user_id "
             f"{following_clause}"
             f"{visibility_clause}"
@@ -873,6 +901,9 @@ class AgoraWorld:
                 "reply_to_post_id": row[16],
                 "num_dislikes": row[17],
                 "language": row[18],
+                "edited_at_tick": row[19],
+                "url": row[20],
+                "num_comments": row[11],
             }
             for score, row, reason in selected
         ]
@@ -1437,14 +1468,21 @@ class AgoraWorld:
             "VALUES (?, ?, ?, ?, ?)",
             (post_id, asset_id, position, role, caption),
         )
+        owner = self.db.execute(
+            "SELECT user_id FROM post WHERE post_id=?", (post_id,)
+        ).fetchone()[0]
+        self.db.execute(
+            "UPDATE post_asset SET alt_text=(SELECT alt_text FROM creator_asset WHERE user_id=? AND asset_id=?), transcript=(SELECT transcript FROM creator_asset WHERE user_id=? AND asset_id=?) WHERE post_id=? AND position=?",
+            (owner, asset_id, owner, asset_id, post_id, position),
+        )
         self.db.commit()
 
     def get_post_assets(self, post_id: int) -> list[dict]:
         rows = self.db.execute(
             "SELECT m.asset_id, m.media_type, m.object_key, m.mime_type, "
             "m.byte_size, m.width, m.height, m.duration_ms, p.position, "
-            "p.role, p.caption, m.technical_metadata, m.alt_text, "
-            "m.transcript "
+            "p.role, p.caption, m.technical_metadata, p.alt_text, "
+            "p.transcript "
             "FROM post_asset p JOIN media_asset m ON m.asset_id = p.asset_id "
             "WHERE p.post_id = ? ORDER BY p.position",
             (post_id,),

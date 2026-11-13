@@ -16,6 +16,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+from agora.read_views import prepare_read_views
 from agora.recommendation import RecommendationConfig
 from agora.runner import JsonSessionPolicy, run_sessions
 from agora.world import open_world
@@ -193,6 +194,8 @@ class ExperimentManager:
                 destination = sqlite3.connect(world_dir / "sandbox.db")
                 try:
                     self.source.db.backup(destination)
+                    destination.execute("DELETE FROM agent_api_token")
+                    destination.commit()
                 finally:
                     destination.close()
                 shutil.copytree(self.source.config.media_path, world_dir / "media")
@@ -223,6 +226,11 @@ class ExperimentManager:
                             "world_id": "world",
                             "preset": self.source.preset.name,
                             "format_version": 1,
+                            "product_limits": json.loads(
+                                (
+                                    self.source.config.world_dir / "world.json"
+                                ).read_text()
+                            ).get("product_limits", {}),
                         }
                     )
                 )
@@ -236,7 +244,7 @@ class ExperimentManager:
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "config": config,
                     "source_world": self.source.config.world_id,
-                    "engine_version": "0.3.0",
+                    "engine_version": "0.4.0",
                     "media_manifest": media_manifest,
                     "initial_database_sha256": initial_sha,
                     "config_sha256": hashlib.sha256(
@@ -382,6 +390,7 @@ class ExperimentManager:
             raise KeyError("Unknown run")
         root = self.root / run_id
         db = sqlite3.connect(f"file:{root / 'world' / 'sandbox.db'}?mode=ro", uri=True)
+        prepare_read_views(db)
         world = AgoraWorld.__new__(AgoraWorld)
         world.config = WorldConfig("world", root, self.source.preset.name)
         world.preset = PLATFORM_PRESETS[self.source.preset.name]
@@ -472,6 +481,11 @@ class ExperimentManager:
                     ),
                     "comments": sum(
                         event["action"]["action_type"] == "create_comment"
+                        and event["result"].get("success", False)
+                        for event in events
+                    ),
+                    "replies": sum(
+                        event["action"]["action_type"] == "reply_post"
                         and event["result"].get("success", False)
                         for event in events
                     ),

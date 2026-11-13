@@ -10,10 +10,12 @@ import copy
 import json
 from dataclasses import asdict
 
+from agora.platforms import validate_creation
+from agora.product_session import NATIVE_SPECS, ProductSession
 from agora.recommendation import RecommendationConfig, RecommendationEngine
 
 ACTION_SPECS = {
-    "refresh": {"optional": ["feed_type"]},
+    "refresh": {"optional": ["feed_type", "location"]},
     "scroll": {},
     "open_post": {"required": ["post_id"]},
     "back": {},
@@ -40,6 +42,7 @@ ACTION_SPECS = {
             "location",
             "assets",
             "post_type",
+            "url",
         ],
     },
     "view_profile": {"optional": ["user_id"]},
@@ -52,6 +55,7 @@ ACTION_SPECS = {
             "topics",
             "assets",
             "post_type",
+            "url",
             "language",
             "community",
             "location",
@@ -72,7 +76,7 @@ FEEDBACK_WEIGHTS = {
 }
 
 
-class SocialSession:
+class SocialSession(ProductSession):
     """One continuous browser visit. The injected world supplies social CRUD.
 
     AgoraWorld owns storage and action transactions. This session supplies
@@ -123,6 +127,9 @@ class SocialSession:
             "step": 0,
             "status": "active",
             "dwell_ms": 0,
+            "nav_stack": [],
+            "media_index": 0,
+            "video_position_ms": 0,
         }
         cursor = world.db.execute(
             "INSERT INTO agora_session(user_id, started_tick, state_json, config_json) "
@@ -136,7 +143,7 @@ class SocialSession:
         )
         world.db.commit()
         session = cls(world, cursor.lastrowid)
-        session._request("discover")
+        session._request(session.contract.feeds[0])
         session._event(
             {"action_type": "start_session", "arguments": {}}, {"success": True}
         )
@@ -153,8 +160,20 @@ class SocialSession:
             "view_profile",
             "open_notifications",
             "open_studio",
+            "open_post",
         }
-        if self.state["screen"] in {"feed", "search", "profile", "notifications"}:
+        if self.state["screen"] in {
+            "feed",
+            "search",
+            "profile",
+            "notifications",
+            "community",
+            "saved",
+            "collection",
+        }:
+            names.update({"like_post", "unlike_post"})
+            if self.world.preset.name in {"xiaohongshu", "generic"}:
+                names.update({"collect_post", "uncollect_post"})
             names.update(
                 {
                     "scroll",
@@ -183,12 +202,55 @@ class SocialSession:
             names.update({"save_draft", "back"})
             if self.state.get("draft"):
                 names.add("publish_draft")
-        return {name: ACTION_SPECS[name] for name in sorted(names)}
+        platform = self.world.preset.name
+        if platform in {"x", "reddit"}:
+            names.difference_update({"collect_post", "uncollect_post"})
+        if platform == "x":
+            names.discard("create_comment")
+        if platform == "reddit":
+            names.difference_update({"like_post", "unlike_post"})
+        actions = {name: copy.deepcopy(ACTION_SPECS[name]) for name in sorted(names)}
+        actions.update(self.product_actions())
+        for name in ("create_post", "save_draft"):
+            if name in actions and platform == "reddit":
+                actions[name]["required"] = ["body", "title", "community"]
+                actions[name]["optional"] = [
+                    item
+                    for item in actions[name]["optional"]
+                    if item not in {"title", "community", "location"}
+                ]
+            if name in actions and platform == "x":
+                actions[name]["optional"] = [
+                    item
+                    for item in actions[name]["optional"]
+                    if item not in {"title", "topics", "community", "location", "url"}
+                ]
+        return dict(sorted(actions.items()))
 
     def observe(self) -> dict:
         user = self.db.execute(
             "SELECT user_name, name, bio FROM user WHERE user_id = ?", (self.user_id,)
         ).fetchone()
+        current_post = self.state["current_post"]
+        screen = self.state["screen"]
+        if current_post:
+            visible = self.world.get_feed(
+                self.user_id,
+                1,
+                record_impressions=False,
+                eligible_post_ids=[current_post["post_id"]],
+            )
+            current_post = self._public_post(visible[0]) if visible else None
+            if not current_post:
+                screen = "feed"
+        ids = [post["post_id"] for post in self.state["cards"]]
+        fresh = {
+            post["post_id"]: self._public_post(post, True)
+            for post in self.world.get_feed(
+                self.user_id, len(ids), record_impressions=False, eligible_post_ids=ids
+            )
+        }
+        cards = [fresh[pid] for pid in ids if pid in fresh]
         return copy.deepcopy(
             {
                 "session_id": self.session_id,
@@ -196,13 +258,13 @@ class SocialSession:
                 "account": {"handle": user[0], "name": user[1], "bio": user[2]},
                 "platform": self.world.preset.name,
                 "tick": self.world.current_tick,
-                "screen": self.state["screen"],
+                "screen": screen,
                 "status": self.state["status"],
                 "elapsed_ms": self.state["elapsed_ms"],
                 "feed_type": self.state["feed_type"],
                 "page": self.state["page"],
-                "cards": self.state["cards"],
-                "post": self.state["current_post"],
+                "cards": cards,
+                "post": current_post,
                 "draft": self.state["draft"],
                 "profile": self.state["profile"],
                 "notifications": self.state["notifications"],
@@ -210,10 +272,13 @@ class SocialSession:
                 if self.state["screen"] == "studio"
                 else [],
                 "available_actions": self.available_actions(),
+                **self.native_observation(),
             }
         )
 
-    def _public_post(self, post: dict, preview: bool = False) -> dict:
+    def _public_post(
+        self, post: dict, preview: bool = False, include_refs=True
+    ) -> dict:
         result = {
             key: value
             for key, value in post.items()
@@ -228,28 +293,33 @@ class SocialSession:
             for asset in post.get("assets", [])
         ]
         if preview:
-            result["body"] = result.get("body", "")[:120]
+            result["body"] = (
+                result.get("body", "")
+                if self.world.preset.name == "x"
+                else result.get("body", "")[:120]
+            )
             # A card shows its cover; opening reveals the ordered gallery/video.
             assets = result["assets"]
             covers = [asset for asset in assets if asset["role"] == "cover"]
-            result["assets"] = (covers or assets)[:1]
+            result["assets"] = (
+                assets[:4] if self.world.preset.name == "x" else (covers or assets)[:1]
+            )
         else:
             result["comments"] = post.get("comments", [])
-            result["liked"] = bool(
-                self.db.execute(
-                    'SELECT 1 FROM "like" WHERE user_id = ? AND post_id = ?',
-                    (self.user_id, post["post_id"]),
-                ).fetchone()
-            )
             result["collected"] = bool(
                 self.db.execute(
                     "SELECT 1 FROM collection WHERE user_id = ? AND post_id = ?",
                     (self.user_id, post["post_id"]),
                 ).fetchone()
             )
-        return result
+        return self.normalize_post(result, preview, include_refs)
 
-    def _request(self, feed_type: str, query=None, community=None):
+    def _request(self, feed_type: str, query=None, community=None, location=None):
+        if feed_type != "search" and self.product_feed(feed_type, community, location):
+            return
+        requested_type = feed_type
+        if feed_type == "for_you":
+            feed_type = "discover"
         seed = self.db.execute(
             "SELECT seed FROM simulation_state WHERE singleton = 1"
         ).fetchone()[0]
@@ -272,7 +342,7 @@ class SocialSession:
             for post in ids
             if post in by_id
         ]
-        self._store_cards(feed_type, cards, diagnostics)
+        self._store_cards(requested_type, cards, diagnostics)
 
     def _store_cards(self, feed_type, cards, diagnostics):
         cursor = self.db.execute(
@@ -415,24 +485,82 @@ class SocialSession:
             raise
 
     async def _act(self, action_type, arguments, rationale):
-        args = {} if arguments is None else arguments
+        args = {} if arguments is None else copy.deepcopy(arguments)
         if not isinstance(args, dict):
             raise TypeError("arguments must be an object")
+        if self.state.get("current_post"):
+            current_id = self.state["current_post"]["post_id"]
+            live = self.world.get_feed(
+                self.user_id,
+                1,
+                record_impressions=False,
+                eligible_post_ids=[current_id],
+            )
+            if live:
+                self.state["current_post"] = self._public_post(live[0])
         if action_type not in self.available_actions():
             raise ValueError(f"Action {action_type!r} is unavailable on this screen")
-        spec = ACTION_SPECS[action_type]
+        spec = self.available_actions()[action_type]
         if set(spec.get("required", [])) - args.keys():
             raise ValueError(f"Missing arguments for {action_type}")
         if args.keys() - set(spec.get("required", []) + spec.get("optional", [])):
             raise ValueError(f"Unexpected arguments for {action_type}")
-        for key in ("post_id", "followee_id", "parent_comment_id", "user_id"):
+        for key in (
+            "post_id",
+            "followee_id",
+            "parent_comment_id",
+            "user_id",
+            "comment_id",
+            "folder_id",
+            "notification_id",
+        ):
             if key in args and (type(args[key]) is not int or args[key] < 1):
                 raise ValueError(f"{key} must be a positive integer")
         visible = {post["post_id"] for post in self.state["cards"]}
+        visible.update(
+            post.get("reaction_target_id")
+            for post in self.state["cards"]
+            if post.get("reaction_target_id")
+        )
         current = self.state["current_post"]
-        if "post_id" in args:
+        if (
+            self.world.preset.name == "x"
+            and "post_id" in args
+            and action_type
+            in {
+                "like_post",
+                "unlike_post",
+                "bookmark_post",
+                "unbookmark_post",
+                "repost",
+                "undo_repost",
+                "quote_post",
+                "reply_post",
+            }
+        ):
+            shown = next(
+                (
+                    post
+                    for post in ([current] if current else self.state["cards"])
+                    if post["post_id"] == args["post_id"]
+                ),
+                None,
+            )
+            if shown and shown.get("reaction_target_id"):
+                args["post_id"] = shown["reaction_target_id"]
+        if "post_id" in args and action_type not in {
+            "open_post",
+            "approve_post",
+            "remove_post",
+        }:
             if self.state["screen"] == "detail":
-                if args["post_id"] != current["post_id"]:
+                displayed = {current["post_id"], current.get("reaction_target_id")}
+                displayed.update(post["post_id"] for post in current.get("replies", []))
+                if current.get("original_post") and not current["original_post"].get(
+                    "unavailable"
+                ):
+                    displayed.add(current["original_post"]["post_id"])
+                if args["post_id"] not in displayed:
                     raise PermissionError("Open this post before interacting")
             elif args["post_id"] not in visible:
                 raise PermissionError("Only visible cards can be opened or hidden")
@@ -442,15 +570,36 @@ class SocialSession:
             authors = {post["author_id"] for post in self.state["cards"]}
             if current:
                 authors.add(current["author_id"])
+                authors.update(post["author_id"] for post in current.get("replies", []))
+                if current.get("original_post") and current["original_post"].get(
+                    "author_id"
+                ):
+                    authors.add(current["original_post"]["author_id"])
             if args["followee_id"] not in authors:
                 raise PermissionError("Only a visible author can be followed")
+        if "comment_id" in args:
+            known = set()
+            queue = list(current.get("comments", [])) if current else []
+            while queue:
+                comment = queue.pop()
+                known.add(comment["comment_id"])
+                queue.extend(comment.get("replies", []))
+            if args["comment_id"] not in known:
+                raise PermissionError("Open the comment before interacting")
         result = {"success": True}
         elapsed = 300
-        if action_type == "view_profile":
+        if action_type in NATIVE_SPECS:
+            result, elapsed = self.dispatch_product(action_type, args)
+        elif action_type == "view_profile":
             uid = args.get("user_id", self.user_id)
             known = {p["author_id"] for p in self.state["cards"]} | {self.user_id}
             if current:
                 known.add(current["author_id"])
+                if current.get("original_post") and current["original_post"].get(
+                    "author_id"
+                ):
+                    known.add(current["original_post"]["author_id"])
+            known.update(item["actor_id"] for item in self.state["notifications"])
             if uid not in known:
                 raise PermissionError("Only known profiles can be opened")
             profile = self.db.execute(
@@ -530,10 +679,11 @@ class SocialSession:
                 },
             )
             self.state["screen"] = "notifications"
-            self.db.execute(
-                "UPDATE notification SET read = 1 WHERE recipient_id = ?",
-                (self.user_id,),
-            )
+            for notification in notifications:
+                self.db.execute(
+                    "UPDATE notification SET read = 1 WHERE notification_id=? AND recipient_id=?",
+                    (notification["notification_id"], self.user_id),
+                )
         elif action_type == "open_studio":
             self.state.update(screen="studio", current_post=None)
         elif action_type == "save_draft":
@@ -547,10 +697,15 @@ class SocialSession:
             self.state["draft"] = None
             elapsed = 1000
         elif action_type == "refresh":
-            feed_type = args.get("feed_type", "discover")
-            if feed_type not in self.world.preset.feed_types:
+            feed_type = args.get(
+                "feed_type",
+                self.state["feed_type"]
+                if self.state["feed_type"] in self.contract.feeds
+                else self.contract.feeds[0],
+            )
+            if feed_type not in set(self.contract.feeds) | {"discover"}:
                 raise ValueError("Unavailable feed")
-            self._request(feed_type)
+            self._request(feed_type, location=args.get("location"))
             elapsed = 800
         elif action_type == "search":
             if not isinstance(args["query"], str) or len(args["query"]) > 200:
@@ -571,6 +726,26 @@ class SocialSession:
                 self._page(cards)
             elapsed = 700
         elif action_type == "open_post":
+            self._check_visible(args["post_id"])
+            self.state.setdefault("nav_stack", []).append(
+                copy.deepcopy(
+                    {
+                        key: self.state.get(key)
+                        for key in (
+                            "screen",
+                            "feed_type",
+                            "cards",
+                            "page",
+                            "request_id",
+                            "current_post",
+                            "profile",
+                            "notifications",
+                        )
+                    }
+                )
+            )
+            self.state["nav_stack"] = self.state["nav_stack"][-10:]
+            self.state.update(media_index=0, video_position_ms=0, comment_offset=0)
             self.state["current_post"] = self._public_post(
                 self.world.view_post(self.user_id, args["post_id"])
             )
@@ -578,13 +753,24 @@ class SocialSession:
             self._feedback(args["post_id"], "open_post")
             elapsed = 500
         elif action_type == "back":
-            self.state.update(
-                screen=self.state["feed_type"]
-                if self.state["feed_type"] in {"search", "profile", "notifications"}
-                else "feed",
-                current_post=None,
-                dwell_ms=0,
-            )
+            if self.state.get("nav_stack"):
+                self.state.update(self.state["nav_stack"].pop())
+            else:
+                self.state.update(
+                    screen=self.state["feed_type"]
+                    if self.state["feed_type"]
+                    in {
+                        "search",
+                        "profile",
+                        "notifications",
+                        "community",
+                        "saved",
+                        "collection",
+                    }
+                    else "feed",
+                    current_post=None,
+                    dwell_ms=0,
+                )
         elif action_type == "dwell":
             duration = args["duration_ms"]
             if type(duration) is not int or not 1 <= duration <= 300000:
@@ -648,15 +834,6 @@ class SocialSession:
         return result
 
     def _validate_creation(self, args):
-        if (
-            not isinstance(args["body"], str)
-            or not args["body"].strip()
-            or len(args["body"]) > 10000
-        ):
-            raise ValueError("body must be nonempty and at most 10000 characters")
-        for key in ("title", "language", "community", "location"):
-            if key in args and (not isinstance(args[key], str) or len(args[key]) > 200):
-                raise ValueError(f"{key} must be a string of at most 200 characters")
         if "topics" in args and (
             not isinstance(args["topics"], list)
             or len(args["topics"]) > 20
@@ -665,25 +842,47 @@ class SocialSession:
                 for topic in args["topics"]
             )
         ):
-            raise ValueError("topics must be a list of up to 20 short strings")
+            raise ValueError("topics must be short text labels")
         assets = self.world.library_assets(self.user_id, args.get("assets", []))
-        post_type = args.get(
-            "post_type", "gallery" if len(assets) > 1 else "image" if assets else "text"
+        post_type = validate_creation(
+            self.world.preset.name,
+            args,
+            self.world.asset_library(self.user_id),
+            self.contract,
         )
-        if post_type not in {"text", "image", "gallery", "video"}:
-            raise ValueError("Unknown creation format")
-        self.world._validate_post(post_type, args["body"], assets)
+        self.world._validate_post(
+            "article" if post_type == "link" else post_type, args["body"], assets
+        )
+        if self.world.preset.name == "reddit":
+            self.world.can_post_to(self.user_id, args["community"])
 
     def _publish(self, args):
         self._validate_creation(args)
         args = copy.deepcopy(args)
+        post_type = validate_creation(
+            self.world.preset.name,
+            args,
+            self.world.asset_library(self.user_id),
+            self.contract,
+        )
         assets = self.world.library_assets(self.user_id, args.pop("assets", []))
-        post_type = args.pop(
-            "post_type", "gallery" if len(assets) > 1 else "image" if assets else "text"
+        args.pop("post_type", None)
+        url = args.pop("url", None)
+        if self.world.preset.name == "x":
+            import re
+
+            args["topics"] = list(
+                dict.fromkeys(re.findall(r"#([^\s#.,!?，。！？]+)", args["body"]))
+            )[:20]
+        pid = self.world.create_post(
+            self.user_id,
+            **args,
+            assets=assets,
+            post_type="article" if post_type == "link" else post_type,
         )
-        return self.world.create_post(
-            self.user_id, **args, assets=assets, post_type=post_type
-        )
+        if url:
+            self.db.execute("UPDATE post SET link_url=? WHERE post_id=?", (url, pid))
+        return pid
 
     def _check_visible(self, post_id):
         posts = self.world.get_feed(

@@ -27,6 +27,29 @@ def populate(world):
                 )
             )
         )
+    community_for_topic = {
+        "城市漫游": "r/lifestyle",
+        "咖啡": "r/lifestyle",
+        "摄影": "r/photography",
+        "数码": "r/technology",
+        "美食": "r/lifestyle",
+        "运动": "r/lifestyle",
+    }
+    if world.preset.name == "reddit":
+        for name, title in [
+            ("r/lifestyle", "Lifestyle and everyday experiences"),
+            ("r/photography", "Photography"),
+            ("r/technology", "Technology"),
+        ]:
+            world.create_community(
+                users[0],
+                name,
+                title,
+                rules=["Be respectful", "Stay on topic", "Explain your experience"],
+            )
+        for user in users:
+            for community in set(community_for_topic.values()):
+                world.join_community(user, community)
     colors = [
         (65, 101, 88),
         (151, 102, 75),
@@ -63,6 +86,9 @@ def populate(world):
             assets=[AssetInput(path, alt_text=f"{topic}主题的合成色块封面")],
             topics=[topic],
             language="zh-CN",
+            community=community_for_topic[topic]
+            if world.preset.name == "reddit"
+            else None,
         )
         path.unlink()
     reader = world.add_persona(
@@ -76,6 +102,9 @@ def populate(world):
         )
     )
     world.follow_user(reader, users[0])
+    if world.preset.name == "reddit":
+        for community in set(community_for_topic.values()):
+            world.join_community(reader, community)
     assets = world.db.execute(
         "SELECT asset_id FROM creator_asset WHERE user_id = ? ORDER BY asset_id LIMIT 3",
         (users[0],),

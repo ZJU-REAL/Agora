@@ -69,7 +69,11 @@ def test_detail_is_required_and_observation_hides_ranking_and_full_body(world):
         and "feed_reason" not in card
     )
     with pytest.raises(ValueError):
-        act(session, "like_post", {"post_id": card["post_id"]})
+        act(
+            session,
+            "create_comment",
+            {"post_id": card["post_id"], "content": "Read first"},
+        )
     with pytest.raises(PermissionError):
         act(session, "open_post", {"post_id": 999})
     act(session, "open_post", {"post_id": card["post_id"]})
@@ -248,7 +252,10 @@ def test_model_vision_receives_visible_cover_bytes_without_leaking_into_replay(
     )
     act(session, "open_post", {"post_id": post})
     parts = session_visual_parts(world, session.observe())
-    assert len([part for part in parts if part["type"] == "image_url"]) == 2
+    assert len([part for part in parts if part["type"] == "image_url"]) == 1
+    first = parts[-1]
+    act(session, "view_media", {"index": 1})
+    assert session_visual_parts(world, session.observe())[-1] != first
     assert "base64" not in json.dumps(session.trajectory())
     assert "object_key" not in json.dumps(session.observe())
 

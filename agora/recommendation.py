@@ -139,7 +139,11 @@ class RecommendationEngine:
             raise ValueError("Search query cannot be empty")
         interests = self.interests(user_id, tick)
         params = {"viewer": user_id, "cap": self.config.channel_limit}
-        gate = VISIBILITY + " AND p.user_id != :viewer"
+        gate = (
+            VISIBILITY
+            + " AND p.user_id != :viewer AND p.deleted = 0 AND p.removed_by IS NULL"
+        )
+        gate += " AND NOT EXISTS (SELECT 1 FROM community nc WHERE nc.name = p.community AND nc.visibility = 'private' AND NOT EXISTS (SELECT 1 FROM community_member nm WHERE nm.community = nc.name AND nm.user_id = :viewer))"
         # Explicit post-level negative feedback is stronger than topic decay.
         gate += (
             " AND NOT EXISTS (SELECT 1 FROM agora_feedback nf WHERE "

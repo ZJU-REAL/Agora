@@ -16,7 +16,7 @@ class ActionConnection(sqlite3.Connection):
 
 
 class WorldStore:
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     def __init__(self, path):
         self.db = sqlite3.connect(str(path), factory=ActionConnection)
@@ -39,6 +39,10 @@ class WorldStore:
                 "title": "TEXT",
                 "visibility": "TEXT NOT NULL DEFAULT 'public'",
                 "language": "TEXT",
+                "deleted": "INTEGER NOT NULL DEFAULT 0",
+                "edited_at_tick": "INTEGER",
+                "removed_by": "INTEGER REFERENCES user(user_id)",
+                "link_url": "TEXT",
             },
         )
         self._columns(
@@ -48,10 +52,36 @@ class WorldStore:
                 "root_comment_id": "INTEGER REFERENCES comment(comment_id)",
                 "reply_to_user_id": "INTEGER REFERENCES user(user_id)",
                 "is_pinned": "INTEGER NOT NULL DEFAULT 0",
+                "deleted": "INTEGER NOT NULL DEFAULT 0",
+                "edited_at_tick": "INTEGER",
             },
+        )
+        self._columns("creator_asset", {"alt_text": "TEXT", "transcript": "TEXT"})
+        self._columns("post_asset", {"alt_text": "TEXT", "transcript": "TEXT"})
+        self._columns("community_member", {"approved": "INTEGER NOT NULL DEFAULT 0"})
+        self._columns(
+            "simulation_state",
+            {
+                "current_time_ms": "INTEGER NOT NULL DEFAULT 0",
+                "tick_duration_ms": "INTEGER NOT NULL DEFAULT 60000",
+            },
+        )
+        self._columns(
+            "agent_model_call",
+            {"decision_id": "TEXT", "ordinal": "INTEGER NOT NULL DEFAULT 0"},
         )
         self.db.executescript(
             (Path(__file__).parent / "schema" / "world.sql").read_text()
+        )
+        if version < 2:
+            self.db.execute(
+                "UPDATE creator_asset SET alt_text=(SELECT alt_text FROM media_asset m WHERE m.asset_id=creator_asset.asset_id), transcript=(SELECT transcript FROM media_asset m WHERE m.asset_id=creator_asset.asset_id)"
+            )
+            self.db.execute(
+                "UPDATE post_asset SET alt_text=(SELECT alt_text FROM media_asset m WHERE m.asset_id=post_asset.asset_id), transcript=(SELECT transcript FROM media_asset m WHERE m.asset_id=post_asset.asset_id)"
+            )
+        self.db.execute(
+            "UPDATE simulation_state SET current_time_ms = MAX(current_time_ms, current_tick * tick_duration_ms)"
         )
         self.db.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
         self.db.commit()
