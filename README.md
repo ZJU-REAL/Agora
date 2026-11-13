@@ -1,10 +1,63 @@
-# Agora-OASIS
+# Agora
 
-Agora-OASIS 是基于 [OASIS](https://github.com/camel-ai/oasis) 增强的多平台、多媒体 AI 社交
-模拟沙盒。当前支持小红书、Reddit 和 X，并提供独占式 Arena 评测：每个 episode 只有一个待评
-Candidate，其余用户由环境控制。
+Agora 是用于研究 AI 社交行为的多平台模拟沙盒，支持小红书、Reddit 和 X。目标是让 AI
+在有推荐、浏览、创作、互动和社会反馈的世界中运营账号，并为舆情传播、情感对齐与社会学
+实验留下可检查、可复现的记录。
 
-项目分为两层：
+**0.2 新增：独立的 Agora 推荐、浏览会话、多账号策略调度和本地可视化。** 新服务由
+`agora/` 实现，当前数据库、平台动作与媒体仍通过 OASIS 适配器提供。迁移尚未完成，
+详细边界与后续计划见 [架构审查与路线](docs/agora-roadmap.md)。
+
+## 启动社交沙盒
+
+Python 3.10–3.11。轻量路径不需要 CAMEL、Torch、Docker 或模型 API：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-sandbox.txt
+
+# 创建 7 个账号、48 条带合成封面的帖子，并保存三个账号的浏览轨迹
+python -m agora demo agora-demo
+
+# 打开 http://127.0.0.1:8765：切换账号、开始新会话或回放已有记录
+python -m agora serve agora-demo
+```
+
+演示需要空世界；再次运行请换一个 `world_id`。世界保存在 `data/worlds/`，不会提交到 Git。
+可选安装命令入口：`pip install --no-deps -e .`；之后可使用 `agora`。
+`pip install -e .` 仍会安装上游完整依赖，轻量沙盒使用上面的安装路径。
+
+```bash
+python -m agora simulate agora-demo --user-id 7 --user-id 1 \
+  --ticks 5 --steps-per-tick 6 \
+  --recommendation-config configs/environments/recommendation.hybrid.json
+
+# 接入现有模型 provider；凭据通过环境变量提供
+python -m agora simulate agora-demo --user-id 7 --ticks 3 \
+  --provider-config configs/benchmarks/providers.example.json
+
+python -m agora export agora-demo --session-id 1 \
+  --output data/worlds/agora-demo/session-1.json
+```
+
+新的推荐流水线为多路召回 → 行为兴趣排序 → 曝光疲劳 → 多样性重排 → 探索位。
+AI 使用刷新、滚动、打开、停留、返回、点赞、收藏、关注、搜索、评论和文字发布等会话
+工具；视觉 provider 可看到当前屏幕的实际图片或视频帧。仅实际显示页面计曝光，排序分数
+留在研究者诊断中。网页支持实时操作、逐步回放与曝光话题分布。
+
+推荐器是常见平台机制的工程代理，**尚未用真实平台日志拟合、校准或训练**。合成演示和
+规则用户用于开发验证，不能将结果直接解释为真实用户行为或厂商推荐效果。新会话层尚未
+覆盖底座的全部多媒体创作和三平台原生动作。详见 [推荐与会话协议](docs/simulation.md)。
+
+## 现有世界与受控评测
+
+OASIS 世界底座和独占式 Arena 评测继续可用：每个 episode 只有一个待评 Candidate，
+其余用户由环境控制。自适应推荐沙盒与受控评测是不同的实验模式。
+
+当前分为三层：
+
+- **Agora 服务（`agora/`）**：推荐、持久浏览会话、多账号策略调度、可视化与 CLI。
 
 - **模拟环境（`oasis/`）**：负责平台、用户、内容和时间演化，一个可变世界对应一个 SQLite
   数据库和一个媒体目录。
@@ -24,6 +77,8 @@ Candidate，其余用户由环境控制。
 ## 目录
 
 ```text
+agora/                 Agora 推荐、会话、策略与本地可视化
+agora/backends/        OASIS 及现有多媒体编码适配器
 oasis/                 模拟环境
 benchmarks/            评测协议、Runner 和指标
 configs/               环境与评测配置

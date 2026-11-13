@@ -1,4 +1,12 @@
-# 上游 OASIS 说明
+# OASIS 参考底座与迁移边界
+
+Agora 的新推荐、浏览会话、策略调度、研究控制台和入口位于 `agora/`，不调用上游
+神经推荐器或 CAMEL agent 调度。`agora/backends/oasis.py` 提供当前世界适配器；视觉
+编码暂通过 `agora/backends/visual.py` 复用既有评测工具。
+
+数据库 schema/migration、帖子/评论/关注 CRUD 和媒体存储仍使用 `oasis/`，因此目前尚未
+彻底脱离 OASIS。下一阶段会迁移这些底层能力，保留兼容 adapter 与原来源声明，具体
+验收见 [架构审查与路线](agora-roadmap.md)。重命名包不等于完成独立内核。
 
 Agora-OASIS 基于 CAMEL-AI OASIS：
 

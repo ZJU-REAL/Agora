@@ -1,4 +1,9 @@
-# Agora-OASIS 系统设计
+# Agora 系统设计
+
+2026-11-13：新增独立 `agora/` 服务，提供自适应推荐、持久浏览会话、多账号策略调度和
+本地可视化。世界 CRUD 暂通过 `agora/backends/oasis.py` 接入现有底座。新沙盒协议见
+[推荐与浏览会话](simulation.md)，迁移与待完成项见 [架构审查与路线](agora-roadmap.md)。
+以下核心边界与确定性内容池说明对应既有受控 Arena，不限制新的沙盒推荐实验。
 
 Agora-OASIS 是基于 OASIS 增强的社交模拟沙盒，Agora Benchmark 是其上层评测系统。环境负责
 平台、用户、内容和时间演化；评测层负责 Candidate、场景、Observer、指标和报告。

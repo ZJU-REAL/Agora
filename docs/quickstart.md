@@ -2,6 +2,19 @@
 
 项目使用 Python 3.11，不要求 Docker。视频功能需要系统安装 `ffmpeg` 和 `ffprobe`。
 
+## 交互沙盒与 AI 会话回放
+
+按下一节安装轻量依赖后，在仓库根目录运行：
+
+```bash
+python -m agora demo agora-demo
+python -m agora serve agora-demo
+```
+
+打开 `http://127.0.0.1:8765`。演示需要空世界，再次运行请换世界 ID。支持账号操作、
+会话回放和推荐观察。模型接入与算法说明见 [README](../README.md) 和
+[推荐与浏览会话](simulation.md)。
+
 ## 安装与建世界
 
 只使用 Agora 沙盒与评测层时，可以安装轻量依赖，无需 PyTorch、CAMEL 或推荐模型权重：

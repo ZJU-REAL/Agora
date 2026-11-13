@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agora · 社交模拟实验室</title>
+    <style>
+      :root {
+        --bg: #f5f4f0;
+        --ink: #242a27;
+        --muted: #858c86;
+        --line: #e2e5de;
+        --green: #285a44;
+        --red: #e75553;
+        --card: #fff;
+        --soft: #eef3ed;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          "PingFang SC",
+          "Microsoft YaHei",
+          sans-serif;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: var(--ink);
+      }
+      button:hover {
+        background: var(--soft);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      input,
+      select,
+      textarea {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 8px;
+        padding: 9px;
+        width: 100%;
+        color: var(--ink);
+      }
+      textarea {
+        resize: vertical;
+        min-height: 86px;
+      }
+      a {
+        color: var(--green);
+      }
+      header {
+        height: 78px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        padding: 0 32px;
+        gap: 18px;
+        background: #fafbf7;
+      }
+      .brand {
+        font:
+          700 28px Georgia,
+          serif;
+        letter-spacing: -1px;
+      }
+      .brand span {
+        color: var(--green);
+      }
+      .divider {
+        height: 25px;
+        width: 1px;
+        background: var(--line);
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.7;
+      }
+      .status {
+        margin-left: auto;
+        border: 1px solid #d7e3d4;
+        border-radius: 20px;
+        padding: 6px 12px;
+        font-size: 12px;
+        color: var(--green);
+      }
+      .status:before {
+        content: "●";
+        padding-right: 7px;
+        font-size: 9px;
+      }
+      main {
+        max-width: 1600px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 220px minmax(400px, 1fr) 340px;
+        gap: 24px;
+        padding: 28px 32px;
+      }
+      .label {
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+      .panel h3 {
+        margin: 0 0 12px;
+        font-size: 14px;
+      }
+      .profile {
+        background: #edf1e9;
+      }
+      .avatar {
+        width: 44px;
+        height: 44px;
+        background: var(--green);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        margin: 18px 0 12px;
+      }
+      .name {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .bio {
+        color: #6c776d;
+        font-size: 12px;
+        line-height: 1.8;
+        margin: 8px 0 18px;
+      }
+      .primary {
+        background: var(--green);
+        color: white;
+        border-color: var(--green);
+      }
+      .primary:hover {
+        background: #39735a;
+      }
+      .wide {
+        width: 100%;
+        margin-top: 10px;
+      }
+      .facts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 8px;
+      }
+      .fact strong {
+        display: block;
+        font-size: 24px;
+        font-weight: 500;
+      }
+      .fact span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.9;
+      }
+      .active-badge {
+        color: var(--green);
+        background: #e9f2e8;
+        border-radius: 12px;
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 0 16px;
+      }
+      .section-head h1 {
+        font-size: 21px;
+        font-weight: 500;
+        margin: 0;
+      }
+      .section-head span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .phone {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+        min-height: 640px;
+      }
+      .appbar {
+        display: flex;
+        align-items: center;
+        padding: 20px 24px;
+        gap: 18px;
+        border-bottom: 1px solid #f0f0ec;
+      }
+      .appbrand {
+        font-weight: 700;
+        font-size: 18px;
+        white-space: nowrap;
+        color: var(--red);
+      }
+      .searchbar {
+        display: flex;
+        gap: 6px;
+        flex: 1;
+      }
+      .searchbar input {
+        background: #f7f8f5;
+        font-size: 12px;
+      }
+      .tabs {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 15px 24px;
+      }
+      .tab {
+        border: 0;
+        padding: 6px 0;
+        color: #899088;
+        border-radius: 0;
+      }
+      .tab.active {
+        color: var(--ink);
+        font-weight: 600;
+        border-bottom: 2px solid var(--red);
+      }
+      .tabs .refresh {
+        margin-left: auto;
+        font-size: 12px;
+      }
+      .feed {
+        padding: 0 18px 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .post-card {
+        border: 1px solid #efefea;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        background: white;
+      }
+      .cover {
+        background: #e9eee5;
+        aspect-ratio: 4/3;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .cover span {
+        font:
+          italic 24px Georgia,
+          serif;
+        color: #657762;
+      }
+      .post-info {
+        padding: 12px;
+      }
+      .post-title {
+        font-weight: 600;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 10px;
+      }
+      .post-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: #858c85;
+        align-items: center;
+        gap: 8px;
+      }
+      .post-meta button {
+        border: 0;
+        padding: 0;
+        font-size: 11px;
+        color: #9a9e99;
+      }
+      .tags {
+        font-size: 11px;
+        color: var(--green);
+        margin-top: 9px;
+      }
+      .feed-footer {
+        padding: 12px 24px 24px;
+        text-align: center;
+      }
+      .empty {
+        padding: 70px 24px;
+        text-align: center;
+        color: var(--muted);
+        grid-column: 1/-1;
+        line-height: 2;
+      }
+      .detail {
+        padding: 18px 24px;
+      }
+      .detail-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .gallery {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+      }
+      .gallery img,
+      .gallery video {
+        width: 100%;
+        max-height: 430px;
+        object-fit: contain;
+        border-radius: 8px;
+        background: var(--soft);
+      }
+      .detail h2 {
+        font-size: 20px;
+        line-height: 1.5;
+      }
+      .body {
+        white-space: pre-wrap;
+        line-height: 1.9;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 18px 0;
+      }
+      .comments {
+        margin: 18px 0;
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+      }
+      .comment {
+        padding: 10px 0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .comment small {
+        color: var(--muted);
+      }
+      .reply {
+        margin-left: 20px;
+        border-left: 2px solid var(--line);
+        padding-left: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .row > * {
+        flex: 1;
+      }
+      .replay-controls {
+        margin: 12px 0;
+      }
+      .range {
+        padding: 0;
+        accent-color: var(--green);
+      }
+      .timeline {
+        max-height: 230px;
+        overflow: auto;
+        margin-top: 12px;
+      }
+      .event {
+        padding: 10px 6px;
+        border-left: 2px solid var(--line);
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .event.selected {
+        border-color: var(--green);
+        background: var(--soft);
+      }
+      .event small {
+        display: block;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .bar {
+        height: 6px;
+        background: #e8eee6;
+        border-radius: 3px;
+        margin: 6px 0 12px;
+        overflow: hidden;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        background: #6c9374;
+        border-radius: 3px;
+      }
+      .topic-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+      }
+      .diagnostics {
+        font-size: 11px;
+        overflow: auto;
+        max-height: 240px;
+        line-height: 1.7;
+      }
+      .decision {
+        border-top: 1px solid var(--line);
+        padding: 9px 0;
+      }
+      .decision summary {
+        cursor: pointer;
+      }
+      .decision pre {
+        white-space: pre-wrap;
+        color: #687366;
+      }
+      .pill {
+        font-size: 10px;
+        background: var(--soft);
+        color: var(--green);
+        padding: 2px 6px;
+        border-radius: 5px;
+      }
+      .legend {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      #toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #2b352d;
+        color: white;
+        border-radius: 10px;
+        padding: 12px 24px;
+        display: none;
+        z-index: 10;
+      }
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: #0005;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 8;
+      }
+      .modal .panel {
+        width: min(90vw, 500px);
+        padding: 24px;
+      }
+      .modal label {
+        display: block;
+        margin: 12px 0 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .mobile-label {
+        display: none;
+      }
+      @media (max-width: 1150px) {
+        main {
+          grid-template-columns: 180px minmax(340px, 1fr);
+          padding: 20px;
+          gap: 20px;
+        }
+        .research {
+          grid-column: 1/-1;
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 16px;
+        }
+        .research > .label {
+          display: none;
+        }
+        .research .panel {
+          margin: 0;
+        }
+      }
+      @media (max-width: 680px) {
+        header {
+          padding: 0 18px;
+        }
+        main {
+          display: block;
+          padding: 16px;
+        }
+        .sidebar {
+          display: flex;
+          gap: 12px;
+        }
+        .sidebar > .label,
+        .sidebar .hint,
+        .sidebar .avatar,
+        .sidebar .bio,
+        .sidebar .facts-panel {
+          display: none;
+        }
+        .sidebar > .panel {
+          flex: 1;
+          padding: 12px;
+        }
+        .sidebar .name {
+          font-size: 14px;
+          margin-top: 8px;
+        }
+        .research {
+          display: block;
+          margin-top: 18px;
+        }
+        .research .panel {
+          margin-bottom: 16px;
+        }
+        .appbar {
+          padding: 16px;
+        }
+        .subtitle {
+          display: none;
+        }
+        .feed {
+          gap: 10px;
+          padding: 0 10px 14px;
+        }
+        .post-info {
+          padding: 10px;
+        }
+        .post-title {
+          font-size: 12px;
+        }
+        .section-head h1 {
+          font-size: 18px;
+        }
+        .phone {
+          min-height: 500px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Agora<span>.</span></div>
+      <div class="divider"></div>
+      <div class="subtitle">社交模拟实验室<br />SOCIAL SIMULATION LAB</div>
+      <div class="status" id="worldStatus">本地世界</div>
+    </header>
+    <main>
+      <aside class="sidebar">
+        <div class="label">Account / 模拟账号</div>
+        <div class="panel profile">
+          <select id="userSelect" aria-label="选择模拟账号"></select>
+          <div class="avatar" id="avatar">A</div>
+          <div class="name" id="accountName">选择一个账号</div>
+          <div class="bio" id="accountBio">从这个账号的视角探索模拟世界。</div>
+          <button class="primary wide" id="newSession">开始新的浏览会话</button>
+        </div>
+        <div class="panel facts-panel">
+          <h3>本次会话</h3>
+          <div class="facts">
+            <div class="fact">
+              <strong id="seenCount">0</strong><span>曝光帖子（去重）</span>
+            </div>
+            <div class="fact">
+              <strong id="actionCount">0</strong><span>操作次数</span>
+            </div>
+            <div class="fact">
+              <strong id="browseTime">0</strong><span>模拟秒数</span>
+            </div>
+            <div class="fact">
+              <strong id="tickCount">0</strong><span>世界 tick</span>
+            </div>
+          </div>
+        </div>
+        <p class="hint">
+          合成世界中的浏览与互动。<br />当前规则策略用于开发验证，行为尚未经真人校准。
+        </p>
+      </aside>
+      <section>
+        <div class="section-head">
+          <h1>从账号的视角，看见这个世界</h1>
+          <span id="viewMode">实时操作</span>
+        </div>
+        <div class="phone">
+          <div class="appbar">
+            <div class="appbrand" id="appName">小红书</div>
+            <form class="searchbar" id="searchForm">
+              <input
+                id="query"
+                placeholder="搜索内容与话题"
+                aria-label="搜索"
+              /><button>搜索</button>
+            </form>
+            <button id="publishButton">发布</button>
+          </div>
+          <div class="tabs" id="tabs">
+            <button class="tab active" data-feed="discover">发现</button
+            ><button class="tab" data-feed="following">关注</button
+            ><button class="refresh" id="refreshButton">↻ 刷新</button>
+          </div>
+          <div id="content">
+            <div class="empty">选择账号，开始浏览或回放已有会话。</div>
+          </div>
+        </div>
+      </section>
+      <aside class="research">
+        <div class="label">Research / 观察与回放</div>
+        <div class="panel">
+          <h3>
+            会话轨迹 <span class="active-badge" id="sessionBadge">待开始</span>
+          </h3>
+          <select id="sessionSelect" aria-label="选择会话"></select>
+          <div class="row replay-controls">
+            <button id="playButton">▶ 回放</button
+            ><button id="liveButton">回到当前</button>
+          </div>
+          <input
+            class="range"
+            type="range"
+            id="replayRange"
+            min="0"
+            max="0"
+            value="0"
+            aria-label="回放进度"
+          />
+          <div class="legend" id="frameLabel">还没有操作记录</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+        <div class="panel">
+          <h3>曝光话题分布</h3>
+          <div class="legend">按去重帖子统计</div>
+          <div id="topicChart" class="hint">开始浏览后显示实际曝光的话题。</div>
+        </div>
+        <div class="panel">
+          <h3>推荐观察</h3>
+          <div class="legend" id="recMeta">
+            研究者可见 · 账号视角不包含排序分数
+          </div>
+          <div id="diagnostics" class="diagnostics"></div>
+        </div>
+      </aside>
+    </main>
+    <div id="toast" role="status"></div>
+    <div class="modal" id="publishModal">
+      <form class="panel" id="publishForm">
+        <h3>发布一条笔记</h3>
+        <label for="postTitle">标题</label
+        ><input
+          id="postTitle"
+          maxlength="200"
+          placeholder="给这条记录起个标题"
+        /><label for="postBody">正文</label
+        ><textarea
+          id="postBody"
+          required
+          maxlength="10000"
+          placeholder="分享你的体验与想法"
+        ></textarea
+        ><label for="postTopics">话题（用逗号分隔）</label
+        ><input id="postTopics" placeholder="城市漫游, 摄影" />
+        <div class="row" style="margin-top: 20px">
+          <button type="button" id="cancelPublish">取消</button
+          ><button class="primary">发布</button>
+        </div>
+      </form>
+    </div>
+    <script>
+      const $ = (id) => document.getElementById(id),
+        esc = (v) =>
+          String(v ?? "").replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+      let world = {},
+        data = null,
+        sessionId = null,
+        frame = -1,
+        timer = null,
+        busy = false;
+      const labels = {
+        start_session: "开始浏览",
+        refresh: "刷新推荐",
+        scroll: "向下浏览",
+        open_post: "打开内容",
+        back: "返回列表",
+        dwell: "阅读停留",
+        like_post: "点赞",
+        unlike_post: "取消点赞",
+        collect_post: "收藏",
+        uncollect_post: "取消收藏",
+        not_interested: "不感兴趣",
+        search: "搜索",
+        follow_user: "关注",
+        unfollow_user: "取消关注",
+        create_post: "发布内容",
+        create_comment: "发表评论",
+        end_session: "结束会话",
+        policy_failure: "策略调用失败",
+      };
+      function toast(text) {
+        $("toast").textContent = text;
+        $("toast").style.display = "block";
+        setTimeout(() => ($("toast").style.display = "none"), 3200);
+      }
+      async function api(path, value) {
+        const r = await fetch(
+          path,
+          value
+            ? {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(value),
+              }
+            : {},
+        );
+        const v = await r.json();
+        if (!r.ok) throw Error(v.error || "请求失败");
+        return v;
+      }
+      async function loadWorld() {
+        world = await api("/api/world");
+        $("worldStatus").textContent = world.world_id + " · tick " + world.tick;
+        $("appName").textContent = {
+          xiaohongshu: "小红书",
+          reddit: "Reddit",
+          x: "X",
+          generic: "Agora 社区",
+        }[world.preset];
+        const user = $("userSelect").value;
+        $("userSelect").innerHTML = world.users
+          .map(
+            (u) =>
+              `<option value="${u.user_id}">${esc(u.name || u.handle)}</option>`,
+          )
+          .join("");
+        if (user) $("userSelect").value = user;
+        updateSessions();
+      }
+      function updateSessions() {
+        const uid = Number($("userSelect").value);
+        const sessions = world.sessions.filter((s) => s.user_id === uid);
+        $("sessionSelect").innerHTML = sessions.length
+          ? sessions
+              .map(
+                (s) =>
+                  `<option value="${s.session_id}">会话 #${s.session_id} · ${s.status === "active" ? "进行中" : "已结束"}</option>`,
+              )
+              .join("")
+          : '<option value="">尚无会话</option>';
+        if (sessions.some((s) => s.session_id === sessionId))
+          $("sessionSelect").value = sessionId;
+        else if (sessions.length)
+          $("sessionSelect").value = sessions.at(-1).session_id;
+        return sessions;
+      }
+      async function loadSession(id, keepFrame = false) {
+        sessionId = Number(id);
+        data = await api("/api/session?id=" + sessionId);
+        if (!keepFrame) frame = -1;
+        render();
+      }
+      function current() {
+        return frame < 0
+          ? data?.observation
+          : data?.trajectory[frame]?.observation;
+      }
+      function editable() {
+        return frame < 0 && current()?.status === "active" && !busy;
+      }
+      function actionButton(name, args, text) {
+        return `<button data-action="${name}" data-args="${esc(JSON.stringify(args))}" ${!editable() ? "disabled" : ""}>${text}</button>`;
+      }
+      function media(asset) {
+        const src = "/media/" + encodeURIComponent(asset.asset_id);
+        return asset.media_type === "video"
+          ? `<video src="${src}" controls preload="metadata"></video>`
+          : `<img src="${src}" alt="${esc(asset.alt_text || "帖子图片")}" loading="lazy">`;
+      }
+      function comments(items) {
+        return (items || [])
+          .map(
+            (c) =>
+              `<div class="comment"><small>用户 ${c.author_id}${c.is_pinned ? " · 置顶" : ""}</small><br>${esc(c.content)}<div class="reply">${comments(c.replies)}</div></div>`,
+          )
+          .join("");
+      }
+      function render() {
+        for (const id of ["userSelect", "sessionSelect", "newSession"])
+          $(id).disabled = busy;
+        const o = current();
+        if (!o) return;
+        $("accountName").textContent = o.account.name;
+        $("accountBio").textContent = o.account.bio;
+        $("avatar").textContent = (o.account.name || "A")[0];
+        $("tickCount").textContent = o.tick;
+        $("viewMode").textContent =
+          frame < 0 ? "实时操作 / 当前状态" : "回放 / 历史状态";
+        $("sessionBadge").textContent =
+          "#" + sessionId + " " + (o.status === "active" ? "进行中" : "已结束");
+        $("browseTime").textContent = Math.round(o.elapsed_ms / 1000);
+        $("actionCount").textContent =
+          frame < 0 ? data.trajectory.length - 1 : frame;
+        $("tabs").style.display = o.screen === "detail" ? "none" : "flex";
+        document
+          .querySelectorAll("[data-feed]")
+          .forEach((b) =>
+            b.classList.toggle("active", b.dataset.feed === o.feed_type),
+          );
+        const can = editable();
+        for (const id of ["refreshButton", "query", "publishButton"])
+          $(id).disabled = !can;
+        document
+          .querySelectorAll(".tabs button,.searchbar button")
+          .forEach((b) => (b.disabled = !can));
+        if (o.screen === "detail") {
+          const p = o.post;
+          const id = { post_id: p.post_id };
+          $("content").innerHTML =
+            `<div class="detail"><div class="detail-top">${actionButton("back", {}, "← 返回")}<span>${esc(p.author_name)}</span>${actionButton("follow_user", { followee_id: p.author_id }, "关注")}</div><div class="gallery">${p.assets.map(media).join("")}</div><h2>${esc(p.title || "一条记录")}</h2><div class="body">${esc(p.body)}</div><div class="tags">${p.topics.map((t) => "#" + esc(t)).join(" ")}</div><div class="actions">${actionButton(p.liked ? "unlike_post" : "like_post", id, p.liked ? "♥ 已赞" : "♡ 点赞")}${o.available_actions.collect_post ? actionButton(p.collected ? "uncollect_post" : "collect_post", id, p.collected ? "★ 已收藏" : "☆ 收藏") : ""}${actionButton("dwell", { duration_ms: 10000 }, "阅读 10 秒")}${actionButton("not_interested", id, "不感兴趣")}</div><div class="comments"><b>评论</b>${comments(p.comments) || '<p class="hint">还没有评论，分享你的想法。</p>'}<form id="commentForm"><textarea id="commentText" required maxlength="5000" placeholder="写一条评论…" ${!can ? "disabled" : ""}></textarea><button class="primary wide" ${!can ? "disabled" : ""}>发表评论</button></form></div></div>`;
+          $("commentForm").onsubmit = (e) => {
+            e.preventDefault();
+            act("create_comment", {
+              post_id: p.post_id,
+              content: $("commentText").value,
+            });
+          };
+        } else {
+          $("content").innerHTML =
+            `<div class="feed">${o.cards.map((p) => `<article class="post-card" data-post="${p.post_id}" tabindex="0"><div class="cover">${p.assets.length ? media(p.assets[0]) : "<span>" + esc(p.topics[0] || "Agora") + "</span>"}</div><div class="post-info"><div class="post-title">${esc(p.title || p.body.slice(0, 55))}</div><div class="post-meta"><span>${esc(p.author_name)}</span><span>♡ ${p.num_likes}</span>${actionButton("not_interested", { post_id: p.post_id }, "隐藏")}</div><div class="tags">${p.topics.map((t) => "#" + esc(t)).join(" ")}</div></div></article>`).join("") || '<div class="empty">暂时没有内容<br>试试刷新、切换关注或搜索话题。</div>'}</div><div class="feed-footer">${actionButton("scroll", {}, "继续往下看 ↓")}</div>`;
+        }
+        const end = frame < 0 ? data.trajectory.length - 1 : frame;
+        $("replayRange").max = Math.max(0, data.trajectory.length - 1);
+        $("replayRange").value = end;
+        $("frameLabel").textContent =
+          `第 ${end + 1} / ${data.trajectory.length} 步 · ${Math.round(o.elapsed_ms / 1000)} 秒`;
+        $("timeline").innerHTML = data.trajectory
+          .map(
+            (e, i) =>
+              `<div class="event ${i === end ? "selected" : ""}" data-frame="${i}">${String(i + 1).padStart(2, "0")} · ${esc(labels[e.action.action_type] || e.action.action_type)}${e.action.arguments.post_id ? " #" + e.action.arguments.post_id : ""}<small>tick ${e.tick} · ${Math.round(e.elapsed_ms / 1000)}s${e.result.success === false ? " · 失败" : ""}</small></div>`,
+          )
+          .join("");
+        const seen = new Map();
+        for (const e of data.trajectory.slice(0, end + 1))
+          for (const p of e.observation.cards) seen.set(p.post_id, p);
+        $("seenCount").textContent = seen.size;
+        const counts = {};
+        for (const p of seen.values())
+          for (const t of p.topics) counts[t] = (counts[t] || 0) + 1;
+        const max = Math.max(1, ...Object.values(counts));
+        $("topicChart").innerHTML =
+          Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(
+              ([t, n]) =>
+                `<div class="topic-label"><span>${esc(t)}</span><span>${n}</span></div><div class="bar"><i style="width:${(n / max) * 100}%"></i></div>`,
+            )
+            .join("") || '<span class="hint">暂无曝光</span>';
+        const requestIndex =
+          data.trajectory
+            .slice(0, end + 1)
+            .filter((e) =>
+              ["start_session", "refresh", "search"].includes(
+                e.action.action_type,
+              ),
+            ).length - 1;
+        const request = data.requests[requestIndex];
+        if (request) {
+          const d = request.diagnostics;
+          $("recMeta").textContent =
+            `${d.policy_version} · ${d.candidate_count} 条候选${d.repeat_fallback ? " · 内容池已看完" : ""}`;
+          $("diagnostics").innerHTML =
+            '<p class="legend">排序依据只对研究者展示</p>' +
+            d.decisions
+              .map(
+                (p) =>
+                  `<details class="decision"><summary>#${p.post_id} <span class="pill">${p.selection === "exploration" ? "探索" : "排序"}</span> · ${p.slate_score.toFixed(2)}</summary><pre>${esc(JSON.stringify({ channels: p.channels, topics: p.topics, ...p.components }, null, 2))}</pre></details>`,
+              )
+              .join("");
+        } else $("diagnostics").textContent = "暂无推荐请求";
+      }
+      async function act(type, args = {}) {
+        if (!editable()) return;
+        busy = true;
+        render();
+        try {
+          await api("/api/action", {
+            session_id: sessionId,
+            action_type: type,
+            arguments: args,
+          });
+          await loadSession(sessionId);
+          await loadWorld();
+        } catch (e) {
+          toast(e.message);
+        } finally {
+          busy = false;
+          render();
+        }
+      }
+      function stop() {
+        if (timer) clearInterval(timer);
+        timer = null;
+        $("playButton").textContent = "▶ 回放";
+      }
+      async function navigate(task) {
+        if (busy) return;
+        busy = true;
+        render();
+        try {
+          await task();
+        } catch (e) {
+          toast(e.message);
+        } finally {
+          busy = false;
+          render();
+        }
+      }
+      $("newSession").onclick = () =>
+        navigate(async () => {
+          stop();
+          const s = await api("/api/session", {
+            user_id: Number($("userSelect").value),
+          });
+          await loadWorld();
+          await loadSession(s.session_id);
+          $("sessionSelect").value = s.session_id;
+        });
+      $("userSelect").onchange = () =>
+        navigate(async () => {
+          stop();
+          const sessions = updateSessions();
+          if (sessions.length) await loadSession($("sessionSelect").value);
+          else {
+            data = null;
+            sessionId = null;
+            $("content").innerHTML =
+              '<div class="empty">这个账号还没有会话。<br>点击「开始新的浏览会话」来探索世界。</div>';
+            $("accountName").textContent =
+              world.users.find(
+                (u) => u.user_id === Number($("userSelect").value),
+              )?.name || "";
+            $("timeline").innerHTML = "";
+            $("diagnostics").innerHTML = "";
+          }
+        });
+      $("sessionSelect").onchange = () =>
+        navigate(async () => {
+          stop();
+          if ($("sessionSelect").value)
+            await loadSession($("sessionSelect").value);
+        });
+      $("refreshButton").onclick = () => act("refresh");
+      document
+        .querySelectorAll("[data-feed]")
+        .forEach(
+          (b) =>
+            (b.onclick = () => act("refresh", { feed_type: b.dataset.feed })),
+        );
+      $("searchForm").onsubmit = (e) => {
+        e.preventDefault();
+        act("search", { query: $("query").value });
+      };
+      $("content").onclick = (e) => {
+        const b = e.target.closest("[data-action]");
+        if (b) {
+          e.stopPropagation();
+          act(b.dataset.action, JSON.parse(b.dataset.args));
+          return;
+        }
+        const p = e.target.closest("[data-post]");
+        if (p) act("open_post", { post_id: Number(p.dataset.post) });
+      };
+      $("content").onkeydown = (e) => {
+        if (e.key === "Enter" && e.target.matches("[data-post]"))
+          act("open_post", { post_id: Number(e.target.dataset.post) });
+      };
+      $("timeline").onclick = (e) => {
+        const item = e.target.closest("[data-frame]");
+        if (item) {
+          stop();
+          frame = Number(item.dataset.frame);
+          render();
+        }
+      };
+      $("replayRange").oninput = () => {
+        stop();
+        frame = Number($("replayRange").value);
+        render();
+      };
+      $("liveButton").onclick = () => {
+        stop();
+        frame = -1;
+        render();
+      };
+      $("playButton").onclick = () => {
+        if (timer) {
+          stop();
+          return;
+        }
+        if (!data) return;
+        frame = 0;
+        render();
+        $("playButton").textContent = "Ⅱ 暂停";
+        timer = setInterval(() => {
+          if (frame >= data.trajectory.length - 1) {
+            stop();
+            return;
+          }
+          frame++;
+          render();
+        }, 1100);
+      };
+      $("publishButton").onclick = () => {
+        if (editable()) $("publishModal").style.display = "flex";
+      };
+      $("cancelPublish").onclick = () =>
+        ($("publishModal").style.display = "none");
+      $("publishForm").onsubmit = async (e) => {
+        e.preventDefault();
+        await act("create_post", {
+          title: $("postTitle").value,
+          body: $("postBody").value,
+          topics: $("postTopics")
+            .value.split(/[,，]/)
+            .map((t) => t.trim())
+            .filter(Boolean),
+        });
+        $("publishModal").style.display = "none";
+      };
+      navigate(async () => {
+        await loadWorld();
+        if (world.sessions.length) {
+          const s = world.sessions.at(-1);
+          $("userSelect").value = s.user_id;
+          updateSessions();
+          await loadSession(s.session_id);
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "policy_version": "agora-hybrid-v1",
+  "channel_limit": 100,
+  "slate_size": 30,
+  "page_size": 6,
+  "feedback_half_life_ticks": 48.0,
+  "freshness_half_life_ticks": 24.0,
+  "exploration_fraction": 0.2,
+  "topic_weight": 2.0,
+  "following_weight": 0.8,
+  "quality_weight": 0.7,
+  "freshness_weight": 0.5,
+  "fatigue_weight": 1.2,
+  "author_diversity_penalty": 0.9,
+  "topic_diversity_penalty": 0.3
+}

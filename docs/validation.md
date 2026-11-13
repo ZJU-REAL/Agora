@@ -1,5 +1,34 @@
 # 验证状态
 
+## 2026-11-13 Agora 0.2 推荐与会话
+
+使用 Python 3.11.15、Pillow 10.3.0、pytest 8.2.0、pytest-asyncio 0.23.6。
+
+```bash
+.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database
+```
+
+结果为 **175 passed**，没有失败或跳过。新增 18 个检查覆盖页面曝光与刷新去重、详情操作
+约束、行为反馈学习/衰减、重复赞与停留上限、热门量约束、私密/关注流、全库搜索、
+受控曝光名次、存档/重开、同种子多账号轨迹、失败账号隔离、配置校验和真实图库视觉输入。
+
+新 Python 代码通过 Ruff 检查与格式检查；网页经 Prettier 格式化。轻量 editable 安装验证了
+`agora`、`agora-oasis`、`agora-benchmark` 三个入口。wheel 构建成功，并检查包含推荐模块
+和 `agora/web/index.html`，无需另行部署前端。
+
+浏览器 DOM 交互验证了建会话、打开、点赞、停留、评论、返回、搜索、文字发布与回放，
+没有 JavaScript 错误；390px 手机宽度没有横向溢出。此检查不等于完整视觉回归。浏览器
+截图在本机环境中超时，未将截图检查报告为通过。
+
+合成演示世界包含 7 个账号、48 条有封面的帖子，三账号/三 tick 开发策略运行无失败，
+会话可导出。独立 `import agora` 不加载 OASIS、CAMEL 或 Torch；创建实际世界仍依赖
+OASIS adapter。现有 Arena 回归继续通过，但受控曝光的历史多记记录已修正，旧实验
+分母不能与新版默认为同一口径。
+
+本轮未调用外部模型 API，也没有真实平台行为校准或真人实验。模型接口通过模拟客户端
+与实际图片编码验证。新会话的全部平台动作、事务恢复、调用 provenance 和大规模
+性能仍需后续实现，见 [架构审查与路线](agora-roadmap.md)。
+
 ## 2026-10-30 跨语境协议
 
 新增 `agora-transfer-v1` 和 `transfer-run`，把源经验、无经验、目标经验及隐藏评论反馈条件接到

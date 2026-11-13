@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "agora-oasis"
-version = "0.1.0"
-description = "An enhanced multimodal AI social simulation sandbox"
+version = "0.2.0"
+description = "Agora social simulation sandbox with adaptive feeds and replayable account sessions"
 authors = ["CAMEL-AI.org", "Agora-OASIS contributors"]
 readme = "README.md"
 license = "Apache License 2.0"
@@ -17,10 +17,12 @@ keywords = [
     "large-language-models",
 ]
 packages = [
+    { include = "agora" },
     { include = "oasis" },
     { include = "benchmarks" },
     { include = "scripts" },
 ]
+include = [{ path = "agora/web/*.html", format = ["sdist", "wheel"] }]
 
 [tool.poetry.dependencies]
 python = ">=3.10.0,<3.12"
@@ -45,6 +47,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
+agora = "agora.cli:main"
 agora-oasis = "oasis.cli:main"
 agora-benchmark = "benchmarks.cli:main"
 agora-stress-world = "scripts.stress_world:main"

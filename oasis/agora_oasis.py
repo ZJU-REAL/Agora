@@ -419,16 +419,18 @@ class AgoraOasis:
         normalized = query.strip().lstrip("#")
         if not normalized:
             raise ValueError("Search query cannot be empty")
-        feed = self.get_feed(user_id, 200, record_impressions=False)
-        matches = []
-        for post in feed:
-            if community and post.get("community") != community:
-                continue
-            haystack = " ".join([post.get("title") or "", post.get("body") or "",
-                                 *post.get("topics", [])]).casefold()
-            if normalized.casefold() in haystack:
-                matches.append(post)
-        return matches[:limit]
+        if type(limit) is not int or limit < 0:
+            raise ValueError("limit must be a nonnegative integer")
+        rows = self.platform.db.execute(
+            "SELECT p.post_id FROM post p WHERE "
+            "(instr(lower(COALESCE(p.title, '') || ' ' || p.content), ?) > 0 "
+            "OR EXISTS (SELECT 1 FROM post_topic pt JOIN topic t ON "
+            "t.topic_id = pt.topic_id WHERE pt.post_id = p.post_id "
+            "AND instr(lower(t.name), ?) > 0)) "
+            "AND (? IS NULL OR p.community = ?)",
+            (normalized.lower(), normalized.lower(), community, community)).fetchall()
+        return self.get_feed(user_id, limit, record_impressions=False,
+                             eligible_post_ids=[row[0] for row in rows])
 
     def pin_comment(self, author_id: int, comment_id: int) -> bool:
         row = self.platform.db.execute(
@@ -492,6 +494,10 @@ class AgoraOasis:
         if feed_type not in self.preset.feed_types:
             raise ValueError(f"Feed {feed_type!r} is unavailable for "
                              f"preset {self.preset.name!r}.")
+        if type(limit) is not int or limit < 0:
+            raise ValueError("limit must be a nonnegative integer")
+        if limit == 0 or eligible_post_ids is not None and not eligible_post_ids:
+            return []
         following_clause = ""
         params: tuple[Any, ...] = ()
         if feed_type == "following":
@@ -504,6 +510,11 @@ class AgoraOasis:
             "(p.visibility = 'followers' AND EXISTS (SELECT 1 FROM follow vf "
             "WHERE vf.follower_id = ? AND vf.followee_id = p.user_id))) ")
         params = (*params, user_id, user_id)
+        if eligible_post_ids is not None:
+            # JSON's table-valued function avoids SQLite's placeholder limit
+            # for large controlled pools and filters before hydration/scoring.
+            visibility_clause += "AND p.post_id IN (SELECT value FROM json_each(?)) "
+            params = (*params, json.dumps(list(eligible_post_ids)))
         rows = self.platform.db.execute(
             "SELECT p.post_id, p.user_id, u.user_name, u.name, p.post_type, "
             "p.title, p.content, p.created_at, p.num_likes, p.num_shares, "
@@ -516,9 +527,6 @@ class AgoraOasis:
             f"{visibility_clause}"
             "ORDER BY p.post_id DESC", params
         ).fetchall()
-        if eligible_post_ids is not None:
-            eligible = set(eligible_post_ids)
-            rows = [row for row in rows if row[0] in eligible]
         interests = {}
         persona_row = self.platform.db.execute(
             "SELECT persona_json FROM persona WHERE user_id = ?",
@@ -572,15 +580,18 @@ class AgoraOasis:
             "language": row[18],
         } for score, row, reason in selected]
         if record_impressions:
-            for rank, item in enumerate(feed):
-                self.platform.db.execute(
-                    "INSERT INTO feed_impression "
-                    "(user_id, post_id, feed_type, rank, score, reason, tick) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, item["post_id"], feed_type, rank,
-                     item["feed_score"], item["feed_reason"], self.current_tick))
-            self.platform.db.commit()
+            self._record_feed_impressions(user_id, feed, feed_type)
         return feed
+
+    def _record_feed_impressions(self, user_id, feed, feed_type="discover"):
+        for rank, item in enumerate(feed):
+            self.platform.db.execute(
+                "INSERT INTO feed_impression "
+                "(user_id, post_id, feed_type, rank, score, reason, tick) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, item["post_id"], feed_type, rank,
+                 item["feed_score"], item["feed_reason"], self.current_tick))
+        self.platform.db.commit()
 
     def observe(self, user_id: int, feed_limit: int = 20) -> Observation:
         row = self.platform.db.execute(
@@ -603,10 +614,13 @@ class AgoraOasis:
     def observe_controlled(self, user_id: int,
                            visible_post_ids: list[int]) -> Observation:
         """Observe only an artifact-frozen post set in the requested order."""
-        base = self.observe(user_id, feed_limit=max(200, len(visible_post_ids)))
+        base = self.observe_ranked_pool(user_id, visible_post_ids,
+                                        feed_limit=len(visible_post_ids),
+                                        record_impressions=False)
         by_id = {post["post_id"]: post for post in base.feed}
         feed = [by_id[post_id] for post_id in visible_post_ids
                 if post_id in by_id]
+        self._record_feed_impressions(user_id, feed)
         return Observation(
             user=base.user, tick=base.tick, feed=feed,
             own_recent_posts=[post for post in feed
@@ -614,7 +628,8 @@ class AgoraOasis:
 
     def observe_ranked_pool(self, user_id: int,
                             visible_post_ids: list[int] | tuple[int, ...],
-                            feed_limit: int = 20) -> Observation:
+                            feed_limit: int = 20,
+                            record_impressions: bool = True) -> Observation:
         """Rank one frozen content pool for a specific user's perspective."""
         row = self.platform.db.execute(
             "SELECT user_id, user_name, name, bio, num_followings, "
@@ -625,7 +640,8 @@ class AgoraOasis:
         user = dict(zip(("user_id", "handle", "display_name", "bio",
                          "num_followings", "num_followers"), row))
         feed = self.get_feed(
-            user_id, feed_limit, eligible_post_ids=visible_post_ids)
+            user_id, feed_limit, eligible_post_ids=visible_post_ids,
+            record_impressions=record_impressions)
         return Observation(
             user=user, tick=self.current_tick, feed=feed,
             own_recent_posts=[post for post in feed
