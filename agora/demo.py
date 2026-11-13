@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def populate(world):
-    if world.platform.db.execute("SELECT COUNT(*) FROM user").fetchone()[0]:
+    if world.db.execute("SELECT COUNT(*) FROM user").fetchone()[0]:
         raise ValueError("Demo requires an empty world; use a new world_id")
     # Persona and media construction belong to the transitional backend.
     from PIL import Image, ImageDraw
@@ -76,6 +76,15 @@ def populate(world):
         )
     )
     world.follow_user(reader, users[0])
+    assets = world.db.execute(
+        "SELECT asset_id FROM creator_asset WHERE user_id = ? ORDER BY asset_id LIMIT 3",
+        (users[0],),
+    ).fetchall()
+    world.db.executemany(
+        "INSERT OR IGNORE INTO creator_asset(user_id, asset_id) VALUES (?, ?)",
+        [(reader, row[0]) for row in assets],
+    )
+    world.db.commit()
     world.set_seed(42)
     return {
         "reader_id": reader,

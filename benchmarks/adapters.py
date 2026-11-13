@@ -6,8 +6,8 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 
+from agora.models import ModelResponse
 from benchmarks.protocol import CandidateAction
-
 
 ACTION_SCHEMAS = {
     "create_post": {"required": [], "optional": [
@@ -36,13 +36,6 @@ ACTION_SCHEMAS = {
 }
 
 
-@dataclass(frozen=True)
-class ModelResponse:
-    text: str
-    model_id: str
-    input_tokens: int | None = None
-    output_tokens: int | None = None
-    provider_request_id: str | None = None
 
 
 class ModelClient(Protocol):
@@ -149,7 +142,7 @@ class JsonModelCandidate:
                     response.model_id, response.input_tokens,
                     response.output_tokens, response.provider_request_id))
                 return action
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - audit provider/parse errors across retries
                 last_error = error
                 self._records.append(ModelCallRecord(
                     attempt, "failed",
@@ -181,7 +174,7 @@ class JsonModelCandidate:
                 raise
             value = json.loads(stripped[start:end + 1])
         if not isinstance(value, dict):
-            raise ValueError("Model action must be a JSON object")
+            raise ValueError("Model action must be a JSON object")  # noqa: TRY004 - validation contract
         return value
 
     @staticmethod

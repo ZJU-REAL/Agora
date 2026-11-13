@@ -11,56 +11,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =========== Copyright 2023 @ CAMEL-AI.org. All Rights Reserved. ===========
-__version__ = "0.1.0"
+"""Agora's native world infrastructure; historical directory name retained."""
 
-from oasis.agora_oasis import AgoraOasis, AgoraOasisConfig
-from oasis.agora_types import (AssetInput, Observation, PersonaProfile,
-                               PlatformPreset, TickResult)
+__version__ = "0.3.0"
+from oasis.agora_types import (
+    AssetInput,
+    Observation,
+    PersonaProfile,
+    PlatformPreset,
+    TickResult,
+)
 from oasis.data_import import DatasetImporter, ImportReport
-from oasis.social_platform.platform import Platform
-from oasis.social_platform.typing import ActionType, DefaultPlatformType
+from oasis.world import AgoraWorld, WorldConfig
 
+AgoraOasis = AgoraWorld
+AgoraOasisConfig = WorldConfig
 __all__ = [
-    "make", "Platform", "ActionType", "DefaultPlatformType", "ManualAction",
-    "LLMAction", "print_db_contents", "AgentGraph", "SocialAgent", "UserInfo",
-    "generate_reddit_agent_graph", "generate_twitter_agent_graph",
-    "generate_xiaohongshu_agent_graph",
-    "AgoraOasis", "AgoraOasisConfig", "AssetInput", "PersonaProfile",
-    "Observation", "TickResult", "DatasetImporter", "ImportReport",
-    "PlatformPreset"
+    "AgoraWorld",
+    "AssetInput",
+    "DatasetImporter",
+    "ImportReport",
+    "Observation",
+    "PersonaProfile",
+    "PlatformPreset",
+    "TickResult",
+    "WorldConfig",
 ]
 
 
 def __getattr__(name):
-    """Lazily load LLM integrations so the base sandbox stays lightweight."""
-    if name in {"LLMAction", "ManualAction"}:
-        from oasis.environment.env_action import LLMAction, ManualAction
-        return {"LLMAction": LLMAction, "ManualAction": ManualAction}[name]
-    if name == "make":
-        from oasis.environment.make import make
-        return make
-    if name in {"generate_reddit_agent_graph",
-                "generate_twitter_agent_graph",
-                "generate_xiaohongshu_agent_graph"}:
-        from oasis.social_agent import (generate_reddit_agent_graph,
-                                        generate_twitter_agent_graph,
-                                        generate_xiaohongshu_agent_graph)
-        return {
-            "generate_reddit_agent_graph": generate_reddit_agent_graph,
-            "generate_twitter_agent_graph": generate_twitter_agent_graph,
-            "generate_xiaohongshu_agent_graph":
-                generate_xiaohongshu_agent_graph,
-        }[name]
-    if name == "SocialAgent":
-        from oasis.social_agent.agent import SocialAgent
-        return SocialAgent
-    if name == "AgentGraph":
-        from oasis.social_agent.agent_graph import AgentGraph
-        return AgentGraph
-    if name == "UserInfo":
-        from oasis.social_platform.config import UserInfo
-        return UserInfo
-    if name == "print_db_contents":
-        from oasis.testing.show_db import print_db_contents
-        return print_db_contents
-    raise AttributeError(f"module 'oasis' has no attribute {name!r}")
+    from importlib import import_module
+
+    legacy = {
+        "Platform": ("oasis.legacy.social_platform.platform", "Platform"),
+        "make": ("oasis.legacy.environment.make", "make"),
+        "LLMAction": ("oasis.legacy.environment.env_action", "LLMAction"),
+        "ManualAction": ("oasis.legacy.environment.env_action", "ManualAction"),
+        "AgentGraph": ("oasis.legacy.social_agent.agent_graph", "AgentGraph"),
+        "SocialAgent": ("oasis.legacy.social_agent.agent", "SocialAgent"),
+        "UserInfo": ("oasis.social_platform.config", "UserInfo"),
+        "print_db_contents": ("oasis.testing.show_db", "print_db_contents"),
+        "ActionType": ("oasis.social_platform.typing", "ActionType"),
+        "DefaultPlatformType": ("oasis.social_platform.typing", "DefaultPlatformType"),
+    }
+    if name.startswith("generate_") and name.endswith("_agent_graph"):
+        return getattr(import_module("oasis.legacy.social_agent"), name)
+    if name in legacy:
+        module, attr = legacy[name]
+        return getattr(import_module(module), attr)
+    raise AttributeError(name)

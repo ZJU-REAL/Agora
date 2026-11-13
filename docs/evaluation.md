@@ -24,7 +24,7 @@ Runner 会依次：
         ↓
 Candidate 观察并选择一个 Action
         ↓
-Agora-OASIS 校验并执行
+Agora 校验并执行
         ↓
 冻结本 tick 的 NPC 共享内容池
 （主题内人类内容 + 最新 Candidate 内容）

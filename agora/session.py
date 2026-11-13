@@ -32,8 +32,32 @@ ACTION_SPECS = {
     },
     "create_post": {
         "required": ["body"],
-        "optional": ["title", "topics", "language", "community", "location"],
+        "optional": [
+            "title",
+            "topics",
+            "language",
+            "community",
+            "location",
+            "assets",
+            "post_type",
+        ],
     },
+    "view_profile": {"optional": ["user_id"]},
+    "open_notifications": {},
+    "open_studio": {},
+    "save_draft": {
+        "required": ["body"],
+        "optional": [
+            "title",
+            "topics",
+            "assets",
+            "post_type",
+            "language",
+            "community",
+            "location",
+        ],
+    },
+    "publish_draft": {},
     "end_session": {},
 }
 FEEDBACK_WEIGHTS = {
@@ -51,13 +75,13 @@ FEEDBACK_WEIGHTS = {
 class SocialSession:
     """One continuous browser visit. The injected world supplies social CRUD.
 
-    The current adapter is AgoraOasis, but no OASIS code is imported by this
-    module. SQLite recommendations and account navigation are owned by Agora.
+    AgoraWorld owns storage and action transactions. This session supplies
+    observable screens, account-owned media and continuous navigation.
     """
 
     def __init__(self, world, session_id: int):
         self.world = world
-        self.db = world.platform.db
+        self.db = world.db
         row = self.db.execute(
             "SELECT user_id, state_json, config_json FROM agora_session "
             "WHERE session_id = ?",
@@ -67,14 +91,22 @@ class SocialSession:
             raise KeyError(f"Unknown session: {session_id}")
         self.session_id, self.user_id = session_id, row[0]
         self.state = json.loads(row[1])
+        for key, value in {"draft": None, "profile": None, "notifications": []}.items():
+            self.state.setdefault(key, value)
         self.config = RecommendationConfig(**json.loads(row[2]))
         self.engine = RecommendationEngine(self.db, self.config)
 
     @classmethod
     def start(cls, world, user_id: int, config: RecommendationConfig | None = None):
+        RecommendationEngine(world.db, config)
+        with world.atomic():
+            return cls._start(world, user_id, config)
+
+    @classmethod
+    def _start(cls, world, user_id, config):
         config = config or RecommendationConfig()
-        RecommendationEngine(world.platform.db, config)
-        if not world.platform.db.execute(
+        RecommendationEngine(world.db, config)
+        if not world.db.execute(
             "SELECT 1 FROM user WHERE user_id = ?", (user_id,)
         ).fetchone():
             raise KeyError(f"Unknown user: {user_id}")
@@ -92,7 +124,7 @@ class SocialSession:
             "status": "active",
             "dwell_ms": 0,
         }
-        cursor = world.platform.db.execute(
+        cursor = world.db.execute(
             "INSERT INTO agora_session(user_id, started_tick, state_json, config_json) "
             "VALUES (?, ?, ?, ?)",
             (
@@ -102,7 +134,7 @@ class SocialSession:
                 json.dumps(asdict(config)),
             ),
         )
-        world.platform.db.commit()
+        world.db.commit()
         session = cls(world, cursor.lastrowid)
         session._request("discover")
         session._event(
@@ -113,8 +145,16 @@ class SocialSession:
     def available_actions(self) -> dict:
         if self.state["status"] != "active":
             return {}
-        names = {"refresh", "search", "create_post", "end_session"}
-        if self.state["screen"] in {"feed", "search"}:
+        names = {
+            "refresh",
+            "search",
+            "create_post",
+            "end_session",
+            "view_profile",
+            "open_notifications",
+            "open_studio",
+        }
+        if self.state["screen"] in {"feed", "search", "profile", "notifications"}:
             names.update(
                 {
                     "scroll",
@@ -139,6 +179,10 @@ class SocialSession:
             )
             if self.world.preset.allow_collect:
                 names.update({"collect_post", "uncollect_post"})
+        if self.state["screen"] == "studio":
+            names.update({"save_draft", "back"})
+            if self.state.get("draft"):
+                names.add("publish_draft")
         return {name: ACTION_SPECS[name] for name in sorted(names)}
 
     def observe(self) -> dict:
@@ -159,6 +203,12 @@ class SocialSession:
                 "page": self.state["page"],
                 "cards": self.state["cards"],
                 "post": self.state["current_post"],
+                "draft": self.state["draft"],
+                "profile": self.state["profile"],
+                "notifications": self.state["notifications"],
+                "asset_library": self.world.asset_library(self.user_id)
+                if self.state["screen"] == "studio"
+                else [],
                 "available_actions": self.available_actions(),
             }
         )
@@ -222,6 +272,9 @@ class SocialSession:
             for post in ids
             if post in by_id
         ]
+        self._store_cards(feed_type, cards, diagnostics)
+
+    def _store_cards(self, feed_type, cards, diagnostics):
         cursor = self.db.execute(
             "INSERT INTO agora_request(session_id, user_id, tick, feed_type, policy_version, "
             "config_json, diagnostics_json, cards_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -299,6 +352,11 @@ class SocialSession:
         )
 
     def _feedback(self, post_id, kind, value=None):
+        author = self.db.execute(
+            "SELECT user_id FROM post WHERE post_id = ?", (post_id,)
+        ).fetchone()
+        if author and author[0] == self.user_id:
+            return
         self.db.execute(
             "INSERT INTO agora_feedback(session_id, user_id, post_id, request_id, kind, value, tick) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -338,7 +396,25 @@ class SocialSession:
         )
         self.db.commit()
 
-    async def act(self, action_type: str, arguments: dict | None = None) -> dict:
+    async def act(
+        self,
+        action_type: str,
+        arguments: dict | None = None,
+        rationale: str | None = None,
+    ) -> dict:
+        if rationale is not None and (
+            not isinstance(rationale, str) or len(rationale) > 2000
+        ):
+            raise ValueError("rationale must be a short public explanation")
+        before = copy.deepcopy(self.state)
+        try:
+            with self.world.atomic():
+                return await self._act(action_type, arguments, rationale)
+        except BaseException:
+            self.state = before
+            raise
+
+    async def _act(self, action_type, arguments, rationale):
         args = {} if arguments is None else arguments
         if not isinstance(args, dict):
             raise TypeError("arguments must be an object")
@@ -349,7 +425,7 @@ class SocialSession:
             raise ValueError(f"Missing arguments for {action_type}")
         if args.keys() - set(spec.get("required", []) + spec.get("optional", [])):
             raise ValueError(f"Unexpected arguments for {action_type}")
-        for key in ("post_id", "followee_id", "parent_comment_id"):
+        for key in ("post_id", "followee_id", "parent_comment_id", "user_id"):
             if key in args and (type(args[key]) is not int or args[key] < 1):
                 raise ValueError(f"{key} must be a positive integer")
         visible = {post["post_id"] for post in self.state["cards"]}
@@ -370,7 +446,107 @@ class SocialSession:
                 raise PermissionError("Only a visible author can be followed")
         result = {"success": True}
         elapsed = 300
-        if action_type == "refresh":
+        if action_type == "view_profile":
+            uid = args.get("user_id", self.user_id)
+            known = {p["author_id"] for p in self.state["cards"]} | {self.user_id}
+            if current:
+                known.add(current["author_id"])
+            if uid not in known:
+                raise PermissionError("Only known profiles can be opened")
+            profile = self.db.execute(
+                "SELECT user_id, user_name, name, bio, num_followers, num_followings FROM user WHERE user_id = ?",
+                (uid,),
+            ).fetchone()
+            if profile is None:
+                raise KeyError("Unknown profile")
+            self.state["profile"] = dict(
+                zip(
+                    ("user_id", "handle", "name", "bio", "followers", "following"),
+                    profile,
+                )
+            )
+            ids = [
+                row[0]
+                for row in self.db.execute(
+                    "SELECT post_id FROM post WHERE user_id = ? ORDER BY post_id DESC LIMIT 100",
+                    (uid,),
+                )
+            ]
+            posts = self.world.get_feed(
+                self.user_id, 100, record_impressions=False, eligible_post_ids=ids
+            )
+            posts.sort(key=lambda post: post["post_id"], reverse=True)
+            self._store_cards(
+                "profile",
+                [self._public_post(post, True) for post in posts],
+                {
+                    "candidate_count": len(posts),
+                    "decisions": [],
+                    "policy_version": "profile-chronological-v1",
+                },
+            )
+            self.state["screen"] = "profile"
+        elif action_type == "open_notifications":
+            notifications = []
+            ids = []
+            for row in self.db.execute(
+                "SELECT notification_id, actor_id, kind, post_id, comment_id, content, tick, read FROM notification WHERE recipient_id = ? ORDER BY notification_id DESC LIMIT 50",
+                (self.user_id,),
+            ):
+                if row[3] is not None:
+                    try:
+                        self._check_visible(row[3])
+                    except PermissionError:
+                        continue
+                    ids.append(row[3])
+                notifications.append(
+                    dict(
+                        zip(
+                            (
+                                "notification_id",
+                                "actor_id",
+                                "kind",
+                                "post_id",
+                                "comment_id",
+                                "content",
+                                "tick",
+                                "read",
+                            ),
+                            row,
+                        )
+                    )
+                )
+            self.state["notifications"] = notifications
+            posts = self.world.get_feed(
+                self.user_id, len(ids), record_impressions=False, eligible_post_ids=ids
+            )
+            self._store_cards(
+                "notifications",
+                [self._public_post(post, True) for post in posts],
+                {
+                    "candidate_count": len(posts),
+                    "decisions": [],
+                    "policy_version": "notifications-v1",
+                },
+            )
+            self.state["screen"] = "notifications"
+            self.db.execute(
+                "UPDATE notification SET read = 1 WHERE recipient_id = ?",
+                (self.user_id,),
+            )
+        elif action_type == "open_studio":
+            self.state.update(screen="studio", current_post=None)
+        elif action_type == "save_draft":
+            self._validate_creation(args)
+            self.state["draft"] = copy.deepcopy(args)
+            result["draft_saved"] = True
+            elapsed = 15000
+        elif action_type == "publish_draft":
+            result["post_id"] = self._publish(self.state["draft"])
+            result["creation"] = copy.deepcopy(self.state["draft"])
+            self.state["draft"] = None
+            elapsed = 1000
+        elif action_type == "refresh":
             feed_type = args.get("feed_type", "discover")
             if feed_type not in self.world.preset.feed_types:
                 raise ValueError("Unavailable feed")
@@ -403,7 +579,9 @@ class SocialSession:
             elapsed = 500
         elif action_type == "back":
             self.state.update(
-                screen="search" if self.state["feed_type"] == "search" else "feed",
+                screen=self.state["feed_type"]
+                if self.state["feed_type"] in {"search", "profile", "notifications"}
+                else "feed",
                 current_post=None,
                 dwell_ms=0,
             )
@@ -425,32 +603,13 @@ class SocialSession:
             ]
             self.state.update(
                 current_post=None,
-                screen="search" if self.state["feed_type"] == "search" else "feed",
+                screen=self.state["feed_type"]
+                if self.state["feed_type"] in {"search", "profile", "notifications"}
+                else "feed",
             )
         elif action_type == "create_post":
-            if (
-                not isinstance(args["body"], str)
-                or not args["body"].strip()
-                or len(args["body"]) > 10000
-            ):
-                raise ValueError("body must be nonempty and at most 10000 characters")
-            for key in ("title", "language", "community", "location"):
-                if key in args and (
-                    not isinstance(args[key], str) or len(args[key]) > 200
-                ):
-                    raise ValueError(
-                        f"{key} must be a string of at most 200 characters"
-                    )
-            if "topics" in args and (
-                not isinstance(args["topics"], list)
-                or len(args["topics"]) > 20
-                or any(
-                    not isinstance(topic, str) or len(topic) > 100
-                    for topic in args["topics"]
-                )
-            ):
-                raise ValueError("topics must be a list of up to 20 short strings")
-            result["post_id"] = self.world.create_post(self.user_id, **args)
+            result["post_id"] = self._publish(args)
+            result["creation"] = copy.deepcopy(args)
             elapsed = 30000
         elif action_type == "create_comment":
             if (
@@ -478,8 +637,53 @@ class SocialSession:
             except PermissionError:
                 self.state.update(current_post=None, screen="feed", cards=[])
         self.state["elapsed_ms"] += elapsed
-        self._event({"action_type": action_type, "arguments": args}, result)
+        self._event(
+            {
+                "action_type": action_type,
+                "arguments": args,
+                **({"rationale": rationale} if rationale else {}),
+            },
+            result,
+        )
         return result
+
+    def _validate_creation(self, args):
+        if (
+            not isinstance(args["body"], str)
+            or not args["body"].strip()
+            or len(args["body"]) > 10000
+        ):
+            raise ValueError("body must be nonempty and at most 10000 characters")
+        for key in ("title", "language", "community", "location"):
+            if key in args and (not isinstance(args[key], str) or len(args[key]) > 200):
+                raise ValueError(f"{key} must be a string of at most 200 characters")
+        if "topics" in args and (
+            not isinstance(args["topics"], list)
+            or len(args["topics"]) > 20
+            or any(
+                not isinstance(topic, str) or len(topic) > 100
+                for topic in args["topics"]
+            )
+        ):
+            raise ValueError("topics must be a list of up to 20 short strings")
+        assets = self.world.library_assets(self.user_id, args.get("assets", []))
+        post_type = args.get(
+            "post_type", "gallery" if len(assets) > 1 else "image" if assets else "text"
+        )
+        if post_type not in {"text", "image", "gallery", "video"}:
+            raise ValueError("Unknown creation format")
+        self.world._validate_post(post_type, args["body"], assets)
+
+    def _publish(self, args):
+        self._validate_creation(args)
+        args = copy.deepcopy(args)
+        assets = self.world.library_assets(self.user_id, args.pop("assets", []))
+        post_type = args.pop(
+            "post_type", "gallery" if len(assets) > 1 else "image" if assets else "text"
+        )
+        return self.world.create_post(
+            self.user_id, **args, assets=assets, post_type=post_type
+        )
 
     def _check_visible(self, post_id):
         posts = self.world.get_feed(
@@ -489,7 +693,18 @@ class SocialSession:
             raise PermissionError("This post is no longer visible")
         return posts[0]
 
-    def trajectory(self) -> list[dict]:
+    def trajectory(self, limit=None, after_step=0) -> list[dict]:
+        query = (
+            "SELECT step, tick, elapsed_ms, action_json, result_json, observation_json "
+            "FROM agora_session_event WHERE session_id = ? AND step > ? ORDER BY step"
+        )
+        params = (self.session_id, after_step)
+        if limit is not None:
+            query = query.removesuffix("ORDER BY step") + "ORDER BY step DESC LIMIT ?"
+            params += (limit,)
+        rows = self.db.execute(query, params).fetchall()
+        if limit is not None:
+            rows.reverse()
         return [
             {
                 "step": row[0],
@@ -499,11 +714,7 @@ class SocialSession:
                 "result": json.loads(row[4]),
                 "observation": json.loads(row[5]),
             }
-            for row in self.db.execute(
-                "SELECT step, tick, elapsed_ms, action_json, result_json, observation_json "
-                "FROM agora_session_event WHERE session_id = ? ORDER BY step",
-                (self.session_id,),
-            )
+            for row in rows
         ]
 
     def diagnostics(self) -> list[dict]:

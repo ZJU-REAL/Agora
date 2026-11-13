@@ -1,5 +1,39 @@
 # 验证状态
 
+## 2026-11-13 Agora 0.3 原生实验工作台
+
+Python 3.11.15；完整命令：
+
+```bash
+.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database
+```
+
+结果 **194 passed**，没有失败或跳过。新增 19 个原生检查验证旧 runtime 不导入、图集草稿/
+发布顺序、账号素材隔离、复合事务和新媒体回滚、共用媒体保留、模拟时间/通知、内容寻址、
+独立世界/同种子语义轨迹、暂停/继续/停止、模型调用/公开理由、非法配置、协同召回版本、
+媒体校验失败无残留，以及完整观察导出。归档低层数据库兼容测试也通过。
+
+原生 Python、迁移模块与更新的共享模型/媒体接口通过 Ruff；两个网页通过 Prettier。
+新包名 `agora-social==0.3.0`，默认运行依赖仅 Pillow 和 requests，测试/开发依赖为 extras。
+`agora`、`agora-world`、`agora-benchmark` 安装入口可启动；wheel 包含原生 world/schema
+与两个前端页面。`uv.lock` 已更新并检查一致性，历史完整依赖移入 requirements-legacy。
+另在全新虚拟环境中从 wheel 安装，并从仓库外运行两账号完整创作实验：成功发布两条内容，
+确认不加载旧 runtime、Torch 或 benchmarks 模块，默认依赖链可独立运行。
+
+浏览器 DOM 验证了从页面启动独立模拟、暂停、继续、停止、账号只读观察、创作工作台
+历史画面和完整导出，无 JavaScript 错误，390px 手机宽度没有横向溢出。截图捕获在本机
+环境中仍会超时，因此没有宣称完成像素/完整视觉回归。
+
+实际启动了 `agora-studio-20261113` 源世界，含 7 个账号和 48 条合成图文。完整演示运行
+`6e2c426dd309`：7 个账号、6 tick、每轮至多 8 个动作，共 336 次动作；12 份草稿和
+12 条代理发布内容、23 次评论、392 次页面曝光，tick 3 注入 1 条研究者指定话题。
+运行完成且无失败，源世界仍有 48 条帖子。演示模式为 **Persona 开发策略，模型调用 0**，
+其文字和理由由规则产生；没有把它当作真实 LLM 或人类行为结果。
+
+本次仍没有可用的远程模型凭据。真实 provider 调用链通过模拟客户端与视觉编码验证，
+调用身份/用量/失败可记录；正式模型与真人实验、推荐参数校准和大规模调度仍需后续验证。
+详细边界见 [research.md](research.md) 和 [agora-roadmap.md](agora-roadmap.md)。
+
 ## 2026-11-13 Agora 0.2 推荐与会话
 
 使用 Python 3.11.15、Pillow 10.3.0、pytest 8.2.0、pytest-asyncio 0.23.6。

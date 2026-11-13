@@ -1,0 +1,12 @@
+{
+  "provider": "openai-compatible",
+  "base_url": "https://your-model-service.example/v1",
+  "model_id": "your-model-id",
+  "api_key_env": "AGORA_API_KEY",
+  "supports_vision": true,
+  "limits": {
+    "timeout_seconds": 60,
+    "max_requests": 100,
+    "max_output_tokens": 512
+  }
+}

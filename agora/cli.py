@@ -5,12 +5,12 @@ import asyncio
 import json
 from pathlib import Path
 
-from agora.backends.oasis import open_world
 from agora.demo import populate
 from agora.recommendation import RecommendationConfig
 from agora.runner import JsonSessionPolicy, run_sessions
 from agora.server import serve
 from agora.session import SocialSession
+from agora.world import open_world
 
 
 def main(argv=None):
@@ -27,6 +27,17 @@ def main(argv=None):
     )
     console.add_argument("world_id")
     console.add_argument("--port", type=int, default=8765)
+    console.add_argument(
+        "--bootstrap",
+        action="store_true",
+        help="Create a synthetic source world when empty",
+    )
+    console.add_argument(
+        "--provider-config",
+        action="append",
+        default=[],
+        help="Register model provider JSON files for the experiment console",
+    )
     simulate = commands.add_parser(
         "simulate", help="Run accounts through persistent browsing sessions"
     )
@@ -51,15 +62,18 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if (
         args.command != "demo"
+        and not (args.command == "serve" and args.bootstrap)
         and not (Path(args.data_root) / args.world_id / "sandbox.db").is_file()
     ):
         parser.error(
-            "World does not exist; create it with agora demo or agora-oasis world-create"
+            "World does not exist; use agora serve --bootstrap or agora-world world-create"
         )
     world = open_world(
         args.world_id,
         args.data_root,
-        preset="xiaohongshu" if args.command == "demo" else None,
+        preset="xiaohongshu"
+        if args.command == "demo" or args.command == "serve" and args.bootstrap
+        else None,
     )
     try:
         if args.command == "demo":
@@ -69,7 +83,18 @@ def main(argv=None):
                 run_sessions(world, [output["reader_id"], *output["creator_ids"][:2]])
             )
         elif args.command == "serve":
-            serve(world, port=args.port)
+            if (
+                args.bootstrap
+                and not world.db.execute("SELECT 1 FROM user LIMIT 1").fetchone()
+            ):
+                populate(world)
+            from agora.models import load_provider_config
+
+            providers = {
+                Path(path).stem: load_provider_config(path)
+                for path in args.provider_config
+            }
+            serve(world, port=args.port, providers=providers)
             return 0
         elif args.command == "simulate":
             config = (
@@ -83,7 +108,7 @@ def main(argv=None):
             if args.provider_config:
                 # Provider implementations are temporarily shared with the
                 # benchmark layer; the session contract itself is independent.
-                from benchmarks.providers import (
+                from agora.models import (
                     build_model_client,
                     load_provider_config,
                 )
@@ -91,7 +116,7 @@ def main(argv=None):
                 spec = load_provider_config(args.provider_config)
 
                 def factory(user):
-                    row = world.platform.db.execute(
+                    row = world.db.execute(
                         "SELECT persona_json FROM persona WHERE user_id = ?", (user,)
                     ).fetchone()
                     from agora.backends.visual import session_visual_parts

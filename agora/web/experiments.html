@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agora · 社交实验工作台</title>
+    <style>
+      :root {
+        --bg: #f3f5f0;
+        --paper: #fff;
+        --line: #dfe5da;
+        --ink: #26392d;
+        --muted: #7a887c;
+        --accent: #315b43;
+        --soft: #eaf0e5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          "PingFang SC",
+          "Microsoft YaHei",
+          sans-serif;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 13px;
+        background: white;
+        color: var(--ink);
+      }
+      button:hover {
+        background: var(--soft);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 9px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        color: var(--ink);
+      }
+      textarea {
+        min-height: 76px;
+        resize: vertical;
+        line-height: 1.7;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      header {
+        background: #fafcf7;
+        border-bottom: 1px solid var(--line);
+        padding: 20px 28px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .brand {
+        font:
+          700 30px Georgia,
+          serif;
+        letter-spacing: -1px;
+      }
+      .brand i {
+        color: #608058;
+      }
+      .tagline {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.7;
+      }
+      .header-links {
+        margin-left: auto;
+        display: flex;
+        gap: 20px;
+        font-size: 12px;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 270px minmax(0, 1fr);
+        gap: 24px;
+        max-width: 1680px;
+        margin: auto;
+        padding: 26px;
+      }
+      .panel {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 18px;
+      }
+      .panel h2,
+      .panel h3 {
+        margin: 0 0 15px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .eyebrow {
+        font-size: 10px;
+        letter-spacing: 1.8px;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      .field {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 13px 0 6px;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .row > * {
+        flex: 1;
+      }
+      .primary {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+      }
+      .primary:hover {
+        background: #427157;
+      }
+      .wide {
+        width: 100%;
+        margin-top: 16px;
+      }
+      .agents {
+        max-height: 140px;
+        overflow: auto;
+        padding: 6px 0;
+      }
+      .agent-choice {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 12px;
+        padding: 6px;
+      }
+      .agent-choice input {
+        width: auto;
+        accent-color: var(--accent);
+      }
+      .hint {
+        font-size: 11px;
+        line-height: 1.8;
+        color: var(--muted);
+      }
+      .jobs {
+        max-height: 290px;
+        overflow: auto;
+      }
+      .job {
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        margin: 8px 0;
+        padding: 10px;
+        cursor: pointer;
+      }
+      .job.selected {
+        border-color: var(--accent);
+        background: #f0f5ea;
+      }
+      .job small {
+        display: block;
+        color: var(--muted);
+        margin-top: 5px;
+      }
+      .status {
+        font-size: 10px;
+        background: var(--soft);
+        color: var(--accent);
+        border-radius: 10px;
+        padding: 4px 8px;
+      }
+      .job-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .main-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 12px;
+      }
+      .main-head h1 {
+        margin: 0;
+        font-size: 25px;
+        font-weight: 500;
+      }
+      .main-head p {
+        margin: 7px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      .metric {
+        background: white;
+        border: 1px solid var(--line);
+        padding: 18px;
+        border-radius: 12px;
+      }
+      .metric strong {
+        font-size: 30px;
+        font-weight: 500;
+        display: block;
+      }
+      .metric small {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .progress {
+        height: 6px;
+        background: #e1e9da;
+        border-radius: 6px;
+        overflow: hidden;
+        margin: 14px 0 5px;
+      }
+      .progress i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: #688956;
+        transition: width 0.4s;
+      }
+      .analysis-row {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+        gap: 18px;
+      }
+      .graph {
+        height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .graph svg {
+        width: 100%;
+        height: 100%;
+      }
+      .log {
+        max-height: 270px;
+        overflow: auto;
+      }
+      .event {
+        border-left: 2px solid #dfe8d5;
+        padding: 10px 12px;
+        margin: 6px 0;
+        font-size: 12px;
+      }
+      .event.creation {
+        border-color: #a78746;
+        background: #fcfaf1;
+      }
+      .event-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .event small {
+        color: var(--muted);
+      }
+      .reason {
+        font-size: 12px;
+        color: #687661;
+        line-height: 1.8;
+        margin-top: 6px;
+      }
+      .args {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 11px;
+        line-height: 1.7;
+        background: #f5f7f1;
+        padding: 9px;
+        border-radius: 6px;
+      }
+      .thumbs {
+        display: flex;
+        gap: 5px;
+        margin: 8px 0;
+      }
+      .thumbs img {
+        height: 70px;
+        width: 58px;
+        object-fit: cover;
+        border-radius: 5px;
+      }
+      .viewer-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .viewer-head select {
+        max-width: 220px;
+      }
+      iframe {
+        width: 100%;
+        height: 760px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--bg);
+      }
+      .empty {
+        padding: 50px 20px;
+        text-align: center;
+        color: var(--muted);
+        line-height: 2;
+      }
+      .config {
+        max-height: 250px;
+        overflow: auto;
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .toast {
+        position: fixed;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #304630;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px;
+        display: none;
+        z-index: 10;
+      }
+      .token-line {
+        font-size: 11px;
+        color: var(--muted);
+        margin: 10px 0;
+      }
+      .chapter {
+        font-size: 11px;
+        color: #64755f;
+        letter-spacing: 1px;
+      }
+      .asset-note {
+        color: #9a7d45;
+        font-size: 11px;
+      }
+      @media (max-width: 1000px) {
+        main {
+          grid-template-columns: 230px minmax(0, 1fr);
+          padding: 18px;
+          gap: 16px;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .analysis-row {
+          grid-template-columns: 1fr;
+        }
+        .header-links {
+          gap: 10px;
+        }
+        .main-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+      @media (max-width: 660px) {
+        header {
+          padding: 16px;
+        }
+        .tagline {
+          display: none;
+        }
+        main {
+          display: block;
+          padding: 14px;
+        }
+        .sidebar {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+        .panel {
+          padding: 16px;
+        }
+        .main-head h1 {
+          font-size: 21px;
+        }
+        .controls {
+          flex-wrap: wrap;
+        }
+        .metrics {
+          gap: 10px;
+        }
+        .metric {
+          padding: 14px;
+        }
+        .metric strong {
+          font-size: 24px;
+        }
+        .viewer-head {
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        iframe {
+          height: 850px;
+        }
+        .header-links a:last-child {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Agora<i>.</i></div>
+      <div class="tagline">
+        社交实验工作台<br />AI SOCIAL SIMULATION WORKBENCH
+      </div>
+      <nav class="header-links">
+        <a href="/account" target="_blank">手动探索源世界 ↗</a
+        ><a id="exportLink" href="#">导出实验记录</a>
+      </nav>
+    </header>
+    <main>
+      <aside class="sidebar">
+        <form class="panel" id="runForm">
+          <div class="eyebrow">NEW EXPERIMENT</div>
+          <h2>启动一次社交模拟</h2>
+          <div class="hint" id="sourceLabel">正在读取源世界…</div>
+          <label class="field" for="runName">实验名称</label
+          ><input
+            id="runName"
+            value="社区创作与反馈实验"
+            maxlength="200"
+          /><label class="field">参与账号</label>
+          <div class="agents" id="agents"></div>
+          <label class="field" for="provider">账号策略</label
+          ><select id="provider">
+            <option value="development">
+              Persona 开发策略 · 无模型调用
+            </option></select
+          ><label class="field" for="pace">观察速度</label
+          ><select id="pace">
+            <option value="80">逐步观察</option>
+            <option value="0">快速运行</option>
+            <option value="400">慢速观察</option></select
+          ><label class="field" for="goal">模型任务目标</label
+          ><textarea id="goal">
+浏览社区，选择合适的素材创作内容，根据公开评论与反馈调整后续行为。</textarea
+          >
+          <div class="row">
+            <div>
+              <label class="field" for="ticks">模拟轮数</label
+              ><input id="ticks" type="number" min="1" max="100" value="6" />
+            </div>
+            <div>
+              <label class="field" for="steps">每轮操作上限</label
+              ><input id="steps" type="number" min="1" max="30" value="8" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label class="field" for="seed">随机种子</label
+              ><input id="seed" type="number" value="42" />
+            </div>
+            <div>
+              <label class="field" for="interest">兴趣权重</label
+              ><input
+                id="interest"
+                type="number"
+                min="0"
+                step="0.1"
+                value="2"
+              />
+            </div>
+          </div>
+          <label class="field" for="explore"
+            >推荐探索比例 <span id="exploreLabel">20%</span></label
+          ><input
+            id="explore"
+            type="range"
+            min="0"
+            max="0.5"
+            step="0.05"
+            value="0.2"
+          /><label class="field" for="intervention">中途注入话题（可选）</label
+          ><textarea
+            id="intervention"
+            placeholder="在模拟中途发布一条指定内容，观察账号反应与后续传播。"
+          ></textarea
+          ><button class="primary wide" id="startButton">
+            创建独立沙盒并运行
+          </button>
+          <p class="hint">
+            每次运行从源世界克隆独立状态。默认开发策略用于验证流程；使用真实模型请选择已注册的服务。
+          </p>
+        </form>
+        <div class="panel">
+          <div class="eyebrow">EXPERIMENTS</div>
+          <h3>实验记录</h3>
+          <div class="jobs" id="jobs"><div class="hint">尚无实验</div></div>
+        </div>
+      </aside>
+      <section>
+        <div class="main-head">
+          <div>
+            <div class="eyebrow">OBSERVE · CREATE · INTERACT</div>
+            <h1 id="runTitle">让 AI 在社交世界中行动</h1>
+            <p id="runSubtitle">
+              开始一个实验，观察每个账号的选择、内容创作与社会反馈。
+            </p>
+          </div>
+          <div class="controls">
+            <button id="pauseButton" disabled>暂停</button
+            ><button id="resumeButton" disabled>继续</button
+            ><button id="stopButton" disabled>停止</button>
+          </div>
+        </div>
+        <div class="metrics">
+          <div class="metric">
+            <strong id="tickMetric">0</strong><small>已完成轮数</small>
+          </div>
+          <div class="metric">
+            <strong id="postMetric">0</strong><small>本次新发布内容</small>
+          </div>
+          <div class="metric">
+            <strong id="commentMetric">0</strong><small>本次评论互动</small>
+          </div>
+          <div class="metric">
+            <strong id="exposureMetric">0</strong
+            ><small>本次实际页面曝光</small>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="row">
+            <span class="chapter" id="runState">等待开始</span
+            ><span class="hint" id="progressText" style="text-align: right"
+              >0 次操作</span
+            >
+          </div>
+          <div class="progress"><i id="progressBar"></i></div>
+          <div class="token-line" id="modelUsage">
+            开发策略不调用模型；真实模型调用和已知 token 用量将单独记录。
+          </div>
+        </div>
+        <div class="analysis-row">
+          <div class="panel">
+            <h3>社区关系</h3>
+            <div class="graph" id="graph">
+              <span class="hint">实验开始后显示当前关注关系</span>
+            </div>
+            <div class="hint">
+              连线表示关注关系，节点为账号。传播与互动以实际事件记录为准。
+            </div>
+          </div>
+          <div class="panel">
+            <div class="viewer-head">
+              <h3 style="margin: 0">AI 选择与创作过程</h3>
+              <select id="actorFilter">
+                <option value="all">所有账号</option>
+              </select>
+            </div>
+            <div class="log" id="events">
+              <div class="empty">
+                这里会显示动作、公开选择理由、素材与草稿。
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="viewer-head">
+            <div>
+              <div class="eyebrow">ACCOUNT VIEW</div>
+              <h3 style="margin: 0">虚拟平台中的实际画面</h3>
+            </div>
+            <span class="hint">可切换账号和回放步骤，实验画面只读</span>
+          </div>
+          <div id="viewerEmpty" class="empty">
+            开始或选择一个实验，查看账号当时看到的内容与制作过程。
+          </div>
+          <iframe id="viewer" title="AI 账号观察与回放" hidden></iframe>
+        </div>
+        <details class="panel">
+          <summary>实验配置与复现信息</summary>
+          <pre class="config" id="config">
+选择实验后显示配置、种子及世界指纹。</pre
+          >
+        </details>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="status"></div>
+    <script>
+      const $ = (id) => document.getElementById(id),
+        esc = (v) =>
+          String(v ?? "").replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+      let selected = null,
+        world = null,
+        currentRun = null,
+        actor = "all",
+        loading = false;
+      const states = {
+        queued: "排队中",
+        running: "运行中",
+        pausing: "等待动作完成后暂停",
+        paused: "已暂停",
+        stopping: "停止中",
+        completed: "已完成",
+        canceled: "已停止",
+        failed: "运行失败",
+        interrupted: "进程中断，记录已保留",
+      };
+      const actions = {
+        start_session: "开始浏览",
+        view_profile: "查看个人主页",
+        open_studio: "进入创作工作台",
+        save_draft: "选择素材 · 保存草稿",
+        publish_draft: "发布图文草稿",
+        create_post: "发布内容",
+        open_post: "打开内容",
+        like_post: "点赞",
+        create_comment: "发表评论",
+        dwell: "阅读停留",
+        back: "返回列表",
+        refresh: "刷新推荐",
+        scroll: "向下浏览",
+        open_notifications: "查看通知与回复",
+        follow_user: "关注作者",
+        end_session: "结束会话",
+        policy_failure: "策略或动作失败",
+        collect_post: "收藏内容",
+        not_interested: "不感兴趣",
+        search: "搜索内容",
+      };
+      function toast(text) {
+        $("toast").textContent = text;
+        $("toast").style.display = "block";
+        setTimeout(() => ($("toast").style.display = "none"), 3500);
+      }
+      async function api(path, value) {
+        const r = await fetch(
+          path,
+          value
+            ? {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(value),
+              }
+            : {},
+        );
+        const data = await r.json();
+        if (!r.ok) throw Error(data.error || "请求失败");
+        return data;
+      }
+      function renderJobs(runs) {
+        $("jobs").innerHTML =
+          runs
+            .map(
+              (run) =>
+                `<div class="job ${run.run_id === selected ? "selected" : ""}" data-run="${run.run_id}"><div class="job-top"><span>${esc(run.name)}</span><span class="status">${esc(states[run.status])}</span></div><small>${run.config.user_ids.length} 个账号 · ${run.completed_ticks}/${run.config.ticks} 轮 · ${esc(run.model)}</small></div>`,
+            )
+            .join("") ||
+          '<div class="hint">尚无实验。创建第一个独立沙盒。</div>';
+      }
+      function renderGraph(run) {
+        const users = run.users,
+          width = 340,
+          height = 210,
+          cx = 170,
+          cy = 100,
+          radius = 76;
+        const positions = {};
+        users.forEach(
+          (u, i) =>
+            (positions[u.user_id] = {
+              x:
+                cx +
+                radius *
+                  Math.cos((2 * Math.PI * i) / users.length - Math.PI / 2),
+              y:
+                cy +
+                radius *
+                  Math.sin((2 * Math.PI * i) / users.length - Math.PI / 2),
+            }),
+        );
+        $("graph").innerHTML =
+          `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="账号关注关系">${run.graph
+            .map((e) => {
+              const a = positions[e.source],
+                b = positions[e.target];
+              return a && b
+                ? `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#c6d4b9" stroke-width="1.5"/>`
+                : "";
+            })
+            .join("")}${users
+            .map((u) => {
+              const p = positions[u.user_id],
+                active = run.config.user_ids.includes(u.user_id);
+              return `<g><circle cx="${p.x}" cy="${p.y}" r="13" fill="${active ? "#608152" : "#d7dfce"}"/><text x="${p.x}" y="${p.y + 4}" text-anchor="middle" fill="white" font-size="10">${u.user_id}</text><text x="${p.x}" y="${p.y + 27}" text-anchor="middle" fill="#72816d" font-size="10">${esc(u.name)}</text></g>`;
+            })
+            .join("")}</svg>`;
+      }
+      function renderEvents(run) {
+        const names = Object.fromEntries(
+          run.users.map((u) => [u.user_id, u.name]),
+        );
+        const events = run.events
+          .filter((e) => actor === "all" || e.user_id === Number(actor))
+          .slice(-160);
+        $("events").innerHTML =
+          events
+            .map((e) => {
+              const a = e.action,
+                args = a.arguments,
+                creation = [
+                  "save_draft",
+                  "create_post",
+                  "publish_draft",
+                ].includes(a.action_type),
+                specs = args.assets || e.result.creation?.assets || [];
+              return `<div class="event ${creation ? "creation" : ""}"><div class="event-top"><b>${esc(names[e.user_id] || e.user_id)}</b><span>${esc(actions[a.action_type] || a.action_type)}</span><small>tick ${e.tick} · #${e.step}</small></div>${a.rationale ? `<div class="reason">${esc(a.rationale)}</div>` : ""}${specs.length ? `<div class="thumbs">${specs.map((s) => `<img src="/api/run-media?run=${run.run_id}&id=${encodeURIComponent(s.asset_id)}" alt="选择的素材" loading="lazy">`).join("")}</div><div class="asset-note">素材顺序已记录 · ${specs.length} 项</div>` : ""}<details><summary class="hint">动作参数与结果</summary><pre class="args">${esc(JSON.stringify({ arguments: args, result: e.result }, null, 2))}</pre></details></div>`;
+            })
+            .join("") || '<div class="hint">账号还没有开始行动。</div>';
+        if (run.status === "running")
+          $("events").scrollTop = $("events").scrollHeight;
+      }
+      function render(run) {
+        currentRun = run;
+        $("runTitle").textContent = run.name;
+        $("runSubtitle").textContent =
+          `${run.config.user_ids.length} 个账号 · seed ${run.config.seed} · ${run.model} · 独立沙盒 ${run.run_id}`;
+        $("tickMetric").textContent = run.completed_ticks;
+        $("postMetric").textContent = run.metrics.created_posts;
+        $("commentMetric").textContent = run.metrics.comments;
+        $("exposureMetric").textContent = run.metrics.exposures;
+        $("runState").textContent =
+          states[run.status] + (run.error_type ? " · " + run.error_type : "");
+        $("progressText").textContent =
+          `${run.attempted_actions}/${run.total_actions} 次操作上限 · ${run.failure_count || 0} 次失败`;
+        $("progressBar").style.width =
+          Math.min(100, (run.attempted_actions / run.total_actions) * 100) +
+          "%";
+        $("modelUsage").textContent =
+          `草稿 ${run.metrics.drafts} 份 · 模型调用 ${run.metrics.model_calls} 次 · 已知输入/输出 token ${run.metrics.input_tokens}/${run.metrics.output_tokens}`;
+        $("pauseButton").disabled = !["queued", "running"].includes(run.status);
+        $("resumeButton").disabled = !["paused", "pausing"].includes(
+          run.status,
+        );
+        $("stopButton").disabled = ![
+          "queued",
+          "running",
+          "paused",
+          "pausing",
+        ].includes(run.status);
+        $("config").textContent = JSON.stringify(
+          {
+            config: run.config,
+            initial_database_sha256: run.initial_database_sha256,
+            config_sha256: run.config_sha256,
+            provider_config_sha256: run.provider_config_sha256,
+            created_at: run.created_at,
+            finished_at: run.finished_at,
+            report: run.report,
+          },
+          null,
+          2,
+        );
+        const prev = $("actorFilter").value;
+        $("actorFilter").innerHTML =
+          '<option value="all">所有账号</option>' +
+          run.users
+            .filter((u) => run.config.user_ids.includes(u.user_id))
+            .map((u) => `<option value="${u.user_id}">${esc(u.name)}</option>`)
+            .join("");
+        if ([...$("actorFilter").options].some((o) => o.value === prev))
+          $("actorFilter").value = prev;
+        else actor = "all";
+        renderGraph(run);
+        renderEvents(run);
+        const uid = actor === "all" ? run.config.user_ids[0] : Number(actor),
+          src = "/account?run=" + run.run_id + "&actor=" + uid;
+        if ($("viewer").getAttribute("src") !== src) $("viewer").src = src;
+        $("viewer").hidden = false;
+        $("viewerEmpty").hidden = true;
+      }
+      async function refresh() {
+        if (loading) return;
+        loading = true;
+        try {
+          const data = await api("/api/runs");
+          renderJobs(data.runs);
+          if (selected) render(await api("/api/runs/" + selected));
+          if (!selected && data.runs.length) {
+            selected = data.runs[0].run_id;
+            render(await api("/api/runs/" + selected));
+            renderJobs(data.runs);
+          }
+        } catch (e) {
+          toast(e.message);
+        } finally {
+          loading = false;
+        }
+      }
+      $("explore").oninput = () =>
+        ($("exploreLabel").textContent =
+          Math.round(Number($("explore").value) * 100) + "%");
+      $("jobs").onclick = async (e) => {
+        const row = e.target.closest("[data-run]");
+        if (row) {
+          selected = row.dataset.run;
+          actor = "all";
+          await refresh();
+        }
+      };
+      $("actorFilter").onchange = () => {
+        actor = $("actorFilter").value;
+        if (currentRun) render(currentRun);
+      };
+      for (const [id, command] of [
+        ["pauseButton", "pause"],
+        ["resumeButton", "resume"],
+        ["stopButton", "stop"],
+      ])
+        $(id).onclick = async () => {
+          try {
+            await api("/api/runs/" + selected + "/control", { command });
+            await refresh();
+          } catch (e) {
+            toast(e.message);
+          }
+        };
+      $("runForm").onsubmit = async (e) => {
+        e.preventDefault();
+        $("startButton").disabled = true;
+        try {
+          const user_ids = [
+            ...document.querySelectorAll("[name=agent]:checked"),
+          ].map((el) => Number(el.value));
+          const ticks = Number($("ticks").value),
+            event = $("intervention").value.trim();
+          const value = {
+            name: $("runName").value,
+            user_ids,
+            ticks,
+            steps_per_tick: Number($("steps").value),
+            seed: Number($("seed").value),
+            provider_id: $("provider").value,
+            pace_ms: Number($("pace").value),
+            goal: $("goal").value,
+            recommendation: {
+              topic_weight: Number($("interest").value),
+              exploration_fraction: Number($("explore").value),
+            },
+            events:
+              event && user_ids.length
+                ? [
+                    {
+                      tick: Math.floor(ticks / 2),
+                      user_id: user_ids[0],
+                      body: event,
+                      topics: ["社区讨论"],
+                    },
+                  ]
+                : [],
+          };
+          const run = await api("/api/runs", value);
+          selected = run.run_id;
+          actor = "all";
+          await refresh();
+          toast("独立沙盒已创建，模拟开始运行。");
+        } catch (e) {
+          toast(e.message);
+        } finally {
+          $("startButton").disabled = false;
+        }
+      };
+      $("exportLink").onclick = async (e) => {
+        e.preventDefault();
+        if (!selected) return toast("请先选择实验");
+        const run = await api("/api/runs/" + selected + "/export");
+        const url = URL.createObjectURL(
+          new Blob([JSON.stringify(run, null, 2)], {
+            type: "application/json",
+          }),
+        );
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "agora-" + selected + ".json";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      (async () => {
+        try {
+          world = await api("/api/world");
+          $("sourceLabel").textContent =
+            `源世界 ${world.world_id} · ${world.preset} · ${world.users.length} 个账号`;
+          $("agents").innerHTML = world.users
+            .map(
+              (u, i) =>
+                `<label class="agent-choice"><input name="agent" type="checkbox" value="${u.user_id}" ${i < 4 ? "checked" : ""}><span>${esc(u.name)}</span></label>`,
+            )
+            .join("");
+          const data = await api("/api/runs");
+          $("provider").innerHTML =
+            '<option value="development">Persona 开发策略 · 无模型调用</option>' +
+            data.providers
+              .map(
+                (p) =>
+                  `<option value="${esc(p.provider_id)}" ${!p.credential_available ? "disabled" : ""}>${esc(p.model_id)}${!p.credential_available ? " · 未配置凭据" : ""}</option>`,
+              )
+              .join("");
+          await refresh();
+        } catch (e) {
+          toast(e.message);
+        }
+      })();
+      setInterval(refresh, 1800);
+    </script>
+  </body>
+</html>

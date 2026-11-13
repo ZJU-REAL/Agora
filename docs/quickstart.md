@@ -1,102 +1,62 @@
 # 快速开始
 
-项目使用 Python 3.11，不要求 Docker。视频功能需要系统安装 `ffmpeg` 和 `ffprobe`。
+## 安装与启动
 
-## 交互沙盒与 AI 会话回放
-
-按下一节安装轻量依赖后，在仓库根目录运行：
+Python 3.10–3.12，无需 Docker。视频需要系统 `ffmpeg` 和 `ffprobe`。
 
 ```bash
-python -m agora demo agora-demo
-python -m agora serve agora-demo
-```
-
-打开 `http://127.0.0.1:8765`。演示需要空世界，再次运行请换世界 ID。支持账号操作、
-会话回放和推荐观察。模型接入与算法说明见 [README](../README.md) 和
-[推荐与浏览会话](simulation.md)。
-
-## 安装与建世界
-
-只使用 Agora 沙盒与评测层时，可以安装轻量依赖，无需 PyTorch、CAMEL 或推荐模型权重：
-
-```bash
-uv venv .venv --python 3.11
-uv pip install --python .venv/bin/python -r requirements-sandbox.txt
-uv pip install --python .venv/bin/python --no-deps -e .
+python3 -m venv .venv
 source .venv/bin/activate
-```
-
-需要上游 CAMEL agent 或学习型推荐器时，使用完整安装：
-
-```bash
 pip install -e .
+agora serve agora-demo --bootstrap
 ```
 
-然后创建世界：
+打开 `http://127.0.0.1:8765`。默认启动一次合成源世界，页面选择账号和参数后创建独立
+实验。每次实验有独立数据库/媒体，源世界不被污染。观察速度只改变展示速度。
+
+## 接入模型
+
+修改 `configs/models/provider.example.json` 的服务地址、模型 ID、视觉能力和预算，然后
+设置配置声明的环境变量：
 
 ```bash
-agora-oasis --data-root data/worlds \
-  world-create xhs-demo --preset xiaohongshu --seed 42
-agora-oasis --data-root data/worlds world-inspect xhs-demo
+export AGORA_API_KEY='...'
+agora serve agora-demo --provider-config configs/models/provider.example.json
 ```
 
-平台可选 `xiaohongshu`、`reddit` 或 `x`。一个世界包含 `sandbox.db`、`media/` 和世界清单。
+页面选择对应模型。缺少凭据的 provider 不可启动；本地 transformers 配置检查模型目录，
+相关依赖需另外安装。开发策略明确显示为无模型调用，不将它伪装为真实 LLM。
 
-## 发布小红书图文
-
-下面在新建的 `xhs-demo` 世界里创建第一个用户，并发布真实的本地图片。`--author-id` 使用
-`user-create` 输出的 `user_id`（空世界的第一个用户为 1）。
+## 导入自己的世界
 
 ```bash
-agora-oasis user-create xhs-demo creator --display-name '旅行博主'
-agora-oasis post-create xhs-demo --author-id 1 \
-  --title '旧街散步' --body '傍晚的光线很适合拍照。' \
-  --image /path/to/street.jpg --topic 城市漫游 --location 上海
-agora-oasis post-view xhs-demo 1 --user-id 1
+agora-world --data-root data/worlds world-create xhs-study --preset xiaohongshu --seed 42
+agora-world --data-root data/worlds data-import xhs-study /path/to/manifest.json
+agora-world --data-root data/worlds world-inspect xhs-study
+agora serve xhs-study
 ```
 
-一个 `--image` 发布单图图文（`image`）；重复传入 `--image` 发布有序多图（`gallery`，2–20 张），
-图片顺序与参数顺序一致。标题和正文与图片一起保存，Feed 和评测均可读取。媒体会复制进世界
-目录，不依赖原始文件后续是否存在。`post-view` 的帖子 ID 使用 `post-create` 返回值。
+详细字段和匿名化约定见 [数据准备](data.md)。X/Reddit 用相应 preset 建世界，底层保留
+各自原生语义；页面会话尚未覆盖全部特殊动作。
 
-发布视频使用 `--video /path/to/clip.mp4`，可加 `--cover /path/to/cover.jpg`；不传媒体时发布
-纯文字。这些发布命令同样支持 Reddit 和 X 世界，Reddit 可额外指定 `--community r/hiking`。
-
-## 导入和推进
-
-数据格式见 [数据准备](data.md)。
+## 运行与记录
 
 ```bash
-agora-oasis --data-root data/worlds \
-  data-import xhs-demo dataset/manifest.json
-agora-oasis --data-root data/worlds run xhs-demo --ticks 10
-agora-oasis --data-root data/worlds \
-  snapshot xhs-demo --snapshot-id before-experiment
+agora simulate agora-demo --user-id 1 --user-id 2 --ticks 6 --steps-per-tick 8
+agora export agora-demo --session-id 1 --output data/worlds/agora-demo/session.json
+agora-benchmark --help
 ```
 
-相同初始世界、策略版本和 seed 会产生相同的 scripted 行为。
+页面“导出实验记录”包含配置/指纹、世界事件、每步公开观察、动作/结果、推荐诊断和
+模型调用。实验目录在 `data/worlds/<source>/experiments/<run_id>/`。进程中断保留记录并标记
+interrupted；不会静默重复模型调用。
 
-## Python 调用
-
-```python
-import asyncio
-from oasis import AgoraOasis, DatasetImporter
-
-sandbox = AgoraOasis.local("xhs-demo", "data/worlds")
-asyncio.run(DatasetImporter(sandbox).import_manifest("dataset/manifest.json"))
-observation = sandbox.observe(user_id=1)
-result = asyncio.run(sandbox.advance())
-sandbox.close()
-```
-
-接入 Candidate、创建 Artifact 和批量评测见 [评测流程](evaluation.md)。
-
-## 本地验证
+## 验证
 
 ```bash
-uv pip install --python .venv/bin/python pytest==8.2.0 pytest-asyncio==0.23.6
-.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database
+pip install -e '.[test,dev]'
+python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database
 ```
 
-`test_platform_readiness.py` 覆盖三平台单图/多图命令行发布，以及完整的多图评测 episode、
-NPC 互动和源世界隔离。上游 agent 与学习型推荐器测试另需完整依赖。
+受控评测见 [evaluation.md](evaluation.md)，原生实验见 [simulation.md](simulation.md)。
+归档的 CAMEL/neural runtime 需要 `requirements-legacy.txt`，不属于默认运行或本次验证。

@@ -8,7 +8,7 @@ from oasis import AgoraOasis, AssetInput, DatasetImporter
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="agora-oasis")
+    parser = argparse.ArgumentParser(prog="agora-world")
     parser.add_argument("--data-root", default="data/worlds")
     commands = parser.add_subparsers(dest="command", required=True)
 

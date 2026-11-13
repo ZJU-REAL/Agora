@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-from oasis.agora_oasis import AgoraOasis
 from oasis.agora_types import AssetInput, PersonaProfile
+from oasis.world import AgoraWorld
 
 
 @dataclass(frozen=True)
@@ -21,9 +22,9 @@ class ImportReport:
 
 
 class DatasetImporter:
-    """Imports a versioned JSONL dataset into one Agora-OASIS world."""
+    """Imports a versioned JSONL dataset into one Agora world."""
 
-    def __init__(self, sandbox: AgoraOasis):
+    def __init__(self, sandbox: AgoraWorld):
         self.sandbox = sandbox
 
     async def import_manifest(self, manifest_path: str | Path) -> ImportReport:
@@ -31,12 +32,20 @@ class DatasetImporter:
         manifest = self._load_manifest(path)
         dataset = manifest.get("dataset", {})
         namespace = manifest.get("import", {}).get(
-            "id_namespace", dataset.get("name", path.stem))
+            "id_namespace", dataset.get("name", path.stem)
+        )
         files = manifest.get("files", {})
         root = path.parent
 
-        counts = {"users": 0, "personas": 0, "posts": 0, "comments": 0,
-                  "relations": 0, "interactions": 0, "skipped": 0}
+        counts = {
+            "users": 0,
+            "personas": 0,
+            "posts": 0,
+            "comments": 0,
+            "relations": 0,
+            "interactions": 0,
+            "skipped": 0,
+        }
         for row in self._rows(root, files.get("users")):
             external_id = str(row["external_id"])
             if self._lookup(namespace, "user", external_id):
@@ -69,10 +78,12 @@ class DatasetImporter:
                 continue
             if row.get("type") != "follow":
                 raise ValueError(f"Unsupported relation type: {row.get('type')}")
-            actor_id = int(self._required(
-                namespace, "user", str(row["actor_external_id"])))
-            target_id = int(self._required(
-                namespace, "user", str(row["target_external_id"])))
+            actor_id = int(
+                self._required(namespace, "user", str(row["actor_external_id"]))
+            )
+            target_id = int(
+                self._required(namespace, "user", str(row["target_external_id"]))
+            )
             if not self.sandbox.follow_user(actor_id, target_id):
                 raise ValueError(f"Duplicate follow relation: {external_id}")
             self._map(namespace, "relation", external_id, external_id)
@@ -86,23 +97,29 @@ class DatasetImporter:
             if self._lookup(namespace, "post", external_id):
                 counts["skipped"] += 1
                 continue
-            author_id = self._required(namespace, "user",
-                                       str(row["author_external_id"]))
+            author_id = self._required(
+                namespace, "user", str(row["author_external_id"])
+            )
             assets = []
             for item in row.get("assets", []):
                 media_path = (media_root / item["path"]).resolve(strict=True)
                 if media_root not in media_path.parents:
-                    raise ValueError(
-                        f"Media path escapes media_root: {item['path']}")
-                assets.append(AssetInput(
-                    path=media_path, role=item.get("role", "content"),
-                    caption=item.get("caption"),
-                    alt_text=item.get("alt_text"),
-                    transcript=item.get("transcript")))
+                    raise ValueError(f"Media path escapes media_root: {item['path']}")
+                assets.append(
+                    AssetInput(
+                        path=media_path,
+                        role=item.get("role", "content"),
+                        caption=item.get("caption"),
+                        alt_text=item.get("alt_text"),
+                        transcript=item.get("transcript"),
+                    )
+                )
             reply_external_id = row.get("reply_to_post_external_id")
-            reply_to_post_id = (int(self._required(
-                namespace, "post", str(reply_external_id)))
-                if reply_external_id else None)
+            reply_to_post_id = (
+                int(self._required(namespace, "post", str(reply_external_id)))
+                if reply_external_id
+                else None
+            )
             post_id = self.sandbox.create_post(
                 author_id=int(author_id),
                 body=row.get("body", ""),
@@ -130,32 +147,36 @@ class DatasetImporter:
                     progressed = True
                     continue
                 parent_external_id = row.get("parent_external_id")
-                parent_id = (self._lookup(namespace, "comment",
-                                          str(parent_external_id))
-                             if parent_external_id else None)
+                parent_id = (
+                    self._lookup(namespace, "comment", str(parent_external_id))
+                    if parent_external_id
+                    else None
+                )
                 if parent_external_id and parent_id is None:
                     remaining.append(row)
                     continue
                 post_id = int(
-                    self._required(namespace, "post",
-                                   str(row["post_external_id"])))
+                    self._required(namespace, "post", str(row["post_external_id"]))
+                )
                 author_id = int(
-                    self._required(namespace, "user",
-                                   str(row["author_external_id"])))
+                    self._required(namespace, "user", str(row["author_external_id"]))
+                )
                 result = await self.sandbox.create_comment(
-                    author_id, post_id, row["content"],
-                    int(parent_id) if parent_id is not None else None)
+                    author_id,
+                    post_id,
+                    row["content"],
+                    int(parent_id) if parent_id is not None else None,
+                )
                 if not result.get("success"):
                     raise ValueError(
-                        f"Could not import comment {external_id}: {result}")
-                self._map(namespace, "comment", external_id,
-                          result["comment_id"])
+                        f"Could not import comment {external_id}: {result}"
+                    )
+                self._map(namespace, "comment", external_id, result["comment_id"])
                 counts["comments"] += 1
                 progressed = True
             if not progressed:
                 unresolved = [row["external_id"] for row in remaining]
-                raise ValueError(
-                    f"Unresolved or cyclic comment parents: {unresolved}")
+                raise ValueError(f"Unresolved or cyclic comment parents: {unresolved}")
             pending = remaining
 
         interaction_actions = {
@@ -171,23 +192,24 @@ class DatasetImporter:
             interaction_type = row.get("type")
             action = interaction_actions.get(interaction_type)
             if action is None:
-                raise ValueError(
-                    f"Unsupported interaction type: {interaction_type}")
-            actor_id = int(self._required(
-                namespace, "user", str(row["actor_external_id"])))
-            post_id = int(self._required(
-                namespace, "post", str(row["post_external_id"])))
+                raise ValueError(f"Unsupported interaction type: {interaction_type}")
+            actor_id = int(
+                self._required(namespace, "user", str(row["actor_external_id"]))
+            )
+            post_id = int(
+                self._required(namespace, "post", str(row["post_external_id"]))
+            )
             if not action(actor_id, post_id):
                 raise ValueError(
-                    f"Duplicate {interaction_type} interaction: {external_id}")
+                    f"Duplicate {interaction_type} interaction: {external_id}"
+                )
             self._map(namespace, "interaction", external_id, external_id)
             counts["interactions"] += 1
 
         self.sandbox.platform.db.commit()
         return ImportReport(**counts)
 
-    def _lookup(self, namespace: str, entity_type: str,
-                external_id: str) -> str | None:
+    def _lookup(self, namespace: str, entity_type: str, external_id: str) -> str | None:
         row = self.sandbox.platform.db.execute(
             "SELECT internal_id FROM external_id_map WHERE namespace = ? "
             "AND entity_type = ? AND external_id = ?",
@@ -195,17 +217,18 @@ class DatasetImporter:
         ).fetchone()
         return row[0] if row else None
 
-    def _required(self, namespace: str, entity_type: str,
-                  external_id: str) -> str:
+    def _required(self, namespace: str, entity_type: str, external_id: str) -> str:
         value = self._lookup(namespace, entity_type, external_id)
         if value is None:
             raise ValueError(
                 f"Missing {entity_type} external_id {external_id!r} "
-                f"in namespace {namespace!r}.")
+                f"in namespace {namespace!r}."
+            )
         return value
 
-    def _map(self, namespace: str, entity_type: str, external_id: str,
-             internal_id: Any) -> None:
+    def _map(
+        self, namespace: str, entity_type: str, external_id: str, internal_id: Any
+    ) -> None:
         self.sandbox.platform.db.execute(
             "INSERT INTO external_id_map "
             "(namespace, entity_type, external_id, internal_id) "
@@ -231,5 +254,6 @@ class DatasetImporter:
             import yaml
         except ImportError as exc:
             raise RuntimeError(
-                "PyYAML is required for YAML manifests; use JSON instead.") from exc
+                "PyYAML is required for YAML manifests; use JSON instead."
+            ) from exc
         return yaml.safe_load(path.read_text(encoding="utf-8"))

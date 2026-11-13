@@ -71,5 +71,20 @@ CREATE INDEX IF NOT EXISTS idx_agora_post_visibility
 
 
 def ensure_schema(db: sqlite3.Connection) -> None:
+    existing = {
+        row[0]
+        for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+    }
+    required = {
+        "agora_session",
+        "agora_request",
+        "agora_exposure",
+        "agora_feedback",
+        "agora_session_event",
+    }
+    if required <= existing:
+        return
+    if db.in_transaction:
+        raise RuntimeError("Apply Agora schema migrations before starting an action")
     db.executescript(SCHEMA)
     db.commit()

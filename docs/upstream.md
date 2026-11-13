@@ -1,23 +1,29 @@
-# OASIS 参考底座与迁移边界
+# 来源、致谢与兼容范围
 
-Agora 的新推荐、浏览会话、策略调度、研究控制台和入口位于 `agora/`，不调用上游
-神经推荐器或 CAMEL agent 调度。`agora/backends/oasis.py` 提供当前世界适配器；视觉
-编码暂通过 `agora/backends/visual.py` 复用既有评测工具。
+Agora 早期参考 CAMEL-AI OASIS：
 
-数据库 schema/migration、帖子/评论/关注 CRUD 和媒体存储仍使用 `oasis/`，因此目前尚未
-彻底脱离 OASIS。下一阶段会迁移这些底层能力，保留兼容 adapter 与原来源声明，具体
-验收见 [架构审查与路线](agora-roadmap.md)。重命名包不等于完成独立内核。
+- 仓库：https://github.com/camel-ai/oasis
+- 基线：`2048ee6dd8d2a9e62f53773f00200ef51a086468`
+- 原上游版本：`camel-oasis 0.2.5`
+- 许可证：Apache-2.0，见根目录 `LICENSE`
 
-Agora-OASIS 基于 CAMEL-AI OASIS：
+## 当前主路径
 
-- 仓库：`https://github.com/camel-ai/oasis.git`
-- 基线提交：`2048ee6dd8d2a9e62f53773f00200ef51a086468`
-- 上游版本：`camel-oasis 0.2.5`
-- 许可证：Apache-2.0
+0.3 的 `AgoraWorld` 使用原生 `WorldStore`、版本化 schema、模拟 tick、事务和内容寻址媒体。
+`agora/` 拥有推荐、账号会话、模型/视觉输入、记忆、策略调度、实验管理和网页。
+启动一次模拟不再创建旧 Platform、Channel、Clock 或 CAMEL agent，也不需要 Docker。
 
-上游兼容代码主要位于 `oasis/environment/`、`oasis/social_agent/` 和
-`oasis/social_platform/`。Agora 扩展集中在统一世界 API、数据导入、多媒体、评论线程、事件、
-快照、小红书平台，以及独立的 `benchmarks/` 评测层。
+已有增强的帖子/评论/关系/媒体实体布局和经过验证的受控评测保留并继续演进；迁移没有
+通过删除有用能力来制造差异，也不把所有派生代码宣称为从零原创。原派生源码保留版权
+声明，新增架构和行为的依据见 [调研记录](research.md)。
 
-上游学习型推荐器只用于兼容性实验；Agora 主评测会在 manifest 校验时拒绝它们。派生源码保留
-原版权声明，详情见根目录 `LICENSE` 和 `licenses/`。
+## 历史集成
+
+历史环境、agent、Clock 与 platform/recommender 实现归档至 `oasis/legacy/`。旧位置的
+小模块仅为显式调用方提供兼容转发，默认沙盒不加载它们。它们的额外依赖放在
+`requirements-legacy.txt`，不再进入 `pip install -e .` 的默认依赖。
+
+`AgoraOasis` / `AgoraOasisConfig` 是 `AgoraWorld` / `WorldConfig` 的旧高层导入别名。
+正式包名和主入口使用 Agora：`agora-social`、`agora`、`agora-world`、`agora-benchmark`。
+旧世界数据库通过增量列/表迁移打开，不重写已发布 Artifact；旧 Artifact 校验和仍按原文件
+校验，运行副本才进行迁移。归档的低层平台不承诺能操作所有新版世界 schema。

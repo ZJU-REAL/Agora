@@ -18,7 +18,7 @@ from agora.storage import ensure_schema
 
 @dataclass(frozen=True)
 class RecommendationConfig:
-    policy_version: str = "agora-hybrid-v1"
+    policy_version: str = "agora-hybrid-v2"
     channel_limit: int = 100
     slate_size: int = 30
     page_size: int = 6
@@ -32,9 +32,10 @@ class RecommendationConfig:
     fatigue_weight: float = 1.2
     author_diversity_penalty: float = 0.9
     topic_diversity_penalty: float = 0.3
+    collaborative_weight: float = 0.6
 
     def __post_init__(self):
-        if self.policy_version != "agora-hybrid-v1":
+        if self.policy_version not in {"agora-hybrid-v1", "agora-hybrid-v2"}:
             raise ValueError("Unsupported recommendation policy version")
         for name in ("channel_limit", "slate_size", "page_size"):
             value = getattr(self, name)
@@ -165,6 +166,7 @@ class RecommendationEngine:
             if not params["query"]:
                 raise ValueError("Search query cannot be empty")
         channels = {}
+        neighbors = {}
 
         def retrieve(name, extra="", order="p.post_id DESC"):
             rows = self.db.execute(
@@ -208,6 +210,24 @@ class RecommendationEngine:
             ).fetchone()[0]
             params["pivot"] = int(_noise(seed, user_id, tick, refresh, 0) * max_id)
             retrieve("explore", order="(p.post_id < :pivot), p.post_id")
+            if self.config.policy_version == "agora-hybrid-v2":
+                neighbors = {
+                    row[0]: row[1]
+                    for row in self.db.execute(
+                        'SELECT peer.user_id, COUNT(*) FROM "like" me JOIN "like" peer '
+                        "ON peer.post_id = me.post_id WHERE me.user_id = ? AND peer.user_id != ? "
+                        "GROUP BY peer.user_id ORDER BY COUNT(*) DESC, peer.user_id LIMIT 20",
+                        (user_id, user_id),
+                    )
+                }
+                if neighbors:
+                    for index, peer in enumerate(neighbors):
+                        params[f"peer{index}"] = peer
+                    names = ",".join(f":peer{i}" for i in range(len(neighbors)))
+                    retrieve(
+                        "collaborative",
+                        f'AND EXISTS (SELECT 1 FROM "like" cl WHERE cl.post_id = p.post_id AND cl.user_id IN ({names}))',
+                    )
         candidates = sorted({post for posts in channels.values() for post in posts})
         topics = self._topics(candidates)
         following = {
@@ -225,6 +245,21 @@ class RecommendationEngine:
             exposure_counts[post] = count
         seen = set(seen_ids)
         records = {}
+        collaborative = defaultdict(float)
+        if neighbors:
+            total = sum(neighbors.values())
+            peers = list(neighbors)
+            for offset in range(0, len(candidates), 400):
+                chunk = candidates[offset : offset + 400]
+                query = (
+                    'SELECT user_id, post_id FROM "like" WHERE user_id IN ('
+                    + ",".join("?" for _ in peers)
+                    + ") AND post_id IN ("
+                    + ",".join("?" for _ in chunk)
+                    + ")"
+                )
+                for peer, post in self.db.execute(query, peers + chunk):
+                    collaborative[post] += neighbors[peer] / total
         for offset in range(0, len(candidates), 400):
             chunk = candidates[offset : offset + 400]
             rows = self.db.execute(
@@ -233,8 +268,8 @@ class RecommendationEngine:
                 "(SELECT COUNT(*) FROM collection c WHERE c.post_id = p.post_id), "
                 "(SELECT COUNT(*) FROM comment c WHERE c.post_id = p.post_id), "
                 "(SELECT COUNT(*) FROM agora_feedback fb WHERE fb.post_id = p.post_id "
-                "AND fb.kind = 'open_post'), "
-                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id) "
+                "AND fb.kind = 'open_post' AND fb.user_id != p.user_id), "
+                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id AND e.user_id != p.user_id) "
                 "FROM post p WHERE p.post_id IN (" + ",".join("?" for _ in chunk) + ")",
                 chunk,
             ).fetchall()
@@ -269,6 +304,8 @@ class RecommendationEngine:
                     * 0.5 ** (age / self.config.freshness_half_life_ticks),
                     "fatigue": -self.config.fatigue_weight
                     * math.log1p(exposure_counts[post]),
+                    "collaborative": self.config.collaborative_weight
+                    * collaborative[post],
                 }
                 records[post] = {
                     "post_id": post,
