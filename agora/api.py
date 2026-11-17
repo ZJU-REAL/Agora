@@ -25,7 +25,7 @@ class PlatformHub:
         self.managers = {
             primary.preset.name: manager or ExperimentManager(primary, providers)
         }
-        self.providers = providers or {}
+        self.providers = providers if providers is not None else {}
 
     def add_platforms(self, bootstrap=False):
         from agora.demo import populate

@@ -28,6 +28,10 @@ def main(argv=None):
     console.add_argument("world_id")
     console.add_argument("--port", type=int, default=8765)
     console.add_argument(
+        "--base-path", default="", help="Reverse-proxy mount, e.g. /agora"
+    )
+    console.add_argument("--public-origin", help="HTTPS origin served by IAP")
+    console.add_argument(
         "--api-port", type=int, help="AI account API port (default console port + 1)"
     )
     console.add_argument(
@@ -103,6 +107,8 @@ def main(argv=None):
                 api_port=args.api_port,
                 providers=providers,
                 bootstrap=args.bootstrap,
+                base_path=args.base_path,
+                public_origin=args.public_origin,
             )
             return 0
         elif args.command == "simulate":

@@ -1,0 +1,21 @@
+[Unit]
+Description=Agora social simulation developer workspace and viewer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=i-lidingming
+Group=i-lidingming
+WorkingDirectory=/data/project/Agora
+ExecStart=/data/project/Agora/.venv/bin/python -m agora serve agora-iap --bootstrap --port 8765 --api-port 8766 --base-path /agora --public-origin https://lidingm.iap.platform.shaipower.com
+Restart=on-failure
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=40
+UMask=0077
+NoNewPrivileges=true
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

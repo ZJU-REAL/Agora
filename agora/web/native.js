@@ -1,16 +1,18 @@
 /* Product renderers share account state and the same AI tool contract. */
 function nativeMediaUrl(asset) {
-  return runId
-    ? "/api/run-media?run=" +
-        encodeURIComponent(runId) +
-        "&id=" +
-        encodeURIComponent(asset.asset_id)
-    : "/media/" +
-        encodeURIComponent(asset.asset_id) +
-        "?platform=" +
-        encodeURIComponent(
-          selectedPlatform || current()?.platform || "xiaohongshu",
-        );
+  return agoraPath(
+    runId
+      ? "/api/run-media?run=" +
+          encodeURIComponent(runId) +
+          "&id=" +
+          encodeURIComponent(asset.asset_id)
+      : "/media/" +
+          encodeURIComponent(asset.asset_id) +
+          "?platform=" +
+          encodeURIComponent(
+            selectedPlatform || current()?.platform || "xiaohongshu",
+          ),
+  );
 }
 function nativeButton(name, args, text) {
   return actionButton(name, args, text);
@@ -44,6 +46,7 @@ function nativeComments(items, o) {
 }
 function nativeRender(o) {
   document.body.dataset.platform = o.platform;
+  document.body.dataset.screen = o.screen;
   const labels = {
     xiaohongshu: { discover: "发现", following: "关注", nearby: "同城" },
     x: { for_you: "For You", following: "Following" },

@@ -581,6 +581,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="/static/embed.css" />
   </head>
   <body>
     <header>
@@ -729,7 +730,10 @@
           );
       const urlParams = new URLSearchParams(location.search),
         runId = urlParams.get("run"),
-        initialActor = urlParams.get("actor");
+        initialActor = urlParams.get("actor"),
+        embedded = urlParams.get("embed") === "1";
+      if (embedded) document.body.classList.add("embedded");
+      let pendingViewerStep = null;
       let selectedPlatform = urlParams.get("platform"),
         world = {},
         data = null,
@@ -784,7 +788,7 @@
               encodeURIComponent(runId);
         }
         const r = await fetch(
-          path,
+          agoraPath(path),
           value
             ? {
                 method: "POST",
@@ -846,8 +850,31 @@
         if (after) next.trajectory = [...data.trajectory, ...next.trajectory];
         data = next;
         if (!keepFrame) frame = -1;
+        applyViewerFrame();
         render();
       }
+      function applyViewerFrame() {
+        if (pendingViewerStep === null || !data) return;
+        frame =
+          pendingViewerStep < 0
+            ? -1
+            : data.trajectory.findIndex((e) => e.step === pendingViewerStep);
+      }
+      window.addEventListener("message", (e) => {
+        if (
+          !embedded ||
+          !runId ||
+          e.origin !== location.origin ||
+          e.source !== window.parent ||
+          e.data?.type !== "agora:frame" ||
+          e.data.run !== runId ||
+          !Number.isInteger(e.data.step)
+        )
+          return;
+        pendingViewerStep = e.data.step;
+        applyViewerFrame();
+        render();
+      });
       function current() {
         return frame < 0
           ? data?.observation

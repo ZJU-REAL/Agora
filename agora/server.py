@@ -12,14 +12,41 @@ from urllib.parse import parse_qs, urlparse
 from agora.api import AgentAPI, PlatformHub
 from agora.recommendation import RecommendationEngine
 from agora.session import SocialSession
+from agora.web_support import page, validate_mount
 
 
-def make_handler(world, manager=None, hub=None, api_only=False):
+def make_handler(
+    world,
+    manager=None,
+    hub=None,
+    api_only=False,
+    base_path="",
+    public_origin=None,
+    registry=None,
+):
+    validate_mount(base_path, public_origin)
     RecommendationEngine(world.db)
     hub = hub or PlatformHub(world, manager=manager)
     native = AgentAPI(hub)
 
     class Handler(BaseHTTPRequestHandler):
+        def parsed(self):
+            parsed = urlparse(self.path)
+            if base_path:
+                if parsed.path == base_path:
+                    return parsed._replace(path="/")
+                if not parsed.path.startswith(base_path + "/"):
+                    raise FileNotFoundError("Unknown mount path")
+                return parsed._replace(path=parsed.path[len(base_path) :])
+            return parsed
+
+        def valid_origin(self):
+            origin = self.headers.get("Origin")
+            return not origin or origin in {
+                f"http://{self.headers.get('Host')}",
+                public_origin,
+            }
+
         def log_message(self, format, *args):
             pass
 
@@ -38,8 +65,8 @@ def make_handler(world, manager=None, hub=None, api_only=False):
             self.wfile.write(body)
 
         def do_GET(self):
-            parsed = urlparse(self.path)
             try:
+                parsed = self.parsed()
                 query = parse_qs(parsed.query)
                 if parsed.path.startswith("/v1/"):
                     status, value, mime = native.dispatch(
@@ -58,7 +85,13 @@ def make_handler(world, manager=None, hub=None, api_only=False):
                     )
                     return
                 world, manager = hub.select(query.get("platform", [None])[0])
-                if parsed.path in {"/static/native.js", "/static/native.css"}:
+                if parsed.path in {
+                    "/static/native.js",
+                    "/static/native.css",
+                    "/static/studio.js",
+                    "/static/studio.css",
+                    "/static/embed.css",
+                }:
                     self.reply(
                         200,
                         (
@@ -78,20 +111,30 @@ def make_handler(world, manager=None, hub=None, api_only=False):
                             "default": hub.primary.preset.name,
                         },
                     )
-                elif parsed.path == "/":
+                elif parsed.path in {"/", "/developer", "/viewer"}:
                     self.reply(
                         200,
-                        (
-                            Path(__file__).parent / "web" / "experiments.html"
-                        ).read_bytes(),
+                        page(
+                            "studio.html",
+                            base_path,
+                            "viewer" if parsed.path == "/viewer" else "developer",
+                        ),
+                        "text/html; charset=utf-8",
+                    )
+                elif parsed.path == "/experiments":
+                    self.reply(
+                        200,
+                        page("experiments.html", base_path),
                         "text/html; charset=utf-8",
                     )
                 elif parsed.path == "/account":
                     self.reply(
                         200,
-                        (Path(__file__).parent / "web" / "index.html").read_bytes(),
+                        page("index.html", base_path),
                         "text/html; charset=utf-8",
                     )
+                elif parsed.path == "/api/providers" and registry is not None:
+                    self.reply(200, {"providers": registry.options()})
                 elif parsed.path == "/api/runs":
                     self.reply(
                         200,
@@ -237,18 +280,18 @@ def make_handler(world, manager=None, hub=None, api_only=False):
         def do_POST(self):
             # This console owns the full research world, including replay and
             # diagnostics. Keep mutations same-origin and bound to loopback.
-            origin = self.headers.get("Origin")
-            if origin and origin != f"http://{self.headers.get('Host')}":
+            if not self.valid_origin():
                 self.reply(403, {"error": "Cross-origin mutation rejected"})
                 return
             try:
+                parsed = self.parsed()
                 length = int(self.headers.get("Content-Length", "0"))
                 if (
                     not 0
                     < length
                     <= (
                         12 * 1024 * 1024
-                        if urlparse(self.path).path in {"/v1/assets", "/api/assets"}
+                        if parsed.path in {"/v1/assets", "/api/assets"}
                         else 1024 * 1024
                     )
                 ):
@@ -258,7 +301,6 @@ def make_handler(world, manager=None, hub=None, api_only=False):
                 value = json.loads(self.rfile.read(length))
                 if not isinstance(value, dict):
                     raise TypeError("Request body must be an object")
-                parsed = urlparse(self.path)
                 query = parse_qs(parsed.query)
                 if parsed.path.startswith("/v1/"):
                     status, body, mime = native.dispatch(
@@ -279,7 +321,11 @@ def make_handler(world, manager=None, hub=None, api_only=False):
                     return
                 platform = value.pop("platform", query.get("platform", [None])[0])
                 world, manager = hub.select(platform)
-                if parsed.path == "/api/assets":
+                if parsed.path == "/api/providers" and registry is not None:
+                    self.reply(201, registry.save(value))
+                elif parsed.path == "/api/providers/test" and registry is not None:
+                    self.reply(200, registry.test(value.get("provider_id")))
+                elif parsed.path == "/api/assets":
                     uid = value.pop("user_id")
                     self.reply(201, native.upload(world, uid, value))
                 elif parsed.path == "/api/runs":
@@ -324,23 +370,32 @@ def make_handler(world, manager=None, hub=None, api_only=False):
                     )
                 else:
                     self.reply(404, {"error": "Unknown route"})
-            except (KeyError, ValueError, PermissionError, TypeError) as error:
+            except (
+                KeyError,
+                ValueError,
+                PermissionError,
+                TypeError,
+                FileNotFoundError,
+            ) as error:
                 self.reply(
                     403 if isinstance(error, PermissionError) else 400,
                     {"error": str(error)},
                 )
 
         def do_DELETE(self):
+            if not self.valid_origin():
+                self.reply(403, {"error": "Cross-origin mutation rejected"})
+                return
             try:
                 status, value, mime = native.dispatch(
                     "DELETE",
-                    urlparse(self.path).path,
+                    self.parsed().path,
                     {},
                     {},
                     self.headers.get("Authorization"),
                 )
                 self.reply(status, value, mime or "application/json; charset=utf-8")
-            except (ValueError, PermissionError, KeyError) as error:
+            except (ValueError, PermissionError, KeyError, FileNotFoundError) as error:
                 self.reply(403, {"error": str(error)})
 
     return Handler
@@ -354,22 +409,41 @@ def serve(
     api_port=None,
     bootstrap=False,
     multi_platform=True,
+    base_path="",
+    public_origin=None,
 ):
+    validate_mount(base_path, public_origin)
     if host not in {"127.0.0.1", "localhost"}:
         raise ValueError("Research console must bind to loopback")
-    hub = PlatformHub(world, providers)
+    from agora.provider_registry import ProviderRegistry
+
+    registry = ProviderRegistry(world.config.world_dir / ".private", providers)
+    hub = PlatformHub(world, registry.providers)
     if multi_platform:
         hub.add_platforms(bootstrap)
     api_port = port + 1 if api_port is None else api_port
     if api_port == port:
         raise ValueError("The AI API uses a separate port from the research console")
     with (
-        HTTPServer((host, port), make_handler(world, hub=hub)) as console,
         HTTPServer(
-            (host, api_port), make_handler(world, hub=hub, api_only=True)
+            (host, port),
+            make_handler(
+                world,
+                hub=hub,
+                base_path=base_path,
+                public_origin=public_origin,
+                registry=registry,
+            ),
+        ) as console,
+        HTTPServer(
+            (host, api_port),
+            make_handler(world, hub=hub, api_only=True, public_origin=public_origin),
         ) as ai_server,
     ):
-        print(f"Agora console: http://{host}:{console.server_port}", flush=True)
+        print(
+            f"Agora console: http://{host}:{console.server_port}{base_path}/developer",
+            flush=True,
+        )
         print(f"AI account API: http://{host}:{ai_server.server_port}/v1", flush=True)
         selector = selectors.DefaultSelector()
         selector.register(console, selectors.EVENT_READ)

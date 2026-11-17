@@ -1,0 +1,58 @@
+body.embedded {
+  background: #fff;
+}
+.embedded > header,
+.embedded .sidebar,
+.embedded .research,
+.embedded .section-head {
+  display: none;
+}
+.embedded main {
+  display: block;
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+.embedded .phone {
+  border: 0;
+  border-radius: 0;
+  min-height: 100vh;
+  box-shadow: none;
+}
+.embedded .appbar {
+  padding: 20px;
+}
+.embedded .searchbar {
+  max-width: 280px;
+}
+.embedded .searchbar input {
+  min-width: 0;
+}
+.embedded .searchbar button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.embedded .phone > .row {
+  display: none;
+}
+.embedded[data-screen="studio"] #nativeNav {
+  display: none;
+}
+.embedded .phone > .row {
+  padding: 0 20px 12px !important;
+}
+.embedded .detail {
+  padding: 20px;
+}
+.embedded #toast {
+  display: none !important;
+}
+@media (max-width: 450px) {
+  .embedded .searchbar {
+    max-width: 160px;
+  }
+  .embedded .appbar {
+    gap: 10px;
+    padding: 14px;
+  }
+}

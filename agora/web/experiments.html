@@ -696,7 +696,7 @@
             "platform=" +
             encodeURIComponent(selectedPlatform);
         const r = await fetch(
-          path,
+          agoraPath(path),
           value
             ? {
                 method: "POST",
@@ -836,7 +836,7 @@
         renderGraph(run);
         renderEvents(run);
         const uid = actor === "all" ? run.config.user_ids[0] : Number(actor),
-          src = "/account?run=" + run.run_id + "&actor=" + uid;
+          src = agoraPath("/account?run=" + run.run_id + "&actor=" + uid);
         if ($("viewer").getAttribute("src") !== src) $("viewer").src = src;
         $("viewer").hidden = false;
         $("viewerEmpty").hidden = true;
@@ -957,8 +957,9 @@
               `<label class="agent-choice"><input name="agent" type="checkbox" value="${u.user_id}" ${i < 4 ? "checked" : ""}><span>${esc(u.name)}</span></label>`,
           )
           .join("");
-        document.querySelector(".header-links a").href =
-          "/account?platform=" + encodeURIComponent(selectedPlatform);
+        document.querySelector(".header-links a").href = agoraPath(
+          "/account?platform=" + encodeURIComponent(selectedPlatform),
+        );
         selected = null;
         currentRun = null;
         actor = "all";

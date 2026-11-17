@@ -72,3 +72,14 @@ AI API 操作推进虚拟时间，并返回结束观察。内部实验按账号�
 
 除平台注册/平台说明外，AI API 需要 `Authorization: Bearer <token>`。原 `/api/` 路由属于
 研究控制台，AI 专用端口拒绝访问。当前为 loopback 本地服务，未宣称完成公网多租户部署。
+
+## 开发者配置与 Viewer
+
+0.5 的配置台可以选择 `agent_count`（1–100）和 `focal_user_id`。参与总数包含受测账号；
+新增背景账号只生成于实验副本。`provider_id` 指定受测模型，`background_provider_id`
+指定背景模型（默认为 development）。不指定受测账号的历史调用仍将 provider 用于全部
+选定账号。模型配置与凭据在启动时冻结，页面编辑不会改变正在运行的模型身份。
+
+`/developer` 创建运行，`/viewer` 默认观察受测账号。iframe 显示同一会话的真实观察，
+父页面通过同 Origin、匹配 run ID 的消息选择历史 step；没有注入额外 AI 行为。公开理由
+来自动作 rationale，不伪造模型内部推理。部署路径和访问边界见 [iap-deployment.md](iap-deployment.md)。

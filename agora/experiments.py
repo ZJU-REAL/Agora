@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import json
 import os
@@ -30,12 +31,13 @@ class ExperimentManager:
         self.source = source_world
         self.root = source_world.config.world_dir / "experiments"
         self.root.mkdir(exist_ok=True)
-        self.providers = providers or {}
+        self.providers = providers if providers is not None else {}
         self.max_active = max_active
         self.lock = threading.RLock()
         self.jobs = {}
         self.controls = {}
         self.threads = {}
+        self.run_providers = {}
         for path in self.root.glob("*/manifest.json"):
             value = json.loads(path.read_text())
             if value["status"] in {
@@ -98,10 +100,23 @@ class ExperimentManager:
             "recommendation",
             "events",
             "pace_ms",
+            "agent_count",
+            "focal_user_id",
+            "background_provider_id",
         }:
             raise ValueError("Unknown experiment configuration fields")
-        users = config.get("user_ids", [])
         known = {row[0] for row in self.source.db.execute("SELECT user_id FROM user")}
+        count = config.get("agent_count")
+        focal = config.get("focal_user_id")
+        if count is not None and (type(count) is not int or not 1 <= count <= 100):
+            raise ValueError("agent_count must be between 1 and 100")
+        if focal is not None and (type(focal) is not int or focal not in known):
+            raise ValueError("Choose a source account as the tested agent")
+        if count is not None and focal is None:
+            focal = min(known) if known else None
+        users = config.get(
+            "user_ids", ([focal] + sorted(known - {focal}))[:count] if count else []
+        )
         if (
             not isinstance(users, list)
             or not 1 <= len(users) <= 100
@@ -109,6 +124,10 @@ class ExperimentManager:
             or len(users) != len(set(users))
         ):
             raise ValueError("Select 1–100 distinct users from the source world")
+        if focal is not None and focal not in users:
+            raise ValueError("The tested agent must participate in the run")
+        if count is not None and len(users) > count:
+            raise ValueError("agent_count is smaller than the selected accounts")
         ticks, steps = config.get("ticks", 6), config.get("steps_per_tick", 8)
         pace = config.get("pace_ms", 0)
         if type(pace) is not int or not 0 <= pace <= 2000:
@@ -146,6 +165,21 @@ class ExperimentManager:
                 raise ValueError(
                     "Selected provider credential environment variable is not set"
                 )
+        background = config.get("background_provider_id", "development")
+        if background != "development" and (
+            background not in self.providers
+            or not next(
+                item
+                for item in self.provider_options()
+                if item["provider_id"] == background
+            )["credential_available"]
+        ):
+            raise ValueError("Background model is unavailable")
+        specs = {
+            key: copy.deepcopy(self.providers[key])
+            for key in {provider, background}
+            if key != "development"
+        }
         events = config.get("events", [])
         if not isinstance(events, list) or len(events) > 20:
             raise ValueError("events must be a list of up to 20 interventions")
@@ -173,6 +207,11 @@ class ExperimentManager:
             ),
             **config,
         }
+        config["user_ids"] = users
+        if focal is not None:
+            config["focal_user_id"] = focal
+        if count is not None:
+            config["agent_count"] = count
         config["recommendation"] = asdict(
             RecommendationConfig(**config.get("recommendation", {}))
         )
@@ -234,6 +273,17 @@ class ExperimentManager:
                         }
                     )
                 )
+                if count is not None and len(users) < count:
+                    from agora.population import extend_population
+
+                    population = open_world("world", directory)
+                    try:
+                        users = extend_population(
+                            population, users, count, config["seed"]
+                        )
+                    finally:
+                        population.close()
+                    config["user_ids"] = users
                 initial_sha = hashlib.sha256(
                     (world_dir / "sandbox.db").read_bytes()
                 ).hexdigest()
@@ -244,7 +294,7 @@ class ExperimentManager:
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "config": config,
                     "source_world": self.source.config.world_id,
-                    "engine_version": "0.4.0",
+                    "engine_version": "0.5.0",
                     "media_manifest": media_manifest,
                     "initial_database_sha256": initial_sha,
                     "config_sha256": hashlib.sha256(
@@ -254,9 +304,17 @@ class ExperimentManager:
                     if provider != "development"
                     else "persona-development",
                     "provider_config_sha256": hashlib.sha256(
-                        json.dumps(self.providers[provider], sort_keys=True).encode()
+                        json.dumps(specs[provider], sort_keys=True).encode()
                     ).hexdigest()
                     if provider != "development"
+                    else None,
+                    "background_model": specs[background]["model_id"]
+                    if background != "development"
+                    else "persona-development",
+                    "background_provider_config_sha256": hashlib.sha256(
+                        json.dumps(specs[background], sort_keys=True).encode()
+                    ).hexdigest()
+                    if background != "development"
                     else None,
                     "session_ids": [],
                     "attempted_actions": 0,
@@ -267,6 +325,7 @@ class ExperimentManager:
                 shutil.rmtree(directory, ignore_errors=True)
                 raise
             self.jobs[run_id] = value
+            self.run_providers[run_id] = specs
             self.controls[run_id] = {
                 "pause": False,
                 "stop": False,
@@ -332,20 +391,41 @@ class ExperimentManager:
                     time.sleep(config["pace_ms"] / 1000)
 
             factory = None
-            if config["provider_id"] != "development":
+            if self.run_providers[run_id] or config.get("focal_user_id") is not None:
                 from agora.backends.visual import session_visual_parts
                 from agora.models import build_model_client
 
-                spec = self.providers[config["provider_id"]]
-
                 def factory(user):
+                    selected = (
+                        config["provider_id"]
+                        if config.get("focal_user_id", user) == user
+                        else config.get("background_provider_id", "development")
+                    )
                     row = world.db.execute(
                         "SELECT persona_json FROM persona WHERE user_id = ?", (user,)
                     ).fetchone()
+                    persona = json.loads(row[0]) if row else {}
+                    if selected == "development":
+                        from agora.policies import PersonaPolicy
+
+                        creator = (
+                            user == config.get("focal_user_id")
+                            or bool(
+                                world.db.execute(
+                                    "SELECT 1 FROM post WHERE user_id=? LIMIT 1",
+                                    (user,),
+                                ).fetchone()
+                            )
+                            or user % 3 == 0
+                        )
+                        return PersonaPolicy(
+                            config["seed"] + user * 1009, persona, creator=creator
+                        )
+                    spec = self.run_providers[run_id][selected]
                     return JsonSessionPolicy(
                         build_model_client(spec),
                         config["goal"],
-                        json.loads(row[0]) if row else {},
+                        persona,
                         visual_builder=(
                             lambda observation: session_visual_parts(world, observation)
                         )
@@ -367,6 +447,8 @@ class ExperimentManager:
                     config.get("events", []),
                 )
             )
+            if not self.run_providers[run_id]:
+                report["policy"] = "persona-development"
             with self.lock:
                 self.jobs[run_id].update(
                     report=report,
