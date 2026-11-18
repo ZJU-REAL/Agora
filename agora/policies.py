@@ -20,6 +20,10 @@ class PersonaPolicy:
         def choice(kind, args=None, reason=""):
             return {"action_type": kind, "arguments": args or {}, "rationale": reason}
 
+        if self.just_published and screen != "studio":
+            self.just_published = False
+            return choice("view_profile", reason="发布完成，查看自己的内容与反馈。")
+
         if screen == "studio":
             if self.just_published:
                 self.just_published = False
@@ -48,10 +52,15 @@ class PersonaPolicy:
                 "topics": [topic],
                 "assets": [{"asset_id": asset["asset_id"]} for asset in selected],
             }
+            if self.persona.get("example_posts"):
+                args["body"] = self.rng.choice(self.persona["example_posts"])
+                if self.persona.get("locale", "").startswith("en"):
+                    args["title"] = f"A small observation about {topic}"
             if observation["platform"] == "x":
                 args.pop("title", None)
                 args.pop("topics", None)
-                args["body"] += " #" + topic
+                if "#" + topic not in args["body"]:
+                    args["body"] += " #" + topic
             elif observation["platform"] == "reddit":
                 args.pop("topics", None)
                 communities = observation.get("communities", [])
@@ -110,7 +119,9 @@ class PersonaPolicy:
                 self.commented.add(post["post_id"])
                 args = {
                     "post_id": post["post_id"],
-                    "content": "这个经验很具体。你会建议第一次尝试的人从哪一步开始？",
+                    "content": "What would you suggest trying first? It would help to know a bit more about your process."
+                    if self.persona.get("locale", "").startswith("en")
+                    else "这个经验很具体。你会建议第一次尝试的人从哪一步开始？",
                 }
                 return choice(
                     "reply_post"

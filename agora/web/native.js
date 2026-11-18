@@ -1,4 +1,33 @@
-/* Product renderers share account state and the same AI tool contract. */
+/* Native platform pages share the same session state and social actions as agents. */
+function pi(name) {
+  return `<svg class="p-icon" aria-hidden="true"><use href="#p-${name}"/></svg>`;
+}
+function nb(name, args, text, classes = "") {
+  return actionButton(name, args, text, classes);
+}
+function av(name, id = 0, large = false) {
+  const colors = ["#dfebe1", "#ede0d5", "#dfe5f2", "#f1e0e5", "#e5e0ef"];
+  return `<span class="p-avatar ${large ? "large" : ""}" style="background:${colors[Math.abs(id) % colors.length]}">${esc((name || "A").slice(0, 2))}</span>`;
+}
+function age(tick, o) {
+  const minutes = Math.max(
+    0,
+    Math.floor(
+      ((o.tick - Number(tick)) * (o.tick_duration_ms || 60000)) / 60000,
+    ),
+  );
+  if (minutes < 1) return o.platform === "xiaohongshu" ? "刚刚" : "now";
+  if (minutes < 60)
+    return minutes + (o.platform === "xiaohongshu" ? " 分钟前" : "m");
+  if (minutes < 1440)
+    return (
+      Math.floor(minutes / 60) +
+      (o.platform === "xiaohongshu" ? " 小时前" : "h")
+    );
+  return (
+    Math.floor(minutes / 1440) + (o.platform === "xiaohongshu" ? " 天前" : "d")
+  );
+}
 function nativeMediaUrl(asset) {
   return agoraPath(
     runId
@@ -14,292 +43,281 @@ function nativeMediaUrl(asset) {
           ),
   );
 }
-function nativeButton(name, args, text) {
-  return actionButton(name, args, text);
+function nativeMedia(asset, classes = "") {
+  return asset.media_type === "video"
+    ? `<video class="${classes}" src="${nativeMediaUrl(asset)}" ${editable() && current()?.screen === "detail" ? "controls" : ""} preload="metadata" playsinline></video>`
+    : `<img class="${classes}" src="${nativeMediaUrl(asset)}" alt="${esc(asset.alt_text || asset.caption || "")}" loading="lazy"/>`;
 }
-function nativeAvatar(name) {
-  return '<span class="mini-avatar">' + esc((name || "A")[0]) + "</span>";
+function bodyText(text) {
+  return String(text ?? "")
+    .split(/(#[\p{L}\p{N}_]+)/gu)
+    .map((part) =>
+      part.startsWith("#")
+        ? '<span class="p-hashtag">' + esc(part) + "</span>"
+        : esc(part),
+    )
+    .join("")
+    .replace(/\n/g, "<br/>");
 }
-function nativeReference(post) {
-  const ref = post.original_post;
-  if (!ref) return "";
-  if (ref.unavailable)
-    return '<blockquote class="quoted">原内容已不可用</blockquote>';
-  return `<blockquote class="quoted" data-post="${ref.post_id}"><b>${esc(ref.author_name)}</b><div>${esc(ref.body)}</div>${ref.assets?.length ? '<div class="native-media">' + ref.assets.map(media).join("") + "</div>" : ""}</blockquote>`;
+function searchbar(o, placeholder, classes = "") {
+  return `<form class="p-search ${classes}" data-search>${pi("search")}<input aria-label="${esc(placeholder)}" placeholder="${esc(placeholder)}" value="${o.screen === "search" ? esc(o.query) : ""}" ${!editable() ? "readonly" : ""}/><button aria-label="搜索" ${!editable() ? "disabled" : ""}>${pi("search")}</button></form>`;
 }
-function nativeXCard(p) {
-  return `<article class="x-post" data-post="${p.post_id}" tabindex="0"><div class="native-author">${nativeAvatar(p.author_name)}<b>${esc(p.author_name)}</b><span>@${esc(p.author_handle)} · ${p.created_at}</span></div>${p.post_type === "repost" ? '<small class="hint">↻ 转发</small>' : ""}<div class="post-text">${esc(p.quote_body || p.body)}</div>${nativeReference(p)}<div class="native-media">${(p.assets || []).map(media).join("")}</div><div class="native-reactions">${nativeButton("open_post", { post_id: p.post_id }, "↩ 回复")}${nativeButton(p.reposted ? "undo_repost" : "repost", { post_id: p.post_id }, "↻ " + p.num_shares)}${nativeButton(p.liked ? "unlike_post" : "like_post", { post_id: p.post_id }, (p.liked ? "♥ " : "♡ ") + p.num_likes)}${nativeButton(p.saved ? "unbookmark_post" : "bookmark_post", { post_id: p.post_id }, p.saved ? "▣ 已保存" : "▢ 书签")}</div></article>`;
+function brand(o) {
+  return o.platform === "xiaohongshu"
+    ? '<span class="brand-xhs">小红书</span>'
+    : o.platform === "x"
+      ? '<span class="brand-x">𝕏</span>'
+      : '<span class="brand-reddit"><svg viewBox="0 0 32 32"><path d="m17 11 2-7 6 1"/><circle cx="26" cy="5" r="2"/><ellipse cx="16" cy="20" rx="11" ry="8" fill="currentColor"/><circle cx="4" cy="16" r="3"/><circle cx="28" cy="16" r="3"/><circle cx="12" cy="19" r="1.5" class="alien-eye"/><circle cx="20" cy="19" r="1.5" class="alien-eye"/><path d="M11 23q5 4 10 0" class="alien-smile"/></svg><b>reddit</b></span>';
 }
-function nativeRedditCard(p) {
-  return `<article class="reddit-post" data-post="${p.post_id}" tabindex="0"><div class="vote-rail">${nativeButton(p.vote === 1 ? "clear_post_vote" : "upvote_post", { post_id: p.post_id }, p.vote === 1 ? "▲" : "△")}<strong>${p.score ?? p.num_likes - p.num_dislikes}</strong>${nativeButton(p.vote === -1 ? "clear_post_vote" : "downvote_post", { post_id: p.post_id }, p.vote === -1 ? "▼" : "▽")}</div><div class="reddit-post-main"><div class="hint">${esc(p.community || "r/general")} · u/${esc(p.author_handle)} · ${p.created_at}</div><h3>${esc(p.title || p.body.slice(0, 80))}</h3><div class="post-text">${esc(p.body)}</div>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noreferrer">${esc(p.url)} ↗</a>` : ""}${nativeReference(p)}<div class="native-media">${(p.assets || []).map(media).join("")}</div><div class="native-reactions">${nativeButton("open_post", { post_id: p.post_id }, "☷ " + (p.num_comments || 0) + " 评论")}${nativeButton(p.saved ? "unsave_post" : "save_post", { post_id: p.post_id }, p.saved ? "已保存" : "保存")}</div></div></article>`;
+function empty(text) {
+  return `<div class="p-empty">${pi("search")}<h3>${esc(text)}</h3><p>${current()?.platform === "xiaohongshu" ? "试试浏览其他内容，或发布你的第一篇笔记。" : "Try another feed or share your first post."}</p></div>`;
 }
-function nativeXhsCard(p) {
-  return `<article class="post-card" data-post="${p.post_id}" tabindex="0"><div class="cover">${p.assets.length ? media(p.assets[0]) : "<span>" + esc(p.topics[0] || "笔记") + "</span>"}</div><div class="post-info"><div class="post-title">${esc(p.title || p.body.slice(0, 55))}</div><div class="post-meta"><span>${esc(p.author_name)}</span>${nativeButton(p.liked ? "unlike_post" : "like_post", { post_id: p.post_id }, (p.liked ? "♥ " : "♡ ") + p.num_likes)}</div><div class="tags">${p.topics.map((t) => "#" + esc(t)).join(" ")}</div></div></article>`;
+function followButton(p, o) {
+  if (p.author_id === o.user_id) return "";
+  return nb(
+    p.following_author ? "unfollow_user" : "follow_user",
+    { followee_id: p.author_id },
+    p.following_author
+      ? o.platform === "xiaohongshu"
+        ? "已关注"
+        : "Following"
+      : o.platform === "xiaohongshu"
+        ? "关注"
+        : "Follow",
+    "p-follow " + (p.following_author ? "following" : ""),
+  );
 }
-function nativeComments(items, o) {
+function postMenu(p, o) {
+  const owned = (p.owner_id ?? p.author_id) === o.user_id;
+  return `<details class="p-post-menu"><summary aria-label="更多操作">${pi("more")}</summary><div>${owned ? (o.available_actions.edit_post ? nb("edit_post", { post_id: p.post_id }, o.platform === "xiaohongshu" ? "编辑笔记" : "Edit") : "") + nb("delete_post", { post_id: p.post_id }, o.platform === "xiaohongshu" ? "删除" : "Delete", "p-danger") : nb("not_interested", { post_id: p.post_id }, o.platform === "xiaohongshu" ? "不感兴趣" : "Show fewer posts like this")}${o.available_actions.remove_post ? nb("remove_post", { post_id: p.post_id }, "Remove as moderator") : ""}</div></details>`;
+}
+function xhsNav(o) {
+  return `<aside class="xhs-sidebar">${brand(o)}<nav>${nb("refresh", { feed_type: "discover" }, pi("home") + "<span>发现</span>", "p-nav " + (o.screen === "feed" ? "active" : ""))}${nb("open_studio", {}, pi("plus") + "<span>发布</span>", "p-nav " + (o.screen === "studio" ? "active" : ""))}${nb("open_notifications", {}, pi("bell") + "<span>通知</span>", "p-nav " + (o.screen === "notifications" ? "active" : ""))}${nb("view_profile", {}, av(o.account.name, o.user_id) + "<span>我</span>", "p-nav " + (o.screen === "profile" ? "active" : ""))}</nav><div class="xhs-nav-footer">${nb("view_saved", {}, pi("bookmark") + "<span>我的收藏</span>", "p-nav")}<span>社区 · 生活 · 兴趣</span></div></aside>`;
+}
+function xhsCard(p, o) {
+  return `<article class="xhs-card" data-post="${p.post_id}" tabindex="0"><div class="xhs-cover">${p.assets?.length ? nativeMedia(p.assets[0]) : '<div class="text-cover">' + esc(p.body.slice(0, 100)) + "</div>"}${p.post_type === "gallery" ? '<span class="cover-badge">' + pi("image") + "</span>" : ""}${p.post_type === "video" ? '<span class="cover-badge">' + pi("video") + "</span>" : ""}</div><div class="xhs-card-info"><h3>${esc(p.title || p.body.slice(0, 36))}</h3><div class="xhs-card-meta">${nb("view_profile", { user_id: p.author_id }, av(p.author_name, p.author_id) + `<span>${esc(p.author_name)}</span>`, "p-author-link")}${nb(p.liked ? "unlike_post" : "like_post", { post_id: p.post_id }, pi("heart") + `<span>${p.num_likes || "赞"}</span>`, "p-like " + (p.liked ? "on" : ""))}</div></div></article>`;
+}
+function commentItems(items, o, level = 0) {
   return (items || [])
     .map(
       (c) =>
-        `<div class="comment"><div class="hint">${o.platform === "reddit" ? "u/" : "用户 "}${c.author_id}${c.is_pinned ? " · 置顶" : ""}${c.edited_at_tick !== null && c.edited_at_tick !== undefined ? " · 已编辑" : ""}</div><div>${esc(c.content)}</div><div class="comment-actions">${!c.deleted ? (o.platform === "reddit" ? nativeButton(c.vote === 1 ? "clear_comment_vote" : "upvote_comment", { comment_id: c.comment_id }, c.vote === 1 ? "▲" : "△") + " " + c.score + " " + nativeButton(c.vote === -1 ? "clear_comment_vote" : "downvote_comment", { comment_id: c.comment_id }, c.vote === -1 ? "▼" : "▽") : nativeButton(c.liked ? "unlike_comment" : "like_comment", { comment_id: c.comment_id }, (c.liked ? "♥ " : "♡ ") + c.num_likes)) : " "}${!c.deleted ? nativeButton("create_comment", { post_id: o.post.post_id, parent_comment_id: c.comment_id }, "回复") : ""}${c.author_id === o.user_id && !c.deleted ? (o.platform !== "x" ? nativeButton("edit_comment", { comment_id: c.comment_id }, "编辑") : "") + nativeButton("delete_comment", { comment_id: c.comment_id }, "删除") : ""}${o.platform === "xiaohongshu" && o.post.author_id === o.user_id && !c.deleted ? nativeButton(c.is_pinned ? "unpin_comment" : "pin_comment", { comment_id: c.comment_id }, c.is_pinned ? "取消置顶" : "置顶") : ""}</div><div class="reply">${nativeComments(c.replies, o)}</div></div>`,
+        `<div class="p-comment ${c.deleted ? "deleted" : ""}">${av(c.author_name, c.author_id)}<div class="p-comment-main"><div class="comment-identity"><span>${o.platform === "reddit" ? "u/" : ""}${esc(c.author_name || c.author_handle || c.author_id)}</span>${c.is_pinned ? "<b>置顶</b>" : ""}${c.author_id === o.post?.author_id && o.platform === "reddit" ? "<b>OP</b>" : ""}</div><div class="comment-body">${esc(c.deleted ? "[deleted]" : c.content)}</div><div class="comment-meta"><span>${age(c.created_at, o)}</span>${!c.deleted ? nb("create_comment", { post_id: o.post.post_id, parent_comment_id: c.comment_id }, o.platform === "xiaohongshu" ? "回复" : "Reply") : ""}${o.platform === "reddit" ? nb(c.vote === 1 ? "clear_comment_vote" : "upvote_comment", { comment_id: c.comment_id }, pi("arrow"), "comment-vote " + (c.vote === 1 ? "on" : "")) + `<span>${c.score}</span>` + nb(c.vote === -1 ? "clear_comment_vote" : "downvote_comment", { comment_id: c.comment_id }, pi("down"), "comment-vote " + (c.vote === -1 ? "down" : "")) : nb(c.liked ? "unlike_comment" : "like_comment", { comment_id: c.comment_id }, pi("heart") + (c.num_likes || ""), "comment-like " + (c.liked ? "on" : ""))}${c.author_id === o.user_id && !c.deleted ? nb("delete_comment", { comment_id: c.comment_id }, o.platform === "xiaohongshu" ? "删除" : "Delete") : ""}${o.platform === "xiaohongshu" && o.post.author_id === o.user_id && !c.deleted ? nb(c.is_pinned ? "unpin_comment" : "pin_comment", { comment_id: c.comment_id }, c.is_pinned ? "取消置顶" : "置顶") : ""}</div>${c.replies?.length ? '<div class="comment-replies">' + commentItems(c.replies, o, level + 1) + "</div>" : ""}</div></div>`,
     )
     .join("");
+}
+function commentForm(o) {
+  return `<form class="p-comment-form" data-comment>${av(o.account.name, o.user_id)}<textarea rows="1" placeholder="${o.platform === "xiaohongshu" ? "说点什么…" : o.platform === "x" ? "Post your reply" : "Join the conversation"}" ${!editable() ? "readonly" : ""}></textarea><button class="p-primary" ${!editable() ? "disabled" : ""}>${o.platform === "xiaohongshu" ? "发送" : o.platform === "x" ? "Reply" : "Comment"}</button></form>`;
+}
+function xhsNote(o) {
+  const p = o.post,
+    visible = p.assets.filter(
+      (a) => !p.visible_asset_ids || p.visible_asset_ids.includes(a.asset_id),
+    ),
+    gallery = p.post_type === "gallery";
+  return `<div class="xhs-note-overlay"><div class="xhs-note"><div class="note-media">${visible.length ? visible.map((a) => nativeMedia(a)).join("") : '<div class="note-text-media">' + esc(p.title || p.body) + "</div>"}${gallery ? `<div class="note-carousel">${nb("view_media", { index: Math.max(0, (p.media_index || 0) - 1) }, "‹")}<span>${(p.media_index || 0) + 1} / ${p.assets.length}</span>${nb("view_media", { index: Math.min(p.assets.length - 1, (p.media_index || 0) + 1) }, "›")}</div>` : ""}</div><div class="note-panel"><div class="note-author">${nb("view_profile", { user_id: p.author_id }, av(p.author_name, p.author_id) + `<span>${esc(p.author_name)}</span>`, "p-author-link")}${followButton(p, o)}${postMenu(p, o)}</div><div class="note-scroll"><h1>${esc(p.title || "")}</h1><div class="note-content">${bodyText(p.body)}</div><div class="note-topics">${p.topics.map((t) => nb("search", { query: t }, "#" + esc(t))).join(" ")}</div><div class="note-location">${age(p.created_at, o)}${p.location ? " · " + esc(p.location) : ""}${p.edited_at_tick !== null ? " · 已编辑" : ""}</div><div class="note-comments-title">共 ${p.num_comments} 条评论</div>${commentItems(p.comments, o)}${nb("load_comments", { offset: (o.comment_offset || 0) + 20 }, "查看更多评论", "p-load-comments")}</div><div class="note-bottom"><div class="note-reactions">${nb(p.liked ? "unlike_post" : "like_post", { post_id: p.post_id }, pi("heart") + p.num_likes, "p-like " + (p.liked ? "on" : ""))}${nb(p.saved ? "uncollect_post" : "collect_post", { post_id: p.post_id }, pi("star") + p.num_collections, "p-save " + (p.saved ? "on" : ""))}<span>${pi("comment")}${p.num_comments}</span>${nb("dwell", { duration_ms: 10000 }, "阅读", "note-read")}${nb("add_to_collection", { post_id: p.post_id }, pi("bookmark"), "folder-action")}</div>${commentForm(o)}</div></div></div>${nb("back", {}, pi("close"), "note-close")}</div>`;
+}
+function nativeComposer(o) {
+  const d = o.draft || {},
+    library = o.asset_library || [];
+  return `<section class="native-composer ${o.platform}"><div class="composer-title">${nb("refresh", { feed_type: o.contract.feeds[0] }, pi("back"), "p-back")}<h1>${o.platform === "xiaohongshu" ? "发布笔记" : o.platform === "x" ? "Compose a post" : "Create a post"}</h1></div>${o.platform === "xiaohongshu" ? '<div class="composer-tabs"><span class="active">发布图文</span><span>视频素材也可在下方上传</span></div>' : ""}<form id="composeForm"><div class="composer-fields">${o.platform === "reddit" ? `<label class="community-picker">${pi("person")}<select name="community">${o.communities.map((c) => `<option value="${esc(c.name)}" ${d.community === c.name ? "selected" : ""}>${esc(c.name)} · ${esc(c.title)}</option>`).join("")}</select></label>` : ""}${o.platform !== "x" ? `<input class="composer-post-title" name="title" placeholder="${o.platform === "xiaohongshu" ? "填写标题会有更多赞哦" : "Title"}" value="${esc(d.title || "")}" maxlength="${o.contract.title_limit}" required/>` : ""}<textarea class="composer-body" name="body" placeholder="${o.platform === "x" ? "What's happening?!" : o.platform === "reddit" ? "Body text (optional)" : "添加正文，分享你的体验…"}" ${!editable() ? "readonly" : ""}>${esc(d.body || "")}</textarea>${o.platform === "xiaohongshu" ? `<div class="composer-subfields"><input name="topics" placeholder="#添加话题（逗号分隔）" value="${esc((d.topics || []).join(", "))}"/><input name="location" placeholder="添加地点" value="${esc(d.location || "")}"/></div>` : o.platform === "reddit" ? `<input name="url" type="url" placeholder="URL for a link post (optional)" value="${esc(d.url || "")}"/>` : ""}</div><div class="composer-media-heading"><span>${o.platform === "xiaohongshu" ? "图片与视频" : o.platform === "x" ? "Media" : "Images & video"}</span><label class="p-upload">${pi("plus")}${o.platform === "xiaohongshu" ? "上传素材" : "Upload"}<input id="nativeUpload" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" ${!editable() ? "disabled" : ""}/></label></div><div id="selectedAssets" class="composer-selected"></div><div class="composer-library">${library.map((a) => `<button class="library-asset ${(d.assets || []).some((s) => s.asset_id === a.asset_id) ? "selected" : ""}" type="button" data-pick="${esc(a.asset_id)}" ${!editable() ? "disabled" : ""}>${nativeMedia(a)}<span>✓</span></button>`).join("") || '<div class="upload-placeholder">' + pi("image") + "<span>" + (o.platform === "xiaohongshu" ? "上传图片或视频，开始创作" : "Add media to your account library") + "</span></div>"}</div><div class="library-paging">${o.library_offset ? nb("view_asset_library", { offset: Math.max(0, o.library_offset - 20) }, "←") : ""}<span>${o.library_total} ${o.platform === "xiaohongshu" ? "份素材" : "assets"}</span>${o.library_offset + 20 < o.library_total ? nb("view_asset_library", { offset: o.library_offset + 20 }, "→") : ""}</div><div class="composer-footer"><span>${o.platform === "xiaohongshu" ? "已选素材顺序会保存在草稿中" : "Your draft keeps the selected media order."}</span><button type="submit" ${!editable() ? "disabled" : ""}>${o.platform === "xiaohongshu" ? "存草稿" : "Save draft"}</button><button type="submit" class="p-primary" data-publish="1" ${!editable() ? "disabled" : ""}>${o.platform === "xiaohongshu" ? "发布" : o.platform === "x" ? "Post" : "Post"}</button>${o.draft ? nb("publish_draft", {}, o.platform === "xiaohongshu" ? "发布已存草稿" : "Publish saved draft", "p-draft-publish") : ""}</div></form></section>`;
+}
+function notifications(o) {
+  const labels = {
+    like: "赞了你的内容",
+    comment: "评论了你的内容",
+    reply: "回复了你",
+    follow: "关注了你",
+    repost: "转发了你的内容",
+    quote: "引用了你的内容",
+  };
+  return `<section class="notifications-page"><h1>${o.platform === "xiaohongshu" ? "通知" : o.platform === "x" ? "Notifications" : "Inbox"}</h1><div class="notification-tabs"><span class="active">${o.platform === "xiaohongshu" ? "全部通知" : "All"}</span></div>${o.notifications.map((n) => `<div class="notification-row">${av(n.actor_name, n.actor_id)}<div><b>${esc(n.actor_name || n.actor_handle || n.actor_id)}</b><span>${o.platform === "xiaohongshu" ? " " + (labels[n.kind] || n.kind) : " · " + esc(n.kind)}</span><p>${esc(n.content)}</p><small>${age(n.tick, o)}</small></div>${n.post_id ? nb("open_notification", { notification_id: n.notification_id }, pi("comment")) : ""}</div>`).join("") || empty(o.platform === "xiaohongshu" ? "还没有通知" : "You’re all caught up")}</section>`;
+}
+function profileHeader(o) {
+  const p = o.profile;
+  if (!p) return "";
+  const own = p.user_id === o.user_id;
+  const tabs =
+    o.platform === "xiaohongshu"
+      ? ["notes", "saved"]
+      : o.platform === "x"
+        ? ["posts", "replies", "media"]
+        : ["posts", "comments", "saved"];
+  const labels = {
+    notes: "笔记",
+    saved: o.platform === "xiaohongshu" ? "收藏" : "Saved",
+    posts: "Posts",
+    replies: "Replies",
+    media: "Media",
+    comments: "Comments",
+  };
+  return `<div class="p-profile ${o.platform}">${o.platform !== "xiaohongshu" ? '<div class="profile-banner"></div>' : ""}<div class="profile-content">${av(p.name, p.user_id, true)}<div><h1>${esc(p.name)}</h1><span>${o.platform === "reddit" ? "u/" : o.platform === "xiaohongshu" ? "小红书号：" : "@"}${esc(p.handle)}</span><p>${esc(p.bio)}</p><div class="profile-stats"><b>${p.following}</b> ${o.platform === "xiaohongshu" ? "关注" : "Following"} <b>${p.followers}</b> ${o.platform === "xiaohongshu" ? "粉丝" : "Followers"}${o.platform === "xiaohongshu" ? ` <b>${p.received_likes + p.received_saves}</b> 获赞与收藏` : ""}</div></div>${own ? nb("edit_profile", {}, o.platform === "xiaohongshu" ? "编辑资料" : "Edit profile", "profile-edit") : nb(p.following_author ? "unfollow_user" : "follow_user", { followee_id: p.user_id }, p.following_author ? "Following" : "Follow", "p-follow")}</div><div class="profile-tabs">${tabs.map((tab) => nb("view_profile", { user_id: p.user_id, tab }, labels[tab], (p.tab === tab ? "active" : "") + (tab === "saved" && !own ? " private-tab" : ""))).join("")}</div></div>`;
+}
+function xhsPage(o) {
+  let content;
+  if (o.screen === "studio") content = nativeComposer(o);
+  else if (o.screen === "notifications") content = notifications(o);
+  else {
+    const head =
+      o.screen === "profile"
+        ? profileHeader(o)
+        : o.screen === "saved" || o.screen === "collection"
+          ? `<div class="saved-heading"><h1>${o.screen === "collection" ? "收藏专辑" : "我的收藏"}</h1>${nb("create_collection", {}, "新建专辑", "p-follow")}</div><div class="collection-pills">${o.collections.map((f) => nb("view_collection", { folder_id: f.folder_id }, esc(f.name))).join("")}</div>`
+          : "";
+    const categories =
+      o.screen === "feed"
+        ? `<div class="xhs-feed-switch">${nb("refresh", { feed_type: "following" }, "关注", o.feed_type === "following" ? "active" : "")}${nb("refresh", { feed_type: "discover" }, "发现", o.feed_type === "discover" ? "active" : "")}${nb("refresh", { feed_type: "nearby" }, "附近", o.feed_type === "nearby" ? "active" : "")}</div><div class="xhs-categories"><span class="active">推荐</span>${["摄影", "咖啡", "数码", "城市漫游", "美食"].map((t) => nb("search", { query: t }, t)).join("")}</div>`
+        : o.screen === "search"
+          ? `<div class="search-heading"><span>搜索结果</span><h2>${esc(o.query)}</h2></div>`
+          : "";
+    content =
+      head +
+      categories +
+      `<div class="xhs-masonry">${o.cards.map((p) => xhsCard(p, o)).join("") || empty("暂时没有笔记")}</div>${nb("scroll", {}, "继续浏览", "p-more-feed")}`;
+  }
+  return `<div class="xhs-page">${xhsNav(o)}<header class="xhs-header">${searchbar(o, "搜索小红书")}<span class="xhs-header-note">生活兴趣社区</span></header><div class="xhs-main">${content}</div>${o.screen === "detail" && o.post ? xhsNote(o) : ""}</div>`;
+}
+function xNav(o) {
+  return `<aside class="x-sidebar">${brand(o)}<nav>${nb("refresh", { feed_type: "for_you" }, pi("home") + "<span>Home</span>", "p-nav " + (o.screen === "feed" ? "active" : ""))}${nb("search", { query: o.cards[0]?.topics?.[0] || "photography" }, pi("search") + "<span>Explore</span>", "p-nav")}${nb("open_notifications", {}, pi("bell") + "<span>Notifications</span>", "p-nav " + (o.screen === "notifications" ? "active" : ""))}${nb("view_saved", {}, pi("bookmark") + "<span>Bookmarks</span>", "p-nav " + (o.screen === "saved" ? "active" : ""))}${nb("view_profile", {}, pi("person") + "<span>Profile</span>", "p-nav " + (o.screen === "profile" ? "active" : ""))}</nav>${nb("open_studio", {}, "<span>Post</span>" + pi("plus"), "x-post-button")}<div class="x-account">${av(o.account.name, o.user_id)}<div><b>${esc(o.account.name)}</b><small>@${esc(o.account.handle)}</small></div>${pi("more")}</div></aside>`;
+}
+function xReference(p) {
+  const ref = p.original_post;
+  if (!ref || p.post_type === "repost") return "";
+  return ref.unavailable
+    ? '<blockquote class="x-reference">This post is unavailable.</blockquote>'
+    : `<blockquote class="x-reference" data-post="${ref.post_id}"><b>${esc(ref.author_name)}</b><span> @${esc(ref.author_handle)}</span><p>${bodyText(ref.body)}</p>${(ref.assets || []).map((a) => nativeMedia(a)).join("")}</blockquote>`;
+}
+function xCard(p, o, detail = false) {
+  return `<article class="x-post ${detail ? "x-post-detail" : ""}" data-post="${p.post_id}" tabindex="0">${p.post_type === "repost" ? `<div class="x-reposted">${pi("repost")}${esc(p.reposted_by || p.author_name)} reposted</div>` : ""}<div class="x-post-layout">${av(p.author_name, p.author_id)}<div class="x-post-main"><div class="x-author">${nb("view_profile", { user_id: p.author_id }, `<b>${esc(p.author_name)}</b>`, "p-author-link")}<span>@${esc(p.author_handle)} · ${age(p.created_at, o)}</span>${postMenu(p, o)}</div><div class="x-post-text">${bodyText(p.quote_body || p.body)}</div>${xReference(p)}${p.assets?.length ? `<div class="x-media-grid images-${p.assets.length}">${p.assets.map((a) => nativeMedia(a)).join("")}</div>` : ""}${detail ? `<div class="x-post-time">${age(p.created_at, o)} · ${p.num_replies || 0} replies</div>` : ""}<div class="x-reactions">${nb("open_post", { post_id: p.post_id }, pi("comment") + `<span>${p.num_replies || p.num_comments || ""}</span>`)}${nb(p.reposted ? "undo_repost" : "repost", { post_id: p.post_id }, pi("repost") + `<span>${p.num_shares || ""}</span>`, p.reposted ? "reposted" : "")}${nb(p.liked ? "unlike_post" : "like_post", { post_id: p.post_id }, pi("heart") + `<span>${p.num_likes || ""}</span>`, "p-like " + (p.liked ? "on" : ""))}${nb(p.saved ? "unbookmark_post" : "bookmark_post", { post_id: p.post_id }, pi("bookmark"), p.saved ? "bookmarked" : "")}${detail ? nb("quote_post", { post_id: p.post_id }, pi("share"), "p-quote") : ""}</div></div></div></article>`;
+}
+function xRight(o) {
+  const authors = [
+    ...new Map(
+      o.cards
+        .filter((p) => p.author_id !== o.user_id)
+        .map((p) => [p.author_id, p]),
+    ).values(),
+  ].slice(0, 3);
+  const topics = [...new Set(o.cards.flatMap((p) => p.topics))].slice(0, 4);
+  return `<aside class="x-right">${searchbar(o, "Search")}<div class="x-right-box"><h2>What’s happening</h2>${topics.map((t) => `<div class="x-topic"><small>From your feed</small>${nb("search", { query: t }, "<b>#" + esc(t) + "</b>")}</div>`).join("") || "<p>Follow people to see more conversations.</p>"}</div><div class="x-right-box"><h2>Who to follow</h2>${authors.map((p) => `<div class="x-suggest">${av(p.author_name, p.author_id)}<div><b>${esc(p.author_name)}</b><small>@${esc(p.author_handle)}</small></div>${followButton(p, o)}</div>`).join("")}</div><div class="x-right-footer">About · Accessibility · Community</div></aside>`;
+}
+function xPage(o) {
+  let content;
+  if (o.screen === "studio") content = nativeComposer(o);
+  else if (o.screen === "notifications") content = notifications(o);
+  else if (o.screen === "detail" && o.post)
+    content = `<div class="x-sticky-heading">${nb("back", {}, pi("back"))}<h1>Post</h1></div>${xCard(o.post, o, true)}${commentForm(o)}${(o.post.replies || []).map((p) => xCard(p, o)).join("")}${nb("dwell", { duration_ms: 10000 }, "Read this conversation", "p-more-feed")}`;
+  else {
+    const head =
+      o.screen === "profile"
+        ? profileHeader(o)
+        : `<div class="x-sticky-heading"><h1>${o.screen === "saved" ? "Bookmarks" : o.screen === "search" ? "Search" : "Home"}</h1></div>`;
+    const tabs =
+      o.screen === "feed"
+        ? `<div class="x-feed-tabs">${nb("refresh", { feed_type: "for_you" }, "For you", o.feed_type === "for_you" ? "active" : "")}${nb("refresh", { feed_type: "following" }, "Following", o.feed_type === "following" ? "active" : "")}</div><form class="x-inline-compose" data-inline-post>${av(o.account.name, o.user_id)}<div><textarea placeholder="What’s happening?!" ${!editable() ? "readonly" : ""}></textarea><div>${nb("open_studio", {}, pi("image"))}<button class="p-primary" ${!editable() ? "disabled" : ""}>Post</button></div></div></form>`
+        : "";
+    content =
+      head +
+      tabs +
+      o.cards.map((p) => xCard(p, o)).join("") +
+      (!o.cards.length ? empty("No posts yet") : "") +
+      nb("scroll", {}, "Show more", "p-more-feed");
+  }
+  return `<div class="x-page">${xNav(o)}<div class="x-main">${content}</div>${xRight(o)}</div>`;
+}
+function redditNav(o) {
+  return `<aside class="reddit-sidebar"><div>${nb("refresh", { feed_type: "for_you" }, pi("home") + "<span>Home</span>", "p-nav " + (o.screen === "feed" && o.feed_type === "for_you" ? "active" : ""))}${nb("refresh", { feed_type: "popular" }, pi("arrow") + "<span>Popular</span>", "p-nav " + (o.feed_type === "popular" ? "active" : ""))}${nb("refresh", { feed_type: "latest" }, pi("search") + "<span>Latest</span>", "p-nav")}</div><div class="reddit-nav-section"><h3>COMMUNITIES</h3>${o.communities
+    .filter((c) => c.joined)
+    .map((c) =>
+      nb(
+        "view_community",
+        { community: c.name },
+        `<span class="community-avatar">${esc(c.name.slice(2, 3).toUpperCase())}</span><span>${esc(c.name)}</span>`,
+        "p-nav " +
+          (o.community?.name === c.name && o.screen === "community"
+            ? "active"
+            : ""),
+      ),
+    )
+    .join(
+      "",
+    )}${nb("list_communities", {}, pi("search") + "<span>Explore communities</span>", "p-nav")}${nb("create_community", {}, pi("plus") + "<span>Create a community</span>", "p-nav")}</div><div class="reddit-nav-section">${nb("view_profile", {}, pi("person") + "<span>Profile</span>", "p-nav")}${nb("view_saved", {}, pi("bookmark") + "<span>Saved</span>", "p-nav")}</div><span class="reddit-copyright">Community · Guidelines · Help</span></aside>`;
+}
+function redditCard(p, o, detail = false) {
+  return `<article class="reddit-post ${detail ? "reddit-detail" : ""}" data-post="${p.post_id}" tabindex="0"><div class="reddit-post-top"><span class="community-avatar">${esc((p.community || "r/a").slice(2, 3).toUpperCase())}</span>${nb("view_community", { community: p.community }, `<b>${esc(p.community)}</b>`, "p-community-link")}<span>· ${age(p.created_at, o)}</span>${postMenu(p, o)}</div>${detail ? `<div class="reddit-author-line">${nb("view_profile", { user_id: p.author_id }, "u/" + esc(p.author_handle))}</div>` : ""}<h2>${esc(p.title || "")}</h2>${p.original_post ? `<div class="reddit-crosspost"><small>Crossposted from ${esc(p.original_post.community || "another community")}</small><p>${esc(p.original_post.title || p.original_post.body || "Original post unavailable")}</p></div>` : ""}${p.body ? '<div class="reddit-body">' + bodyText(p.body) + "</div>" : ""}${p.url ? '<a class="reddit-link" href="' + esc(p.url) + '" target="_blank" rel="noreferrer">' + esc(p.url) + "</a>" : ""}${
+    p.assets?.length
+      ? `<div class="reddit-post-media">${p.assets
+          .filter(
+            (a) =>
+              !detail ||
+              !p.visible_asset_ids ||
+              p.visible_asset_ids.includes(a.asset_id),
+          )
+          .map((a) => nativeMedia(a))
+          .join(
+            "",
+          )}${detail && p.post_type === "gallery" ? `<div class="reddit-carousel">${nb("view_media", { index: Math.max(0, (p.media_index || 0) - 1) }, "‹")}<span>${(p.media_index || 0) + 1} / ${p.assets.length}</span>${nb("view_media", { index: Math.min(p.assets.length - 1, (p.media_index || 0) + 1) }, "›")}</div>` : ""}</div>`
+      : ""
+  }<div class="reddit-reactions"><span class="vote-pill ${p.vote === 1 ? "upvoted" : p.vote === -1 ? "downvoted" : ""}">${nb(p.vote === 1 ? "clear_post_vote" : "upvote_post", { post_id: p.post_id }, pi("arrow"))}<b>${p.score}</b>${nb(p.vote === -1 ? "clear_post_vote" : "downvote_post", { post_id: p.post_id }, pi("down"))}</span>${nb("open_post", { post_id: p.post_id }, pi("comment") + `<b>${p.num_comments}</b>`, "reddit-pill")}${nb(p.saved ? "unsave_post" : "save_post", { post_id: p.post_id }, pi("bookmark") + (p.saved ? "Saved" : "Save"), "reddit-pill")}${detail ? nb("crosspost", { post_id: p.post_id }, pi("share") + "Crosspost", "reddit-pill") : ""}</div></article>`;
+}
+function redditRight(o) {
+  const c =
+    o.community || o.communities.find((c) => c.joined) || o.communities[0];
+  if (!c) return "";
+  return `<aside class="reddit-right"><section class="reddit-about"><h2>${esc(c.name)}</h2><h3>${esc(c.title)}</h3><p>${esc(c.description || "Share experiences, ask questions, and participate in the community.")}</p><div class="community-stats"><b>${c.members}</b><span>Members</span></div>${nb(c.joined ? "leave_community" : "join_community", { community: c.name }, c.joined ? "Joined" : "Join", "p-community-join")}</section><section class="reddit-rules"><h2>COMMUNITY RULES</h2>${c.rules.map((r, i) => `<div><span>${i + 1}</span>${esc(r)}</div>`).join("")}</section><div class="reddit-right-foot">Respect the people behind the posts.</div></aside>`;
+}
+function redditSort(o) {
+  if (
+    o.screen === "feed" &&
+    ["for_you", "home", "latest"].includes(o.feed_type)
+  )
+    return `<div class="reddit-sort"><span>${o.feed_type === "latest" ? "Latest posts" : "Recommended for you"}</span></div>`;
+  return `<div class="reddit-sort"><label><select data-sort ${!editable() ? "disabled" : ""}>${["best", "hot", "new", "top"].map((sort) => `<option value="${sort}" ${o.feed_sort === sort ? "selected" : ""}>${sort[0].toUpperCase() + sort.slice(1)}</option>`).join("")}</select>${pi("down")}</label>${o.feed_sort === "top" ? `<select data-time-range ${!editable() ? "disabled" : ""}>${["hour", "day", "week", "month", "year", "all"].map((t) => `<option value="${t}" ${o.time_range === t ? "selected" : ""}>${t === "all" ? "All time" : "Past " + t}</option>`).join("")}</select>` : ""}<span>${pi("image")} Card</span></div>`;
+}
+function redditPage(o) {
+  let content;
+  if (o.screen === "studio") content = nativeComposer(o);
+  else if (o.screen === "notifications") content = notifications(o);
+  else if (o.screen === "profile") {
+    content =
+      profileHeader(o) +
+      (o.profile?.tab === "comments"
+        ? (o.profile.comments || [])
+            .map(
+              (c) =>
+                `<article class="profile-comment" data-post="${c.post_id}"><small>${esc(c.community)} · ${esc(c.post_title)}</small><p>${esc(c.content)}</p><span>${c.score} points · ${age(c.created_at, o)}</span></article>`,
+            )
+            .join("")
+        : o.cards.map((p) => redditCard(p, o)).join(""));
+  } else if (o.screen === "detail" && o.post) {
+    content = `<div class="reddit-back">${nb("back", {}, pi("back"))}</div>${redditCard(o.post, o, true)}<div class="reddit-comments">${commentForm(o)}<div class="reddit-comment-sort"><span>Sort by:</span>${["best", "top", "new"].map((sort) => nb("load_comments", { sort }, sort[0].toUpperCase() + sort.slice(1))).join("")}</div>${commentItems(o.post.comments, o)}${nb("load_comments", { offset: (o.comment_offset || 0) + 20 }, "View more comments", "p-load-comments")}${nb("dwell", { duration_ms: 10000 }, "Read discussion", "p-more-feed")}</div>`;
+  } else if (o.screen === "communities") {
+    content = `<section class="reddit-explore"><h1>Explore communities</h1>${o.communities.map((c) => `<article><div class="community-avatar">${esc(c.name.slice(2, 3).toUpperCase())}</div><div><h2>${esc(c.name)}</h2><p>${esc(c.description || c.title)}</p><small>${c.members} members</small></div>${nb("view_community", { community: c.name }, "Explore", "p-community-join")}</article>`).join("")}</section>`;
+  } else {
+    let head = "";
+    if (o.screen === "community" && o.community) {
+      const c = o.community;
+      head = `<div class="reddit-community-header"><div class="community-banner"></div><div><span class="community-avatar big">${esc(c.name.slice(2, 3).toUpperCase())}</span><h1>${esc(c.name)}</h1>${nb("open_studio", {}, pi("plus") + "Create post", "reddit-pill")}${nb(c.joined ? "leave_community" : "join_community", { community: c.name }, c.joined ? "Joined" : "Join", "p-community-join")}</div></div>`;
+    } else if (o.screen === "feed")
+      head = `<div class="reddit-home-tabs">${nb("refresh", { feed_type: "for_you" }, "For You", ["for_you", "home"].includes(o.feed_type) ? "active" : "")}${nb("refresh", { feed_type: "following" }, "Following", o.feed_type === "following" ? "active" : "")}${nb("refresh", { feed_type: "popular" }, "Popular", o.feed_type === "popular" ? "active" : "")}</div>`;
+    else
+      head = `<h1 class="reddit-page-title">${o.screen === "saved" ? "Saved" : o.screen === "search" ? "Search results for “" + esc(o.query) + "”" : "Latest"}</h1>`;
+    content =
+      head +
+      redditSort(o) +
+      o.cards.map((p) => redditCard(p, o)).join("") +
+      (!o.cards.length ? empty("No posts in this feed") : "") +
+      nb("scroll", {}, "View more posts", "p-more-feed");
+  }
+  return `<div class="reddit-page"><header class="reddit-header">${brand(o)}${searchbar(o, o.screen === "community" ? "Search in " + o.community.name : "Search Reddit")}${nb("open_studio", {}, pi("plus") + "<span>Create</span>", "reddit-header-create")}${nb("open_notifications", {}, pi("bell"), "reddit-inbox")}${nb("view_profile", {}, av(o.account.name, o.user_id), "reddit-header-profile")}</header>${redditNav(o)}<div class="reddit-center"><div class="reddit-main">${content}</div>${o.screen === "studio" ? "" : redditRight(o)}</div></div>`;
 }
 function nativeRender(o) {
   document.body.dataset.platform = o.platform;
   document.body.dataset.screen = o.screen;
-  const labels = {
-    xiaohongshu: { discover: "发现", following: "关注", nearby: "同城" },
-    x: { for_you: "For You", following: "Following" },
-    reddit: { home: "Home", popular: "Popular", latest: "Latest" },
-  };
-  const feeds = o.contract?.feeds || Object.keys(labels[o.platform] || {});
-  $("tabs").innerHTML =
-    feeds
-      .map(
-        (f) =>
-          `<button class="tab ${o.feed_type === f ? "active" : ""}" data-native-feed="${f}" ${!editable() ? "disabled" : ""}>${esc(labels[o.platform]?.[f] || f)}</button>`,
-      )
-      .join("") +
-    `<button class="refresh" id="nativeRefresh" ${!editable() ? "disabled" : ""}>↻ 刷新</button>`;
-  $("tabs").style.display = ["detail", "studio"].includes(o.screen)
-    ? "none"
-    : "flex";
-  let extra = $("nativeNav");
-  if (!extra) {
-    extra = document.createElement("div");
-    extra.id = "nativeNav";
-    extra.className = "native-nav";
-    $("tabs").after(extra);
-  }
-  extra.innerHTML =
-    nativeButton(
-      "view_saved",
-      {},
-      o.platform === "x"
-        ? "Bookmarks"
-        : o.platform === "reddit"
-          ? "Saved"
-          : "我的收藏",
-    ) +
-    (o.platform === "reddit"
-      ? nativeButton("list_communities", {}, "Communities")
-      : o.platform === "xiaohongshu"
-        ? nativeButton("create_collection", {}, "新建收藏专辑")
-        : "") +
-    nativeButton("edit_profile", {}, "编辑资料");
-  if (o.screen === "studio") {
-    const d = o.draft;
-    const visible = (d?.assets || [])
-      .map((s) => o.asset_library.find((a) => a.asset_id === s.asset_id))
-      .filter(Boolean);
-    $("content").innerHTML =
-      `<div class="detail"><h2>${o.platform === "x" ? "Compose a post" : o.platform === "reddit" ? "Create a post" : "发布笔记"}</h2><p class="hint">${o.platform === "x" ? "标准账号 · 280 加权字符 · 最多 4 张图片" : o.platform === "reddit" ? "选择社区，阅读规则，再发布文字、链接或媒体" : "选择图文或视频，整理素材顺序，保存草稿"}</p>${d ? `<h3>${esc(d.title || "")}</h3><div class="body">${esc(d.body)}</div><div class="gallery">${visible.map(media).join("")}</div><div class="actions">${nativeButton("publish_draft", {}, "发布草稿")}</div>` : '<p class="hint">还没有保存草稿。</p>'}<button id="editDraft" ${!editable() ? "disabled" : ""}>${d ? "编辑草稿" : "开始编辑"}</button><label class="upload-control">上传图片或视频<input type="file" id="nativeUpload" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" ${!editable() ? "disabled" : ""}></label><h3>账号素材库 · ${o.asset_library.length}</h3><div class="feed">${o.asset_library
-        .slice(0, 20)
-        .map(
-          (a) =>
-            `<div class="post-card"><div class="cover">${media(a)}</div><div class="post-info">${esc(a.alt_text || a.media_type)}</div></div>`,
-        )
-        .join("")}</div></div>`;
-    $("editDraft").onclick = () => openEditor(o);
-    $("nativeUpload").onchange = (e) => nativeUpload(e.target.files[0]);
-  } else if (o.screen === "detail" && o.post) {
-    const p = o.post,
-      id = { post_id: p.post_id },
-      platform = o.platform;
-    const visible = p.assets.filter(
-      (a) => !p.visible_asset_ids || p.visible_asset_ids.includes(a.asset_id),
-    );
-    const gallery =
-      p.post_type === "gallery" && platform !== "x"
-        ? `<div class="gallery-nav">${nativeButton("view_media", { index: Math.max(0, (p.media_index || 0) - 1) }, "←")}<span>${(p.media_index || 0) + 1}/${p.assets.length}</span>${nativeButton("view_media", { index: Math.min(p.assets.length - 1, (p.media_index || 0) + 1) }, "→")}</div>`
-        : "";
-    const reactions =
-      platform === "reddit"
-        ? nativeButton(
-            p.vote === 1 ? "clear_post_vote" : "upvote_post",
-            id,
-            "△ " + p.score,
-          ) +
-          nativeButton(
-            p.vote === -1 ? "clear_post_vote" : "downvote_post",
-            id,
-            "▽",
-          ) +
-          nativeButton(
-            p.saved ? "unsave_post" : "save_post",
-            id,
-            p.saved ? "已保存" : "保存",
-          ) +
-          nativeButton("crosspost", id, "Repost / Crosspost")
-        : nativeButton(
-            p.liked ? "unlike_post" : "like_post",
-            id,
-            p.liked ? "♥ 已赞" : "♡ 点赞",
-          ) +
-          (platform === "x"
-            ? nativeButton(
-                p.reposted ? "undo_repost" : "repost",
-                id,
-                "↻ Repost",
-              ) +
-              nativeButton("quote_post", id, "Quote") +
-              nativeButton(
-                p.saved ? "unbookmark_post" : "bookmark_post",
-                id,
-                p.saved ? "已保存" : "Bookmark",
-              )
-            : nativeButton(
-                p.saved ? "uncollect_post" : "collect_post",
-                id,
-                p.saved ? "★ 已收藏" : "☆ 收藏",
-              ) + nativeButton("add_to_collection", id, "加入专辑"));
-    const editing =
-      (p.owner_id || p.author_id) === o.user_id
-        ? (platform !== "x" ? nativeButton("edit_post", id, "编辑") : "") +
-          nativeButton("delete_post", id, "删除")
-        : "";
-    const moderation = o.available_actions.remove_post
-      ? nativeButton("remove_post", id, "版务移除")
-      : "";
-    const video = p.assets.some((a) => a.media_type === "video")
-      ? `<div class="actions">${nativeButton("play_video", { duration_ms: 10000 }, "播放 10 秒")}${nativeButton("seek_video", {}, "跳转")}<span class="hint">位置 ${Math.round((p.video_position_ms || 0) / 1000)} 秒</span></div>`
-      : "";
-    $("content").innerHTML =
-      `<div class="detail"><div class="detail-top">${nativeButton("back", {}, "← 返回")}<div class="native-author">${nativeAvatar(p.author_name)}<b>${esc(p.author_name)}</b></div>${p.author_id !== o.user_id ? nativeButton("follow_user", { followee_id: p.author_id }, "关注") : ""}</div>${platform === "reddit" ? '<p class="hint">' + esc(p.community) + "</p>" : ""}${p.title ? "<h2>" + esc(p.title) + "</h2>" : ""}<div class="body">${esc(p.quote_body || p.body)}</div>${p.url ? '<a href="' + esc(p.url) + '" target="_blank" rel="noreferrer">' + esc(p.url) + "</a>" : ""}${nativeReference(p)}<div class="gallery">${visible.map(media).join("")}</div>${gallery}${video}<div class="actions">${reactions}${nativeButton("dwell", { duration_ms: 10000 }, "阅读 10 秒")}${editing}${moderation}</div><div class="comments"><h3>${platform === "x" ? "Replies" : "评论"}</h3>${platform === "x" ? (p.replies || []).map(nativeXCard).join("") : nativeComments(p.comments, o)}${platform !== "x" ? '<div class="actions">' + nativeButton("load_comments", { sort: "best" }, "热门评论") + nativeButton("load_comments", { sort: "new" }, "最新评论") + nativeButton("load_comments", { offset: (o.comment_offset || 0) + 20 }, "更多评论") + "</div>" : ""}<form id="commentForm"><textarea id="commentText" placeholder="${platform === "x" ? "Post your reply" : "参与讨论…"}" ${!editable() ? "disabled" : ""}></textarea><button class="primary wide" ${!editable() ? "disabled" : ""}>${platform === "x" ? "Reply" : "发表评论"}</button></form></div></div>`;
-    $("commentForm").onsubmit = (e) => {
-      e.preventDefault();
-      act(
-        platform === "x" ? "reply_post" : "create_comment",
-        platform === "x"
-          ? { post_id: p.post_id, body: $("commentText").value }
-          : { post_id: p.post_id, content: $("commentText").value },
-      );
-    };
-  } else if (o.screen === "communities") {
-    $("content").innerHTML =
-      `<div class="detail"><h2>Explore communities</h2>${nativeButton("create_community", {}, "创建社区")}${o.communities.map((c) => `<div class="community-card"><h3>${esc(c.name)} · ${esc(c.title)}</h3><p>${esc(c.description)}</p><div class="hint">${c.members} 位成员 · ${esc(c.visibility)}${c.role === "moderator" ? " · 你是版主" : ""}</div><ul>${c.rules.map((r) => "<li>" + esc(r) + "</li>").join("")}</ul><div class="actions">${nativeButton("view_community", { community: c.name }, "打开")}${nativeButton(c.joined ? "leave_community" : "join_community", { community: c.name }, c.joined ? "Joined" : "Join")}${c.role === "moderator" ? nativeButton("approve_member", { community: c.name }, "批准成员") : ""}</div></div>`).join("")}</div>`;
-  } else {
-    let intro = "";
-    if (o.screen === "profile" && o.profile)
-      intro = `<div class="detail"><h2>${esc(o.profile.name)}</h2><p>${esc(o.profile.bio)}</p><span class="hint">${o.profile.followers} followers · ${o.profile.following} following</span></div>`;
-    if (o.screen === "notifications")
-      intro = `<div class="detail"><h2>通知与回复</h2>${o.notifications.map((n) => `<div class="comment">${esc(n.kind)} · 用户 ${n.actor_id}<p>${esc(n.content)}</p>${nativeButton("open_notification", { notification_id: n.notification_id }, "查看")}</div>`).join("") || '<p class="hint">暂无通知</p>'}</div>`;
-    if (o.screen === "community" && o.community) {
-      const c = o.community;
-      intro = `<div class="detail"><h2>${esc(c.name)}</h2><p>${esc(c.description)}</p><ul>${c.rules.map((r) => "<li>" + esc(r) + "</li>").join("")}</ul><div class="actions">${nativeButton(c.joined ? "leave_community" : "join_community", { community: c.name }, c.joined ? "Joined" : "Join")}${["hot", "new", "top"].map((sort) => nativeButton("view_community", { community: c.name, sort }, sort)).join("")}</div></div>`;
-    }
-    if (o.screen === "collection")
-      intro = '<div class="detail"><h2>收藏专辑</h2></div>';
-    const cards =
-      o.platform === "x"
-        ? o.cards.map(nativeXCard)
-        : o.platform === "reddit"
-          ? o.cards.map(nativeRedditCard)
-          : o.cards.map(nativeXhsCard);
-    $("content").innerHTML =
-      intro +
-      `<div class="${o.platform === "xiaohongshu" ? "feed" : "native-timeline"}">${cards.join("") || '<div class="empty">暂无内容。试试刷新、搜索或加入社区。</div>'}</div><div class="feed-footer">${nativeButton("scroll", {}, "继续浏览 ↓")}</div>`;
-  }
-  if (o.screen === "detail" && o.post) {
-    for (const video of $("content").querySelectorAll("video"))
-      video.onloadedmetadata = () => {
-        video.currentTime = Math.min(
-          video.duration || 0,
-          (o.post.video_position_ms || 0) / 1000,
-        );
-      };
-  }
-  $("tabs").onclick = (e) => {
-    const b = e.target.closest("[data-native-feed]");
-    if (b) {
-      const args = { feed_type: b.dataset.nativeFeed };
-      if (args.feed_type === "nearby") {
-        const location = prompt("输入要浏览的城市，例如：上海");
-        if (!location) return;
-        args.location = location;
-      }
-      act("refresh", args);
-    }
-  };
-  $("nativeRefresh").onclick = () =>
-    act("refresh", { feed_type: o.contract?.feeds[0] || "discover" });
-}
-async function nativeAction(type, args) {
-  if (!editable()) return;
-  const value = { ...args };
-  if (["create_collection", "create_community"].includes(type)) {
-    const name = prompt(
-      type === "create_community" ? "社区名称（如 r/photography）" : "专辑名称",
-    );
-    if (!name) return;
-    value.name = name;
-    if (type === "create_community")
-      value.title = prompt("社区标题", name) || name;
-  }
-  if (type === "edit_profile") {
-    const bio = prompt("个人简介", current().account.bio || "");
-    if (bio === null) return;
-    value.bio = bio;
-  }
-  if (
-    ["edit_post", "quote_post", "edit_comment", "create_comment"].includes(
-      type,
-    ) &&
-    !value.body &&
-    !value.content &&
-    !value.quote_body
-  ) {
-    const text = prompt(
-      type === "quote_post" ? "引用时的文字" : "输入内容",
-      type === "edit_post" ? current().post.body : "",
-    );
-    if (text === null) return;
-    if (type === "edit_post") value.body = text;
-    else if (type === "quote_post") value.quote_body = text;
-    else value.content = text;
-  }
-  if (["crosspost", "approve_member"].includes(type)) {
-    if (!value.community) value.community = prompt("目标社区（r/...）");
-    if (!value.community) return;
-    if (type === "approve_member") {
-      value.user_id = Number(prompt("要批准的用户 ID"));
-      if (!value.user_id) return;
-    }
-  }
-  if (type === "add_to_collection") {
-    const folders = current().collections || [];
-    value.folder_id = Number(
-      prompt(
-        "专辑 ID：" + folders.map((f) => f.folder_id + " " + f.name).join("，"),
-      ),
-    );
-    if (!value.folder_id) return;
-  }
-  if (type === "seek_video") {
-    const seconds = prompt("跳转到第几秒？");
-    if (seconds === null) return;
-    value.position_ms = Math.round(Number(seconds) * 1000);
-  }
-  return act(type, value);
-}
-async function nativeUpload(file) {
-  if (!file) return;
-  if (file.size > 8 * 1024 * 1024) return toast("上传文件须小于 8 MiB");
-  const data = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  try {
-    await api("/api/assets", {
-      user_id: current().user_id,
-      filename: file.name,
-      data_base64: data,
-    });
-    await loadSession(sessionId);
-    toast("素材已加入账号素材库");
-  } catch (e) {
-    toast(e.message);
-  }
+  $("platformRoot").innerHTML =
+    o.platform === "xiaohongshu"
+      ? xhsPage(o)
+      : o.platform === "x"
+        ? xPage(o)
+        : redditPage(o);
+  wireNative(o);
 }

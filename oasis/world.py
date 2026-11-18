@@ -192,6 +192,19 @@ class AgoraWorld(PlatformActions):
     @atomic_action
     def add_persona(self, profile: PersonaProfile) -> int:
         user_id = self.create_user(profile.handle, profile.display_name, profile.bio)
+        self.attach_persona(user_id, profile)
+        return user_id
+
+    @atomic_action
+    def attach_persona(self, user_id, profile):
+        if not self.db.execute(
+            "SELECT 1 FROM user WHERE user_id=?", (user_id,)
+        ).fetchone():
+            raise KeyError("Unknown persona account")
+        if self.db.execute(
+            "SELECT 1 FROM persona WHERE user_id=?", (user_id,)
+        ).fetchone():
+            raise ValueError("This account already has a persona")
         self.db.execute(
             "INSERT INTO persona (profile_id, user_id, profile_version, "
             "persona_json, policy_type) VALUES (?, ?, ?, ?, ?)",
@@ -305,7 +318,16 @@ class AgoraWorld(PlatformActions):
         self.db.commit()
         return post_id
 
-    def asset_library(self, user_id):
+    def asset_library(self, user_id, limit=None, offset=0, asset_ids=None):
+        query = "SELECT m.asset_id, m.media_type, ca.alt_text, m.width, m.height, m.duration_ms FROM creator_asset ca JOIN media_asset m ON m.asset_id=ca.asset_id WHERE ca.user_id=?"
+        params = (user_id,)
+        if asset_ids is not None:
+            query += " AND m.asset_id IN (SELECT value FROM json_each(?))"
+            params += (json.dumps(list(asset_ids)),)
+        query += " ORDER BY m.asset_id"
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params += (limit, offset)
         return [
             {
                 "asset_id": row[0],
@@ -315,10 +337,7 @@ class AgoraWorld(PlatformActions):
                 "height": row[4],
                 "duration_ms": row[5],
             }
-            for row in self.db.execute(
-                "SELECT m.asset_id, m.media_type, ca.alt_text, m.width, m.height, m.duration_ms FROM creator_asset ca JOIN media_asset m ON m.asset_id = ca.asset_id WHERE ca.user_id = ? ORDER BY m.asset_id",
-                (user_id,),
-            )
+            for row in self.db.execute(query, params)
         ]
 
     def library_assets(self, user_id, specs):
@@ -369,7 +388,10 @@ class AgoraWorld(PlatformActions):
             if self.store.depth == 0:
                 self._media_imports.clear()
 
-    async def create_comment(
+    async def create_comment(self, author_id, post_id, content, parent_comment_id=None):
+        return self.add_comment(author_id, post_id, content, parent_comment_id)
+
+    def add_comment(
         self,
         author_id: int,
         post_id: int,
@@ -388,7 +410,11 @@ class AgoraWorld(PlatformActions):
             if row[1] == "repost" and self.preset.name != "reddit":
                 post_id = row[0]
             if not self.get_feed(
-                author_id, 1, record_impressions=False, eligible_post_ids=[post_id]
+                author_id,
+                1,
+                record_impressions=False,
+                eligible_post_ids=[post_id],
+                include_comments=False,
             ):
                 return {"success": False, "error": "Post is not visible"}
             root, reply_to = None, None
@@ -745,13 +771,36 @@ class AgoraWorld(PlatformActions):
         self.db.commit()
         return True
 
-    def get_thread(self, post_id: int) -> list[dict[str, Any]]:
+    def get_thread(
+        self,
+        post_id: int,
+        root_limit=None,
+        root_offset=0,
+        max_comments=200,
+        root_sort="best",
+    ) -> list[dict[str, Any]]:
+        prefix, restriction, params = "", "cm.post_id=?", (post_id,)
+        if root_limit is not None:
+            order = (
+                "created_at DESC, comment_id DESC"
+                if root_sort == "new"
+                else "is_pinned DESC, num_likes-num_dislikes DESC, comment_id DESC"
+            )
+            prefix = (
+                "WITH RECURSIVE roots AS (SELECT comment_id FROM comment WHERE post_id=? AND parent_comment_id IS NULL ORDER BY "
+                + order
+                + " LIMIT ? OFFSET ?), branch(id) AS (SELECT comment_id FROM roots UNION ALL SELECT c.comment_id FROM comment c JOIN branch b ON c.parent_comment_id=b.id WHERE c.post_id=? LIMIT ?) "
+            )
+            restriction = "cm.comment_id IN (SELECT id FROM branch)"
+            params = (post_id, root_limit, root_offset, post_id, max_comments)
         rows = self.db.execute(
-            "SELECT comment_id, user_id, content, created_at, num_likes, "
-            "num_dislikes, parent_comment_id, root_comment_id, "
-            "reply_to_user_id, is_pinned, deleted, edited_at_tick FROM comment WHERE post_id = ? "
-            "ORDER BY is_pinned DESC, created_at, comment_id",
-            (post_id,),
+            prefix
+            + "SELECT cm.comment_id, cm.user_id, cm.content, cm.created_at, cm.num_likes, "
+            "cm.num_dislikes, cm.parent_comment_id, cm.root_comment_id, "
+            "cm.reply_to_user_id, cm.is_pinned, cm.deleted, cm.edited_at_tick, u.name, u.user_name FROM comment cm JOIN user u ON u.user_id=cm.user_id WHERE "
+            + restriction
+            + " ORDER BY cm.is_pinned DESC, cm.created_at, cm.comment_id",
+            params,
         ).fetchall()
         flat = [
             {
@@ -767,6 +816,8 @@ class AgoraWorld(PlatformActions):
                 "is_pinned": bool(row[9]),
                 "deleted": bool(row[10]),
                 "edited_at_tick": row[11],
+                "author_name": row[12],
+                "author_handle": row[13],
                 "replies": [],
             }
             for row in rows
@@ -799,6 +850,7 @@ class AgoraWorld(PlatformActions):
         feed_type: str = "discover",
         record_impressions: bool = True,
         eligible_post_ids: list[int] | tuple[int, ...] | None = None,
+        include_comments=True,
     ) -> list[dict[str, Any]]:
         if feed_type not in self.preset.feed_types:
             raise ValueError(
@@ -893,7 +945,7 @@ class AgoraWorld(PlatformActions):
                 "feed_reason": reason,
                 "topics": self.get_post_topics(row[0]),
                 "assets": self.get_post_assets(row[0]),
-                "comments": self.get_thread(row[0]),
+                "comments": self.get_thread(row[0]) if include_comments else [],
                 "community": row[12],
                 "location": row[13],
                 "original_post_id": row[14],

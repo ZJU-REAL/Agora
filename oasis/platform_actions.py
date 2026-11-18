@@ -7,7 +7,11 @@ import re
 class PlatformActions:
     def require_post(self, user, post_id):
         posts = self.get_feed(
-            user, 1, record_impressions=False, eligible_post_ids=[post_id]
+            user,
+            1,
+            record_impressions=False,
+            eligible_post_ids=[post_id],
+            include_comments=False,
         )
         if not posts:
             raise PermissionError("Post is unavailable to this account")

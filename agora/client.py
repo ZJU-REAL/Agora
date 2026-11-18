@@ -44,8 +44,12 @@ class AgoraClient:
         self.session_id = value["session_id"]
         return value["observation"]
 
-    def observe(self):
-        return self.request("GET", f"/v1/sessions/{self.session_id}")
+    def observe(self, step=None):
+        return self.request(
+            "GET",
+            f"/v1/sessions/{self.session_id}"
+            + (f"?step={step}" if step is not None else ""),
+        )
 
     def act(self, action_type, arguments=None, rationale=None, request_id=None):
         value = {
@@ -117,6 +121,7 @@ class AgoraClient:
                 break
             response = requests.get(
                 self.base_url + "/v1/assets/" + asset["asset_id"],
+                stream=True,
                 headers={"Authorization": "Bearer " + self.token},
                 timeout=self.timeout,
             )
@@ -143,13 +148,16 @@ class AgoraClient:
 
                 with tempfile.TemporaryDirectory(prefix="agora-client-video-") as root:
                     path = Path(root) / "visible.mp4"
-                    path.write_bytes(response.content)
+                    with path.open("wb") as stream:
+                        for chunk in response.iter_content(65536):
+                            stream.write(chunk)
                     parts.extend(
                         video_frame_parts(
                             path, position_ms=observation.get("video_position_ms", 0)
                         )
                     )
                 count += 1
+            response.close()
         return parts
 
     async def run(self, model_client, goal, max_actions=20, supports_vision=False):

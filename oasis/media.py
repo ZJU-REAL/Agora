@@ -158,6 +158,10 @@ class MediaStore:
     def _inspect_image(path: Path) -> dict:
         try:
             with Image.open(path) as image:
+                if image.width * image.height > 16000000:
+                    raise MediaValidationError(
+                        "Image exceeds the 16 megapixel decode limit"
+                    )
                 image.verify()
             with Image.open(path) as image:
                 image_format = (image.format or "").upper()

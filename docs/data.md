@@ -3,20 +3,15 @@
 本文说明你需要获取什么数据、最低字段是什么、如何匿名化，以及哪些数据能直接导入当前
 Agora。建议先准备一个小红书垂类的小样本，验证完整流程后再扩大规模。
 
-## 1. 第一批建议规模
+## 1. 先用小样本验证导入
 
-最低可运行样本：
+内置数据每个平台只有 4 个虚构账号、6 条主帖子和少量评论/回复，图片使用 3 份示意
+照片。它们用于检查页面与操作，可以在之后的数据交付中替换；无需先准备固定评测任务。
 
-- 100 个匿名用户；
-- 500 条帖子；
-- 2,000 条评论；
-- 至少 50 条图片、多图或视频帖子；
-- 10–20 类 NPC Persona；
-- 20 个开发场景；
-- 2 个 Candidate 模型，其中至少一个支持视觉输入。
-
-数据不足时可以先交付 20 个用户、50 条帖子和 200 条评论做导入验证。数据量不是第一优先级，
-用户—帖子—评论—媒体之间的关联完整性更重要。
+第一批数据可从 4–20 个用户、6–30 条帖子、几条评论、2–5 份媒体和少量关注关系开始。
+实体之间的 ID 关联、内容类型与媒体路径比样本数量更重要。运行平台不要求评分场景或
+候选模型池。逐步扩大数据时，JSONL 流式读取，每行限制 1 MiB；评论按父子依赖逐轮
+处理，不把整个评论文件放入内存。
 
 ## 2. 交付目录
 
@@ -26,6 +21,7 @@ dataset/
 ├── users.jsonl
 ├── personas.jsonl
 ├── posts.jsonl
+├── communities.jsonl      # Reddit 社区、规则、创建者与成员
 ├── comments.jsonl
 ├── relations.jsonl        # 可选，关注关系
 ├── interactions.jsonl     # 可选，点赞、收藏和 downvote
@@ -145,8 +141,8 @@ JSONL 表示每行一个完整 JSON 对象，编码统一使用 UTF-8。不要�
 `posting_probability`、`reply_probability` 和 `like_probability` 取值应在 0–1。第一版建议大多数
 NPC 使用 `scripted`，避免调用费用和不可复现性。
 
-注意：当前 Persona 导入会创建一个新用户。不要同时在 `users.jsonl` 中重复创建同一个 Persona
-账号，除非后续转换器明确处理绑定关系。
+Persona 可以指定 `user_external_id`，绑定到已导入用户，保留该用户的 handle/name/bio；
+不指定时才创建新账号。每个用户当前最多绑定一个 Persona。
 
 ## 6. 帖子数据
 
@@ -309,3 +305,28 @@ ASR 和 transcript 可由后续版本化转换器写入媒体记录。
 
 拿到第一批样本后，项目侧会继续完成数据审计、转换器、Persona 生成、世界导入、Artifact
 冻结和 dry-run。无需在交付前手工转换成 SQLite。
+
+## Reddit 社区与人物绑定示例
+
+在 manifest 的 `files` 中加入 `communities` 文件：
+
+```json
+{"external_id":"c_photo","name":"r/photography","title":"Photography","creator_external_id":"u_0001","description":"Photo discussions","rules":["Be constructive"],"visibility":"public","members":["u_0002"]}
+```
+
+社区在用户/人物之后、帖子之前导入。创建者、成员和帖子作者引用同一用户命名空间，
+重复导入同一 namespace 会跳过既有社区。私人/受限社区的指定成员会由创建者批准。
+
+```json
+{"profile_id":"voice_01","user_external_id":"u_0001","interests":{"photography":1},"style":{"tone":["curious","specific"],"example_posts":["What would you change about this framing?"]}}
+```
+
+无需同时创建同名人物账号。数据准备完成后，可以先在新世界中导入，不混入内置样本：
+
+```bash
+agora-world world-create my-data --preset xiaohongshu
+agora-world data-import my-data /path/to/dataset/manifest.json
+```
+
+`data-import` 指定世界和 manifest。切换网页使用的数据源时，将 service 的
+world_id 改为新世界；X/Reddit 使用对应的 `-x`、`-reddit` 世界。旧世界和实验保留。

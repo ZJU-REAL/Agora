@@ -31,6 +31,9 @@ def main(argv=None):
         "--base-path", default="", help="Reverse-proxy mount, e.g. /agora"
     )
     console.add_argument("--public-origin", help="HTTPS origin served by IAP")
+    console.add_argument("--max-active-agents", type=int, default=32)
+    console.add_argument("--max-active-runs", type=int, default=1)
+    console.add_argument("--max-run-actions", type=int, default=2400)
     console.add_argument(
         "--api-port", type=int, help="AI account API port (default console port + 1)"
     )
@@ -109,6 +112,9 @@ def main(argv=None):
                 bootstrap=args.bootstrap,
                 base_path=args.base_path,
                 public_origin=args.public_origin,
+                max_active_agents=args.max_active_agents,
+                max_active_runs=args.max_active_runs,
+                max_run_actions=args.max_run_actions,
             )
             return 0
         elif args.command == "simulate":

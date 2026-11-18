@@ -1,58 +1,36 @@
-body.embedded {
-  background: #fff;
-}
-.embedded > header,
-.embedded .sidebar,
-.embedded .research,
-.embedded .section-head {
+/* The Viewer embeds the same native platform, without the operator switcher. */
+.embedded .sandbox-bar {
   display: none;
 }
-.embedded main {
-  display: block;
-  padding: 0;
-  margin: 0;
-  max-width: none;
+.embedded .xhs-sidebar,
+.embedded .x-sidebar {
+  top: 0;
+  height: 100vh;
 }
-.embedded .phone {
-  border: 0;
-  border-radius: 0;
-  min-height: 100vh;
-  box-shadow: none;
+.embedded .xhs-header,
+.embedded .reddit-header,
+.embedded .x-sticky-heading {
+  top: 0;
 }
-.embedded .appbar {
-  padding: 20px;
+.embedded .x-feed-tabs {
+  top: 57px;
 }
-.embedded .searchbar {
-  max-width: 280px;
+.embedded .reddit-sidebar {
+  top: 64px;
 }
-.embedded .searchbar input {
-  min-width: 0;
+.embedded .reddit-right {
+  top: 80px;
 }
-.embedded .searchbar button {
-  flex-shrink: 0;
-  white-space: nowrap;
+.embedded .x-right .p-search {
+  top: 10px;
 }
-.embedded .phone > .row {
-  display: none;
-}
-.embedded[data-screen="studio"] #nativeNav {
-  display: none;
-}
-.embedded .phone > .row {
-  padding: 0 20px 12px !important;
-}
-.embedded .detail {
-  padding: 20px;
-}
-.embedded #toast {
-  display: none !important;
-}
-@media (max-width: 450px) {
-  .embedded .searchbar {
-    max-width: 160px;
+@media (max-width: 480px) {
+  .embedded .xhs-sidebar,
+  .embedded .x-sidebar {
+    top: auto;
+    height: 56px;
   }
-  .embedded .appbar {
-    gap: 10px;
-    padding: 14px;
+  .embedded .x-feed-tabs {
+    top: 51px;
   }
 }

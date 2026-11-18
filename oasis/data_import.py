@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,7 @@ class ImportReport:
     comments: int = 0
     relations: int = 0
     interactions: int = 0
+    communities: int = 0
     skipped: int = 0
 
 
@@ -44,6 +45,7 @@ class DatasetImporter:
             "comments": 0,
             "relations": 0,
             "interactions": 0,
+            "communities": 0,
             "skipped": 0,
         }
         for row in self._rows(root, files.get("users")):
@@ -64,12 +66,58 @@ class DatasetImporter:
             if self._lookup(namespace, "persona", profile.profile_id):
                 counts["skipped"] += 1
                 continue
-            user_id = self.sandbox.add_persona(profile)
+            user_external_id = row.get("user_external_id")
+            existing_user = (
+                self._lookup(namespace, "user", str(user_external_id))
+                if user_external_id
+                else None
+            )
+            if existing_user:
+                user_id = int(existing_user)
+                identity = self.sandbox.db.execute(
+                    "SELECT user_name,name,bio FROM user WHERE user_id=?", (user_id,)
+                ).fetchone()
+                self.sandbox.attach_persona(
+                    user_id,
+                    replace(
+                        profile,
+                        handle=identity[0],
+                        display_name=identity[1],
+                        bio=identity[2],
+                    ),
+                )
+            else:
+                user_id = self.sandbox.add_persona(profile)
             self._map(namespace, "persona", profile.profile_id, user_id)
             user_external_id = row.get("user_external_id")
-            if user_external_id:
+            if user_external_id and not existing_user:
                 self._map(namespace, "user", str(user_external_id), user_id)
             counts["personas"] += 1
+
+        for row in self._rows(root, files.get("communities")):
+            external_id = str(row.get("external_id", row["name"]))
+            if self._lookup(namespace, "community", external_id):
+                counts["skipped"] += 1
+                continue
+            creator = int(
+                self._required(namespace, "user", str(row["creator_external_id"]))
+            )
+            name = self.sandbox.create_community(
+                creator,
+                row["name"],
+                row.get("title", row["name"]),
+                row.get("description", ""),
+                row.get("rules", []),
+                row.get("visibility", "public"),
+            )
+            for external_user in row.get("members", []):
+                member = int(self._required(namespace, "user", str(external_user)))
+                if row.get("visibility", "public") == "public":
+                    self.sandbox.join_community(member, name)
+                else:
+                    self.sandbox.approve_member(creator, name, member)
+            self._map(namespace, "community", external_id, name)
+            counts["communities"] += 1
 
         for row in self._rows(root, files.get("relations")):
             external_id = str(row["external_id"])
@@ -136,15 +184,15 @@ class DatasetImporter:
             self._map(namespace, "post", external_id, post_id)
             counts["posts"] += 1
 
-        pending = list(self._rows(root, files.get("comments")))
-        while pending:
+        first_pass = True
+        while files.get("comments"):
             progressed = False
-            remaining = []
-            for row in pending:
+            remaining = 0
+            for row in self._rows(root, files.get("comments")):
                 external_id = str(row["external_id"])
                 if self._lookup(namespace, "comment", external_id):
-                    counts["skipped"] += 1
-                    progressed = True
+                    if first_pass:
+                        counts["skipped"] += 1
                     continue
                 parent_external_id = row.get("parent_external_id")
                 parent_id = (
@@ -153,7 +201,7 @@ class DatasetImporter:
                     else None
                 )
                 if parent_external_id and parent_id is None:
-                    remaining.append(row)
+                    remaining += 1
                     continue
                 post_id = int(
                     self._required(namespace, "post", str(row["post_external_id"]))
@@ -174,10 +222,13 @@ class DatasetImporter:
                 self._map(namespace, "comment", external_id, result["comment_id"])
                 counts["comments"] += 1
                 progressed = True
+            if not remaining:
+                break
             if not progressed:
-                unresolved = [row["external_id"] for row in remaining]
-                raise ValueError(f"Unresolved or cyclic comment parents: {unresolved}")
-            pending = remaining
+                raise ValueError(
+                    f"Unresolved or cyclic comment parents: {remaining} records"
+                )
+            first_pass = False
 
         interaction_actions = {
             "like": self.sandbox.like_post,
@@ -239,12 +290,16 @@ class DatasetImporter:
     @staticmethod
     def _rows(root: Path, relative_path: str | None) -> Iterable[dict]:
         if not relative_path:
-            return []
+            return
         path = (root / relative_path).resolve(strict=True)
         if root not in path.parents:
             raise ValueError(f"Dataset file escapes manifest root: {path}")
         with path.open("r", encoding="utf-8") as stream:
-            return [json.loads(line) for line in stream if line.strip()]
+            while line := stream.readline(1048577):
+                if len(line) > 1048576:
+                    raise ValueError("JSONL row exceeds the 1 MiB import limit")
+                if line.strip():
+                    yield json.loads(line)
 
     @staticmethod
     def _load_manifest(path: Path) -> dict:

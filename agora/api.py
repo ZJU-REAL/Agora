@@ -9,23 +9,98 @@ import re
 import secrets
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 from agora.decisions import DecisionJournal
 from agora.experiments import ExperimentManager
+from agora.http_media import MediaResponse
 from agora.platforms import contract_for
 from agora.session import SocialSession
 from agora.world import open_world
 from oasis import PersonaProfile
+from oasis.agora_types import PLATFORM_PRESETS
+from oasis.world import WorldConfig
 
 
 class PlatformHub:
-    def __init__(self, primary, providers=None, manager=None):
+    def __init__(
+        self,
+        primary,
+        providers=None,
+        manager=None,
+        max_active_agents=32,
+        max_active_runs=1,
+        max_run_actions=2400,
+    ):
         self.primary = primary
         self.worlds = {primary.preset.name: primary}
         self.managers = {
             primary.preset.name: manager or ExperimentManager(primary, providers)
         }
         self.providers = providers if providers is not None else {}
+        self.archives = {}
+        self.max_active_agents, self.max_active_runs, self.max_run_actions = (
+            max_active_agents,
+            max_active_runs,
+            max_run_actions,
+        )
+        if min(max_active_agents, max_active_runs, max_run_actions) < 1:
+            raise ValueError("Run limits must be positive")
+
+    def capacity(self):
+        agents, runs = 0, 0
+        for manager in self.managers.values():
+            with manager.lock:
+                for job in manager.jobs.values():
+                    if job["status"] in {
+                        "queued",
+                        "running",
+                        "pausing",
+                        "paused",
+                        "stopping",
+                    }:
+                        runs += 1
+                        agents += len(job["config"]["user_ids"])
+        return {
+            "max_active_agents": self.max_active_agents,
+            "max_active_runs": self.max_active_runs,
+            "max_run_actions": self.max_run_actions,
+            "active_agents": agents,
+            "active_runs": runs,
+        }
+
+    def admit(self, config):
+        count = config.get("agent_count", len(config.get("user_ids", [])))
+        if type(count) is not int or count < 1:
+            raise ValueError("Select a positive agent count")
+        ticks, steps = config.get("ticks", 6), config.get("steps_per_tick", 8)
+        if type(ticks) is not int or type(steps) is not int:
+            raise ValueError("Run periods and action limits must be integers")
+        limits = self.capacity()
+        if limits["active_runs"] >= self.max_active_runs:
+            raise ValueError("已有模拟占用运行槽，请先停止或完成当前模拟。")
+        if limits["active_agents"] + count > self.max_active_agents:
+            raise ValueError(
+                f"当前服务最多同时运行 {self.max_active_agents} 个 agent。"
+            )
+        if count * ticks * steps > self.max_run_actions:
+            raise ValueError(
+                f"单次模拟的动作上限为 {self.max_run_actions}；请减少账号、轮数或每轮动作数。"
+            )
+        recommendation = config.get("recommendation", {})
+        if (
+            recommendation.get("slate_size", 30) > 30
+            or recommendation.get("page_size", 6) > 12
+        ):
+            raise ValueError("网页沙盒每次推荐最多 30 条、每页最多 12 条。")
+        for key in ("provider_id", "background_provider_id"):
+            if (
+                self.providers.get(config.get(key), {}).get("provider")
+                == "local-transformers"
+            ):
+                raise ValueError(
+                    "网页沙盒请连接独立模型 API，不在平台进程加载本地权重。"
+                )
 
     def add_platforms(self, bootstrap=False):
         from agora.demo import populate
@@ -57,6 +132,28 @@ class PlatformHub:
         for manager in self.managers.values():
             if run_id in manager.jobs:
                 return manager
+        if not re.fullmatch(r"[a-f0-9]{12}", run_id):
+            raise KeyError("Unknown run")
+        for directory in self.primary.config.data_root.iterdir():
+            if (
+                not (directory / "experiments" / run_id / "manifest.json").is_file()
+                or not (directory / "world.json").is_file()
+            ):
+                continue
+            if directory.name not in self.archives:
+                import json
+
+                preset = json.loads((directory / "world.json").read_text())["preset"]
+                source = SimpleNamespace(
+                    config=WorldConfig(
+                        directory.name, self.primary.config.data_root, preset
+                    ),
+                    preset=PLATFORM_PRESETS[preset],
+                )
+                self.archives[directory.name] = ExperimentManager(
+                    source, self.providers
+                )
+            return self.archives[directory.name]
         raise KeyError("Unknown run")
 
     def metadata(self):
@@ -232,7 +329,13 @@ class AgentAPI:
             parts = path.split("/")
             session = self.session(world, user, int(parts[3]))
             if method == "GET" and len(parts) == 4:
-                return 200, session.observe(), None
+                return (
+                    200,
+                    session.observe_at(int(query["step"][0]))
+                    if "step" in query
+                    else session.observe(),
+                    None,
+                )
             if method == "GET" and parts[-1] == "tools":
                 from agora.tool_schema import tool_definitions
 
@@ -242,7 +345,9 @@ class AgentAPI:
                     200,
                     {
                         "trajectory": session.trajectory(
-                            after_step=int(query.get("after", [0])[0])
+                            after_step=int(query.get("after", [0])[0]),
+                            include_observations=False,
+                            compact=True,
                         )
                     },
                     None,
@@ -288,7 +393,11 @@ class AgentAPI:
                     )
                 ]
                 if not world.get_feed(
-                    user, 1, record_impressions=False, eligible_post_ids=ids
+                    user,
+                    1,
+                    record_impressions=False,
+                    eligible_post_ids=ids,
+                    include_comments=False,
                 ):
                     raise PermissionError("Asset is not visible to this account")
             row = world.db.execute(
@@ -297,7 +406,7 @@ class AgentAPI:
             ).fetchone()
             if row is None:
                 raise KeyError("Unknown asset")
-            return 200, world.media.path_for(row[0]).read_bytes(), row[1]
+            return 200, MediaResponse(world.media.path_for(row[0])), row[1]
         raise ValueError("Unknown AI API route")
 
     @staticmethod

@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from agora.api import AgentAPI, PlatformHub
+from agora.http_media import MediaResponse, byte_range
 from agora.recommendation import RecommendationEngine
 from agora.session import SocialSession
 from agora.web_support import page, validate_mount
@@ -51,6 +52,13 @@ def make_handler(
             pass
 
         def reply(self, status, value, content_type="application/json; charset=utf-8"):
+            if isinstance(value, MediaResponse):
+                try:
+                    self.reply_file(value.path, content_type, value.download_name)
+                finally:
+                    if value.delete_after:
+                        value.path.unlink(missing_ok=True)
+                return
             body = (
                 json.dumps(value, ensure_ascii=False).encode()
                 if isinstance(value, (dict, list))
@@ -63,6 +71,41 @@ def make_handler(
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(body)
+
+        def reply_file(self, path, mime, download_name=None):
+            size = path.stat().st_size
+            try:
+                start, end, partial = byte_range(self.headers.get("Range"), size)
+            except (ValueError, TypeError):
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            self.send_response(206 if partial else 200)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(end - start + 1))
+            self.send_header("Accept-Ranges", "bytes")
+            if download_name:
+                self.send_header(
+                    "Content-Disposition", f'attachment; filename="{download_name}"'
+                )
+            self.send_header("X-Content-Type-Options", "nosniff")
+            if partial:
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            self.end_headers()
+            try:
+                with path.open("rb") as stream:
+                    stream.seek(start)
+                    remaining = end - start + 1
+                    while remaining:
+                        chunk = stream.read(min(65536, remaining))
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        remaining -= len(chunk)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
 
         def do_GET(self):
             try:
@@ -91,6 +134,7 @@ def make_handler(
                     "/static/studio.js",
                     "/static/studio.css",
                     "/static/embed.css",
+                    "/static/platform.js",
                 }:
                     self.reply(
                         200,
@@ -109,6 +153,7 @@ def make_handler(
                         {
                             "platforms": hub.metadata(),
                             "default": hub.primary.preset.name,
+                            "capacity": hub.capacity(),
                         },
                     )
                 elif parsed.path in {"/", "/developer", "/viewer"}:
@@ -148,9 +193,14 @@ def make_handler(
                     manager = hub.run_manager(run_id)
                     self.reply(
                         200,
-                        manager.export(run_id)
+                        MediaResponse(
+                            manager.export_file(run_id),
+                            delete_after=True,
+                            download_name=f"agora-{run_id}.json",
+                        )
                         if parsed.path.endswith("/export")
                         else manager.inspect(run_id),
+                        "application/json; charset=utf-8",
                     )
                 elif parsed.path in {
                     "/api/run-world",
@@ -165,7 +215,12 @@ def make_handler(
                             users = [
                                 {"user_id": row[0], "handle": row[1], "name": row[2]}
                                 for row in snapshot.db.execute(
-                                    "SELECT user_id, user_name, name FROM user"
+                                    "SELECT user_id, user_name, name FROM user WHERE user_id IN (SELECT value FROM json_each(?))",
+                                    (
+                                        json.dumps(
+                                            manager.jobs[run_id]["config"]["user_ids"]
+                                        ),
+                                    ),
                                 )
                             ]
                             ids = manager.jobs[run_id]["session_ids"]
@@ -198,14 +253,31 @@ def make_handler(
                                     "Session does not belong to this run"
                                 )
                             session = SocialSession(snapshot, sid)
+                            if "step" in query:
+                                self.reply(
+                                    200,
+                                    {
+                                        "observation": session.observe_at(
+                                            int(query["step"][0])
+                                        ),
+                                        "trajectory": [],
+                                        "requests": [],
+                                    },
+                                )
+                                return
+                            compact = query.get("compact", ["0"])[0] == "1"
                             self.reply(
                                 200,
                                 {
                                     "observation": session.observe(),
                                     "trajectory": session.trajectory(
-                                        after_step=int(query.get("after", [0])[0])
+                                        after_step=int(query.get("after", [0])[0]),
+                                        include_observations=not compact,
+                                        compact=compact,
                                     ),
-                                    "requests": session.diagnostics(),
+                                    "requests": []
+                                    if compact
+                                    else session.diagnostics(),
                                 },
                             )
                         else:
@@ -217,14 +289,14 @@ def make_handler(
                                 raise KeyError("Unknown media")
                             self.reply(
                                 200,
-                                snapshot.media.path_for(row[0]).read_bytes(),
+                                MediaResponse(snapshot.media.path_for(row[0])),
                                 row[1],
                             )
                 elif parsed.path == "/api/world":
                     users = [
                         {"user_id": row[0], "handle": row[1], "name": row[2]}
                         for row in world.db.execute(
-                            "SELECT user_id, user_name, name FROM user ORDER BY user_id"
+                            "SELECT user_id, user_name, name FROM user ORDER BY user_id LIMIT 200"
                         )
                     ]
                     sessions = [
@@ -245,12 +317,27 @@ def make_handler(
                     )
                 elif parsed.path == "/api/session":
                     session = SocialSession(world, int(parse_qs(parsed.query)["id"][0]))
+                    if "step" in query:
+                        self.reply(
+                            200,
+                            {
+                                "observation": session.observe_at(
+                                    int(query["step"][0])
+                                ),
+                                "trajectory": [],
+                                "requests": [],
+                            },
+                        )
+                        return
+                    compact = query.get("compact", ["0"])[0] == "1"
                     self.reply(
                         200,
                         {
                             "observation": session.observe(),
-                            "trajectory": session.trajectory(),
-                            "requests": session.diagnostics(),
+                            "trajectory": session.trajectory(
+                                include_observations=not compact, compact=compact
+                            ),
+                            "requests": [] if compact else session.diagnostics(),
                         },
                     )
                 elif parsed.path.startswith("/media/"):
@@ -262,7 +349,7 @@ def make_handler(
                     ).fetchone()
                     if row is None:
                         raise KeyError("Unknown media")
-                    self.reply(200, world.media.path_for(row[0]).read_bytes(), row[1])
+                    self.reply(200, MediaResponse(world.media.path_for(row[0])), row[1])
                 else:
                     self.reply(404, {"error": "Unknown route"})
             except (
@@ -329,6 +416,7 @@ def make_handler(
                     uid = value.pop("user_id")
                     self.reply(201, native.upload(world, uid, value))
                 elif parsed.path == "/api/runs":
+                    hub.admit(value)
                     self.reply(201, manager.start(value))
                 elif parsed.path.startswith("/api/runs/") and parsed.path.endswith(
                     "/control"
@@ -411,6 +499,9 @@ def serve(
     multi_platform=True,
     base_path="",
     public_origin=None,
+    max_active_agents=32,
+    max_active_runs=1,
+    max_run_actions=2400,
 ):
     validate_mount(base_path, public_origin)
     if host not in {"127.0.0.1", "localhost"}:
@@ -418,7 +509,13 @@ def serve(
     from agora.provider_registry import ProviderRegistry
 
     registry = ProviderRegistry(world.config.world_dir / ".private", providers)
-    hub = PlatformHub(world, registry.providers)
+    hub = PlatformHub(
+        world,
+        registry.providers,
+        max_active_agents=max_active_agents,
+        max_active_runs=max_active_runs,
+        max_run_actions=max_run_actions,
+    )
     if multi_platform:
         hub.add_platforms(bootstrap)
     api_port = port + 1 if api_port is None else api_port

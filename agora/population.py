@@ -4,7 +4,12 @@ from oasis import PersonaProfile
 
 
 def extend_population(world, users, count, seed):
-    topics = ("城市漫游", "摄影", "咖啡", "数码", "美食", "运动")
+    english = world.preset.name in {"x", "reddit"}
+    topics = (
+        ("photography", "coffee", "technology", "design")
+        if english
+        else ("城市漫游", "摄影", "咖啡", "数码", "美食", "运动")
+    )
     assets = world.db.execute(
         "SELECT DISTINCT pa.asset_id, pa.alt_text, pa.transcript FROM post_asset pa "
         "JOIN post p ON p.post_id=pa.post_id LEFT JOIN community c ON c.name=p.community "
@@ -25,8 +30,23 @@ def extend_population(world, users, count, seed):
             PersonaProfile(
                 profile_id=f"background-{seed}-{index}",
                 handle=f"sim_{seed % 100000}_{index}",
-                display_name=f"{topic}观察员 {index + 1:02d}",
-                bio=f"关注{topic}，分享日常，也参与社区讨论。",
+                display_name=f"{topic.title()} reader {index + 1:02d}"
+                if english
+                else f"{topic}观察员 {index + 1:02d}",
+                bio=f"Interested in {topic}. Here to share experiences and learn from discussions."
+                if english
+                else f"关注{topic}，分享日常，也参与社区讨论。",
+                locale="en-US" if english else "zh-CN",
+                tone=(("curious",), ("direct",), ("helpful",))[index % 3]
+                if english
+                else (("简短好奇",), ("具体直接",), ("温和分享",))[index % 3],
+                example_posts=(
+                    f"One small thing I learned about {topic}: try changing one thing at a time.",
+                )
+                if english
+                else (
+                    f"最近关于{topic}的一点新发现。先尝试一个小改变，再看看自己的体验。",
+                ),
                 interests={topic: 1.0, topics[(index + seed + 1) % len(topics)]: 0.35},
                 posting_probability=0,
             )

@@ -127,7 +127,7 @@
           <div>
             <div class="eyebrow">BUILD YOUR SOCIAL WORLD</div>
             <h1>配置下一场社交模拟<span>.</span></h1>
-            <p>选择平台，为受测 agent 连接模型，再观察它如何参与社区。</p>
+            <p>选择平台，为主 agent 连接模型，再观察它如何参与社区。</p>
           </div>
           <span class="outline-badge"
             ><span class="online-dot"></span>平台已就绪</span
@@ -154,14 +154,14 @@
                 <span class="section-number">02</span>
                 <div>
                   <h2>设置参与者</h2>
-                  <p>受测 agent 使用选定模型，背景账号共同构成社交环境。</p>
+                  <p>主 agent 使用选定模型，背景账号共同构成社交环境。</p>
                 </div>
               </div>
               <div class="field-grid">
                 <label class="field"
-                  >受测账号<select id="focalUser" required></select></label
+                  >主账号<select id="focalUser" required></select></label
                 ><label class="field"
-                  >参与 agent 总数 <span class="field-hint">包含受测账号</span>
+                  >参与 agent 总数 <span class="field-hint">包含主账号</span>
                   <div class="number-control">
                     <button
                       type="button"
@@ -173,8 +173,8 @@
                       id="agentCount"
                       type="number"
                       min="1"
-                      max="100"
-                      value="12"
+                      max="32"
+                      value="4"
                       required
                     /><button
                       type="button"
@@ -188,7 +188,7 @@
               </div>
               <div class="participant-note">
                 <svg><use href="#i-users" /></svg
-                ><span id="populationNote">1 个受测 agent + 11 个背景账号</span
+                ><span id="populationNote">1 个主 agent + 3 个背景账号</span
                 ><span class="small-badge">独立沙盒</span>
               </div>
             </section>
@@ -197,7 +197,7 @@
                 <span class="section-number">03</span>
                 <div>
                   <h2>连接模型与设定任务</h2>
-                  <p>受测模型与背景模型可以独立配置。</p>
+                  <p>主模型与背景模型可以独立配置。</p>
                 </div>
                 <button type="button" class="text-button" id="addModel">
                   <svg><use href="#i-plus" /></svg>添加模型
@@ -205,15 +205,19 @@
               </div>
               <div class="field-grid">
                 <label class="field"
-                  >受测 agent 模型<select id="focalModel"></select></label
+                  >主 agent 模型<select id="focalModel"></select></label
                 ><label class="field"
                   >背景账号策略<select id="backgroundModel"></select
                 ></label>
               </div>
               <div id="modelNote" class="inline-note"></div>
               <label class="field goal-field"
-                >受测任务<textarea id="goal" rows="3" maxlength="4000" required>
-浏览社区，选择合适的素材发布一条内容，阅读并回应公开反馈。</textarea>
+                >运行意图（可选）<textarea
+                  id="goal"
+                  rows="3"
+                  maxlength="4000"
+                  placeholder="留空时，账号根据自己的兴趣和风格自然浏览与互动。"
+                ></textarea>
               </label>
               <div class="field-grid three">
                 <label class="field"
@@ -296,11 +300,11 @@
                 <dd id="summaryTicks">6 rounds</dd>
               </div>
               <div>
-                <dt>受测动作上限</dt>
+                <dt>主动作上限</dt>
                 <dd id="summaryActions">48 actions</dd>
               </div>
               <div>
-                <dt>受测模型</dt>
+                <dt>主模型</dt>
                 <dd id="summaryModel">开发策略</dd>
               </div>
             </dl>
@@ -322,7 +326,7 @@
               </svg>
             </button>
             <p class="summary-footnote">
-              启动后进入 Viewer，可查看受测账号的实时画面与每一步操作。
+              启动后进入 Viewer，可查看主账号的实时画面与每一步操作。
             </p>
             <div class="preview-seed">
               <svg><use href="#i-code" /></svg
@@ -391,7 +395,7 @@
         <span class="eyebrow">A WINDOW INTO YOUR AGENT</span>
         <h2>选择一场实验，开始观察</h2>
         <p>
-          配置好平台和模型后，这里会呈现受测 agent<br />看到的内容、制作过程，以及每次操作的公开理由。
+          配置好平台和模型后，这里会呈现主 agent<br />看到的内容、制作过程，以及每次操作的公开理由。
         </p>
         <a class="primary-button" data-route="/developer"
           >配置一场模拟<svg><use href="#i-arrow" /></svg
@@ -423,7 +427,7 @@
             </div>
             <iframe
               id="accountFrame"
-              title="受测 agent 的社交平台画面"
+              title="主 agent 的社交平台画面"
               hidden
             ></iframe>
             <div id="frameEmpty" class="empty-state">等待这个账号开始行动…</div>
@@ -571,6 +575,9 @@
             /></label>
           </div>
           <div class="model-options">
+            <label class="checkbox-field"
+              ><input type="checkbox" id="providerProxy" />使用系统代理</label
+            >
             <label class="checkbox-field"
               ><input
                 type="checkbox"

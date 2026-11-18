@@ -19,6 +19,20 @@ class ModelResponse:
     provider_request_id: str | None = None
 
 
+def _response_json(response):
+    if not hasattr(response, "iter_content"):
+        return response.json()
+    content = bytearray()
+    try:
+        for chunk in response.iter_content(65536):
+            if len(content) + len(chunk) > 4 * 1024 * 1024:
+                raise ValueError("Model response exceeds the 4 MiB limit")
+            content.extend(chunk)
+        return json.loads(content)
+    finally:
+        response.close()
+
+
 def _text_content(content: Any) -> str:
     if isinstance(content, str):
         return content
@@ -107,6 +121,7 @@ class GeminiClient(_BudgetedClient):
             f"{self.model_id}:generateContent",
             params={"key": key},
             timeout=self.limits.timeout_seconds,
+            stream=True,
             json={
                 "systemInstruction": {"parts": [{"text": system}]},
                 "contents": contents,
@@ -118,7 +133,7 @@ class GeminiClient(_BudgetedClient):
             },
         )
         response.raise_for_status()
-        value = response.json()
+        value = _response_json(response)
         text = value["candidates"][0]["content"]["parts"][0]["text"]
         usage = value.get("usageMetadata", {})
         return ModelResponse(
@@ -193,10 +208,11 @@ class OpenAICompatibleClient(_BudgetedClient):
             f"{self.base_url}/chat/completions",
             headers=headers,
             timeout=self.limits.timeout_seconds,
+            stream=True,
             json=payload,
         )
         response.raise_for_status()
-        value: dict[str, Any] = response.json()
+        value: dict[str, Any] = _response_json(response)
         usage = value.get("usage", {})
         return ModelResponse(
             text=value["choices"][0]["message"]["content"],
@@ -265,9 +281,10 @@ class RednoteGeminiGatewayClient(_BudgetedClient):
             headers={"api-key": key, "Content-Type": "application/json"},
             json=payload,
             timeout=self.limits.timeout_seconds,
+            stream=True,
         )
         response.raise_for_status()
-        value = response.json()
+        value = _response_json(response)
         parts = value.get("candidates", [{}])[0].get("content", {}).get("parts", [])
         text = "\n".join(
             part.get("text", "")

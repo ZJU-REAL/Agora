@@ -62,6 +62,10 @@ def video_frame_parts(
         frame = subprocess.run(
             [
                 "ffmpeg",
+                "-threads",
+                "1",
+                "-filter_threads",
+                "1",
                 "-v",
                 "error",
                 "-ss",

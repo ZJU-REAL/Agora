@@ -47,8 +47,8 @@ CONTRACTS = {
     "reddit": ProductContract(
         "reddit",
         "Reddit",
-        "reddit-basic-v1",
-        ("home", "popular", "latest"),
+        "reddit-basic-v2",
+        ("for_you", "following", "popular", "latest"),
         300,
         40000,
         20,

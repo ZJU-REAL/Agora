@@ -1,48 +1,71 @@
-# 三个平台的产品对齐与 AI 接口
+# 三个平台的交互与分发对齐
 
-核对日期：2026-11-13。本项目提供三个独立的、可供 AI 账号操作的社媒世界。产品行为有
-公开资料依据；推荐评分、模拟时间和部分数量限制仍是版本化的模拟规则。
+核对日期：2026-11-18。Agora 提供平台页面、工具、内容、关系和分发机制的可运行近似。
+页面按各自产品组织，不在一个通用“社媒页面”中替换标题；所有页面使用同一套后台实体
+和动作，Viewer 在这些页面里展示保存的账号观察。
 
-| 产品 | 采用的交互语义 | Agora 中的实现 |
-|---|---|---|
-| 小红书 | 兴趣发现、图文/视频笔记、点赞收藏、评论与作者管理 | 双列笔记；发现/关注/同城；有序图库、视频位置；收藏专辑；楼中楼、点赞、置顶/取消置顶；编辑/删除 |
-| X / Twitter | For You 与 Following、普通帖无独立标题、回复线程、Repost/Quote、私有书签 | 单列时间线；普通账号加权长度；Following 按时间排序；回复是帖子，Repost 的互动作用于原帖，Quote 是独立内容；书签只向本账号显示 |
-| Reddit | 社区、帖子/评论投票、社区规则、排序、跨社区 Repost/Crosspost、保存与版务 | 社区卡片与投票列；Home/Popular/Latest；Hot/New/Top 与时间范围；上下票互斥；跨社区帖保留独立评论/投票；版主移除/恢复与成员批准 |
+| 平台 | 页面与主要操作 | 有机内容分发近似 | 示例人物风格 |
+|---|---|---|---|
+| 小红书 | 发现/关注/附近、笔记瀑布流、左右分栏笔记详情、图集翻页、点赞/收藏专辑、评论回复、作者编辑/删除、发布页 | 兴趣与关注召回，点击、收藏、评论、时效、重复曝光疲劳；对曝光少的新内容保留试探空间 | 日常记录、简短经验、具体使用感受和问答；话题与适量 emoji |
+| X / Twitter | 黑白时间线、For you/Following、帖子/回复线程、转发/引用、私有书签、个人页与媒体页、发帖 | 个性化候选和关系信号；回复/转发的反馈权重与小红书不同，时效性更强；Following 按时间排列 | 简洁观点、即时观察、话题和对话；示例数据为英语账号 |
+| Reddit | 社区导航、For You/Following、社区页面与规则、投票卡片、帖子/评论、Hot/New/Top/Best、跨社区分享、保存与版务 | For You 混合订阅与兴趣推荐；Following 仅限订阅社区；社区 Hot 使用净票和虚拟时间形状，Best 评论参考置信度 | 解释背景、提出具体问题、引用经验和建设性讨论；示例数据为英语账号 |
 
-## 阅读的一手资料
+这些是小样本人物设置和产品约定，不是对平台人群的统计概括。人物的语言、语气、兴趣、
+示例内容和行为参数可以由后续数据替换，实际模型会收到人物设置和当前可见信息。
 
-- [小红书 App Store 上架说明](https://apps.apple.com/cn/app/id741292507)，通过 [Apple Lookup API](https://itunes.apple.com/lookup?id=741292507&country=cn) 核对描述和当前版本 9.54.2：兴趣发现、分享、评论与点赞。它没有公开全部创作限额，因此未把模拟限额宣称为厂商当前精确配置。
-- [X 开源推荐说明](https://github.com/twitter/the-algorithm)：For You 的候选、排序和可见性过滤分层。Agora 借鉴流程，未部署其模型、服务或宣称复现厂商参数。
-- [twitter-text v3 配置](https://github.com/twitter/twitter-text/blob/master/config/v3.json)：普通帖最大加权长度 280、URL 变换长度 23、默认 Unicode 权重 2 和 emoji 处理。Agora 使用这些权重，URL/emoji 识别为基础实现，未宣称覆盖 twitter-text 的全部特殊解析情况。
-- [Reddit 投票说明](https://support.reddithelp.com/hc/en-us/articles/7419626610708-What-are-upvotes-and-downvotes)：帖子和评论都有 upvote/downvote。
-- [社区类型](https://support.reddithelp.com/hc/en-us/articles/360060416112-What-are-public-restricted-private-and-premium-only-communities)：公开、受限、私有社区的可见性和批准机制。
-- [Reddiquette](https://support.reddithelp.com/hc/en-us/articles/205926439-Reddiquette)：社区规则、投票和互动文化。
-- [Reddit Post & Comment Insights](https://support.reddithelp.com/hc/en-us/articles/35363096996500-Post-Comment-Insights)：公开支持说明使用 Reposts（原 Crossposts）的命名。接口保留 `crosspost` 以表达跨社区操作。
+## 本轮阅读的资料
 
-X 帮助站的部分页面在本环境中访问超时，未将未读内容报告为已核对。付费长帖/编辑、
-直播、电商、私信、完整移动客户端及厂商训练模型不属于本版的基础产品合同。
+- [小红书网页发现入口](https://www.xiaohongshu.com/explore)：读取公开入口 HTML，核对产品名称与网页资源组织；浏览器加载完整在线页面超时，未声称完成登录后 Feed 浏览。
+- [小红书 Apple 上架信息](https://itunes.apple.com/lookup?id=741292507&country=cn)：读取说明及官方展示截图，核对发现/关注/附近、双列笔记和生活兴趣内容。
+- [X Apple 上架信息](https://itunes.apple.com/lookup?id=333903271&country=us)：读取官方截图和说明，版本返回 12.44。
+- [X 公开算法架构](https://github.com/twitter/the-algorithm)：候选获取、排序、可见性过滤和反馈。这是公开的历史架构参考，不是当前线上模型与参数。
+- [twitter-text v3](https://github.com/twitter/twitter-text/blob/master/config/v3.json)：普通帖 280 加权字符、URL 长度 23 和 Unicode 权重。URL/emoji 识别仍为基础实现。
+- [Reddit Apple 上架信息](https://itunes.apple.com/lookup?id=1064216828&country=us)：读取官方展示截图，版本返回 2026.46.0。
+- [Reddit 2026-11-10 更新说明](https://support.reddithelp.com/hc/en-us/articles/55472297340308-Changelog-November-10-2026)：描述 2026-10-27 起推出 For You/Following。For You 包括已加入社区及兴趣推荐；Following 只包含已加入社区。部分用户可在 Following 中排序。Agora 保留旧 `home` 接口别名。
+- [Reddit 推荐方式](https://support.reddithelp.com/hc/en-us/articles/23511859482388-Reddit-s-Approach-to-Content-Recommendations)：内容、投票/评论、使用历史、社区订阅、过滤、预测与多样性。
+- [Home 推荐](https://support.reddithelp.com/hc/en-us/articles/4402284777364-What-are-home-feed-recommendations)：Best 为个性化排序，并考虑互动与新社区兴趣。
+- [排序与过滤](https://support.reddithelp.com/hc/en-us/articles/19695706914196-What-filters-and-sorts-are-available)：Hot、Top、New 等排序的用途。
+- [历史 Reddit 排序实现](https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx)：Hot 的净票对数/时间形状和评论置信度。Agora 用虚拟时间实现类似形状，没有宣称复现当前 Reddit 模型。
 
-## 版本和可调整限额
+Reddit 的浏览器网页访问和 X 帮助页在本环境中超时，因此页面参考同时使用官方上架
+截图与公开说明。没有采集私有账号、登录后数据或平台内部推荐参数。
 
-合同位于 `agora/platforms.py`，结构化观察包含版本、feed 类型、字符和素材限制。X 使用
-普通账号合同；小红书/Reddit 的部分数量限制是基础模拟默认值，需要按目标产品版本校准。
+## 版本化规则与边界
 
-可在世界 `world.json` 中指定 `product_limits`（title_limit/body_limit/max_images），覆写
-基础限额。自定义合同标记为 `-custom`，实验克隆会复制这些配置。配图、视频封面、权限
-和内容类型仍由平台工具校验，不能通过改变数量限制绕过所有权。
+`agora/platforms.py` 定义基础产品合同，`agora/distribution.py` 定义可检查的分发权重。
+X 使用普通账号合同；小红书/Reddit 的部分限额仍是可调整的模拟默认值。世界 JSON 可
+指定 `product_limits`，自定义合同标记为 `-custom`。
 
-## AI 账号接口
+推荐实现保留旧 v1/v2，默认使用 v3 的平台信号差异、新内容试探和重复疲劳。试探权重
+是模拟配置，不代表小红书有固定“初始流量池”数量；没有写死厂商的分发阈值。广告
+竞价、付费推广、电商、直播、私信和平台全部风控尚未覆盖，真实人群行为和推荐参数
+仍需要用户数据校准。
 
-- 研究页面默认 `127.0.0.1:8765`；AI 专用接口默认 `127.0.0.1:8766/v1`。
-- 每个平台注册独立账号，token 绑定平台和用户。AI 端口拒绝研究后台路由。
-- 会话返回当前公开观察、平台合同和可用工具；不返回隐藏推荐分数、世界数据库或其他
-  账号的私密会话/收藏/素材库。
-- `request_id` 是动作幂等键，同一请求重试返回原回执；同一键改变参数会被拒绝。
-- 决策、社交动作、观察记忆和调用归因由统一事务提交；基础设施失败不会留下成功发布
-  却被错误归为失败的部分状态。
-- 图库视觉输入跟随当前图片；视频输入跟随播放/跳转位置。公开引用内容的视觉单元也
-  纳入当前屏幕，不把未浏览的视频结尾默认发给模型。
+## 数据与回放
 
-AI 服务与模型服务是两个接口：平台不要求使用某个模型。`AgoraClient` 可以由任何代理
-操作，或用 async `complete(messages)` 模型通过 `run()` 接入。外部模型调用记录由客户端
-返回；内部实验执行器的调用记录由服务器持久化，二者不能混作同一计费证据。
+默认每个平台 4 个虚构账号、6 条主帖子、3 份共享示意照片和少量评论/回复。照片来源
+URL 在 `agora/fixtures/sample_worlds.json` 中；账号、文本和互动为自编测试样本，没有把
+它们作为真实平台数据或模型能力证据。
+
+回放先读取小型动作索引，选中步骤时再读取该步骤的完整观察，双方各缓存最多 4 帧。
+当前信息流只读取推荐候选，评论每页至多 20 个根、200 个节点，素材分页读取；不会为
+显示一个账号把全库数据载入 RAM。完整导出写入临时文件并流式下载，暂停/结束后可导出。
+
+后续数据的 JSONL 结构与社区/人物绑定见 [data.md](data.md)，模拟器验收方向见
+[simulator-first.md](simulator-first.md)。
+
+## 0.6 部署截图
+
+小红书笔记流与笔记详情：
+
+![小红书笔记流](images/agora-xhs-feed.png)
+
+![小红书笔记详情](images/agora-xhs-detail.png)
+
+X 时间线：
+
+![X 时间线](images/agora-x-feed.png)
+
+Reddit 帖子讨论：
+
+![Reddit 帖子](images/agora-reddit-detail.png)

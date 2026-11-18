@@ -21,6 +21,8 @@ class ProviderRegistry:
         self.directory.chmod(0o700)
         self.path = self.directory / "providers.json"
         self.providers = copy.deepcopy(providers or {})
+        if self.path.exists() and self.path.stat().st_size > 1048576:
+            raise ValueError("Private model settings exceed the 1 MiB limit")
         self.saved = json.loads(self.path.read_text()) if self.path.exists() else {}
         if self.path.exists():
             self.path.chmod(0o600)
@@ -38,6 +40,7 @@ class ProviderRegistry:
                 "model_id": spec["model_id"],
                 "base_url": spec.get("base_url", spec.get("url", "")),
                 "auth_style": spec.get("auth_style", "bearer"),
+                "trust_env": bool(spec.get("trust_env", True)),
                 "supports_vision": bool(spec.get("supports_vision")),
                 "credential_available": bool(
                     os.environ.get(spec.get("api_key_env", "AGORA_MAAS_API_KEY"))
@@ -60,6 +63,7 @@ class ProviderRegistry:
             "auth_style",
             "supports_vision",
             "limits",
+            "trust_env",
         }:
             raise ValueError("Unknown model setting")
         name = value.get("provider_id") or "model-" + uuid.uuid4().hex[:8]
@@ -69,6 +73,8 @@ class ProviderRegistry:
             or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", name)
         ):
             raise ValueError("Invalid model configuration ID")
+        if name not in self.providers and len(self.providers) >= 32:
+            raise ValueError("At most 32 model configurations are allowed")
         model = value.get("model_id")
         label = value.get("display_name") or model
         if (
@@ -139,7 +145,11 @@ class ProviderRegistry:
             "limits": asdict(limits),
         }
         if protocol == "openai-compatible":
-            spec.update(base_url=url, auth_style=value.get("auth_style", "bearer"))
+            spec.update(
+                base_url=url,
+                auth_style=value.get("auth_style", "bearer"),
+                trust_env=bool(value.get("trust_env", False)),
+            )
         elif protocol == "rednote-gemini-gateway":
             spec["url"] = url
         build_model_client(spec)  # Validate the protocol without making a request.

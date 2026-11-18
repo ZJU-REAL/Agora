@@ -9,12 +9,14 @@ import json
 import os
 import shutil
 import sqlite3
+import tempfile
 import threading
 import time
 import uuid
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 
 from agora.read_views import prepare_read_views
@@ -294,7 +296,7 @@ class ExperimentManager:
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "config": config,
                     "source_world": self.source.config.world_id,
-                    "engine_version": "0.5.0",
+                    "engine_version": "0.6.0",
                     "media_manifest": media_manifest,
                     "initial_database_sha256": initial_sha,
                     "config_sha256": hashlib.sha256(
@@ -484,31 +486,221 @@ class ExperimentManager:
         finally:
             db.close()
 
-    def inspect(self, run_id):
+    def inspect(self, run_id, event_limit=200):
+        from agora.replay import preview_action
+
         with self.lock:
             metadata = json.loads(json.dumps(self.jobs[run_id]))
         with self.snapshot(run_id) as world:
-            ids = metadata["session_ids"]
-            events, calls = [], []
-            for sid in ids:
-                for row in world.db.execute(
-                    "SELECT e.step, e.tick, e.elapsed_ms, e.action_json, e.result_json, s.user_id, e.event_id FROM agora_session_event e JOIN agora_session s ON s.session_id = e.session_id WHERE e.session_id = ? ORDER BY step",
-                    (sid,),
-                ):
-                    events.append(
-                        {
-                            "event_id": row[6],
-                            "session_id": sid,
-                            "user_id": row[5],
-                            "step": row[0],
-                            "tick": row[1],
-                            "elapsed_ms": row[2],
-                            "action": json.loads(row[3]),
-                            "result": json.loads(row[4]),
-                        }
+            ids = json.dumps(metadata["session_ids"])
+            actors = json.dumps(metadata["config"]["user_ids"])
+            restriction = "e.session_id IN (SELECT value FROM json_each(?))"
+            query = (
+                "SELECT e.step,e.tick,e.elapsed_ms,e.action_json,e.result_json,s.user_id,e.event_id,e.session_id FROM agora_session_event e JOIN agora_session s ON s.session_id=e.session_id WHERE "
+                + restriction
+                + " ORDER BY e.event_id DESC"
+            )
+            params = (ids,)
+            if event_limit is not None:
+                query += " LIMIT ?"
+                params += (event_limit,)
+            events = []
+            for row in world.db.execute(query, params):
+                action, result = json.loads(row[3]), json.loads(row[4])
+                shortened = False
+                if event_limit is not None:
+                    action, result, shortened = preview_action(action, result)
+                events.append(
+                    {
+                        "event_id": row[6],
+                        "session_id": row[7],
+                        "user_id": row[5],
+                        "step": row[0],
+                        "tick": row[1],
+                        "elapsed_ms": row[2],
+                        "action": action,
+                        "result": result,
+                        "preview_truncated": shortened,
+                    }
+                )
+            events.reverse()
+            calls = [
+                dict(
+                    zip(
+                        (
+                            "session_id",
+                            "step",
+                            "tick",
+                            "status",
+                            "model_id",
+                            "input_tokens",
+                            "output_tokens",
+                            "elapsed_ms",
+                            "error_type",
+                        ),
+                        row,
                     )
-                calls.extend(
-                    [
+                )
+                for row in world.db.execute(
+                    "SELECT session_id,step,tick,status,model_id,input_tokens,output_tokens,elapsed_ms,error_type FROM agent_model_call WHERE session_id IN (SELECT value FROM json_each(?)) ORDER BY call_id DESC LIMIT 200",
+                    (ids,),
+                )
+            ]
+            total_calls, input_tokens, output_tokens = world.db.execute(
+                "SELECT COUNT(*),COALESCE(SUM(input_tokens),0),COALESCE(SUM(output_tokens),0) FROM agent_model_call WHERE session_id IN (SELECT value FROM json_each(?))",
+                (ids,),
+            ).fetchone()
+            users = [
+                {"user_id": r[0], "name": r[1], "followers": r[2]}
+                for r in world.db.execute(
+                    "SELECT user_id,name,num_followers FROM user WHERE user_id IN (SELECT value FROM json_each(?))",
+                    (actors,),
+                )
+            ]
+            graph = [
+                {"source": r[0], "target": r[1]}
+                for r in world.db.execute(
+                    "SELECT follower_id,followee_id FROM follow WHERE follower_id IN (SELECT value FROM json_each(?)) AND followee_id IN (SELECT value FROM json_each(?)) LIMIT 2000",
+                    (actors, actors),
+                )
+            ]
+            counts = dict(
+                world.db.execute(
+                    "SELECT json_extract(e.action_json,'$.action_type'),COUNT(*) FROM agora_session_event e WHERE "
+                    + restriction
+                    + " AND COALESCE(json_extract(e.result_json,'$.success'),1)=1 GROUP BY json_extract(e.action_json,'$.action_type')",
+                    (ids,),
+                )
+            )
+            total_events = world.db.execute(
+                "SELECT COUNT(*) FROM agora_session_event e WHERE " + restriction,
+                (ids,),
+            ).fetchone()[0]
+            actor_counts = {
+                str(r[0]): r[1]
+                for r in world.db.execute(
+                    "SELECT s.user_id,COUNT(*) FROM agora_session_event e JOIN agora_session s ON s.session_id=e.session_id WHERE "
+                    + restriction
+                    + " AND json_extract(e.action_json,'$.action_type') NOT IN ('start_session','end_session') GROUP BY s.user_id",
+                    (ids,),
+                )
+            }
+            exposures = world.db.execute(
+                "SELECT COUNT(*) FROM agora_exposure WHERE session_id IN (SELECT value FROM json_each(?))",
+                (ids,),
+            ).fetchone()[0]
+            metadata.update(
+                events=events,
+                events_total=total_events,
+                events_truncated=len(events) < total_events,
+                actor_action_counts=actor_counts,
+                model_calls=calls,
+                model_calls_truncated=len(calls) < total_calls,
+                users=users,
+                graph=graph,
+                metrics={
+                    "created_posts": counts.get("create_post", 0)
+                    + counts.get("publish_draft", 0),
+                    "drafts": counts.get("save_draft", 0),
+                    "comments": counts.get("create_comment", 0),
+                    "replies": counts.get("reply_post", 0),
+                    "model_calls": total_calls,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "exposures": exposures,
+                },
+            )
+        return metadata
+
+    def shutdown(self):
+        with self.lock:
+            for flags in self.controls.values():
+                flags["stop"] = True
+                flags["condition"].notify_all()
+        for thread in self.threads.values():
+            thread.join(timeout=2)
+
+    def export_file(self, run_id):
+        metadata = self.inspect(run_id)
+        if metadata["status"] not in {
+            "completed",
+            "canceled",
+            "failed",
+            "interrupted",
+            "paused",
+        }:
+            raise ValueError("请暂停或结束模拟后导出完整记录。")
+        directory = self.root / run_id
+        fd, name = tempfile.mkstemp(prefix="export-", suffix=".json", dir=directory)
+        os.close(fd)
+        path = Path(name)
+        try:
+            with (
+                self.snapshot(run_id) as world,
+                path.open("w", encoding="utf-8") as stream,
+            ):
+
+                def write(value):
+                    stream.write(value)
+                    if stream.tell() > 128 * 1024 * 1024:
+                        raise ValueError(
+                            "完整导出超过 128 MiB，请缩小单次运行或分批导出。"
+                        )
+
+                def array(values):
+                    write("[")
+                    first = True
+                    for value in values:
+                        if not first:
+                            write(",")
+                        write(value)
+                        first = False
+                    write("]")
+
+                encode = lambda value: json.dumps(value, ensure_ascii=False)
+                ids = encode(metadata["session_ids"])
+                metadata = {
+                    k: v
+                    for k, v in metadata.items()
+                    if k not in {"events", "model_calls"}
+                }
+                metadata.update(
+                    format_version="agora-experiment-v1",
+                    events_truncated=False,
+                    model_calls_truncated=False,
+                )
+                write(encode(metadata)[:-1])
+                write(',"events":')
+
+                def events():
+                    for row in world.db.execute(
+                        "SELECT e.event_id,e.session_id,s.user_id,e.step,e.tick,e.elapsed_ms,e.action_json,e.result_json FROM agora_session_event e JOIN agora_session s ON s.session_id=e.session_id WHERE e.session_id IN (SELECT value FROM json_each(?)) ORDER BY e.event_id",
+                        (ids,),
+                    ):
+                        yield (
+                            '{"event_id":'
+                            + str(row[0])
+                            + ',"session_id":'
+                            + str(row[1])
+                            + ',"user_id":'
+                            + str(row[2])
+                            + ',"step":'
+                            + str(row[3])
+                            + ',"tick":'
+                            + str(row[4])
+                            + ',"elapsed_ms":'
+                            + str(row[5])
+                            + ',"action":'
+                            + row[6]
+                            + ',"result":'
+                            + row[7]
+                            + "}"
+                        )
+
+                array(events())
+                write(',"model_calls":')
+                array(
+                    encode(
                         dict(
                             zip(
                                 (
@@ -525,76 +717,82 @@ class ExperimentManager:
                                 row,
                             )
                         )
+                    )
+                    for row in world.db.execute(
+                        "SELECT session_id,step,tick,status,model_id,input_tokens,output_tokens,elapsed_ms,error_type FROM agent_model_call WHERE session_id IN (SELECT value FROM json_each(?))",
+                        (ids,),
+                    )
+                )
+                write(',"trajectories":[')
+                for index, sid in enumerate(metadata["session_ids"]):
+                    if index:
+                        write(",")
+                    write('{"session_id":' + str(sid) + ',"trajectory":')
+                    array(
+                        '{"step":'
+                        + str(row[0])
+                        + ',"tick":'
+                        + str(row[1])
+                        + ',"elapsed_ms":'
+                        + str(row[2])
+                        + ',"action":'
+                        + row[3]
+                        + ',"result":'
+                        + row[4]
+                        + ',"observation":'
+                        + row[5]
+                        + "}"
                         for row in world.db.execute(
-                            "SELECT session_id, step, tick, status, model_id, input_tokens, output_tokens, elapsed_ms, error_type FROM agent_model_call WHERE session_id = ?",
+                            "SELECT step,tick,elapsed_ms,action_json,result_json,observation_json FROM agora_session_event WHERE session_id=? ORDER BY step",
                             (sid,),
                         )
-                    ]
-                )
-            events.sort(key=lambda event: event["event_id"])
-            users = [
-                {"user_id": row[0], "name": row[1], "followers": row[2]}
-                for row in world.db.execute(
-                    "SELECT user_id, name, num_followers FROM user"
-                )
-            ]
-            graph = [
-                {"source": row[0], "target": row[1]}
-                for row in world.db.execute(
-                    "SELECT follower_id, followee_id FROM follow"
-                )
-            ]
-            created = [
-                event
-                for event in events
-                if event["action"]["action_type"] in {"create_post", "publish_draft"}
-                and event["result"].get("success")
-            ]
-            metadata.update(
-                events=events,
-                model_calls=calls,
-                users=users,
-                graph=graph,
-                metrics={
-                    "created_posts": len(created),
-                    "drafts": sum(
-                        event["action"]["action_type"] == "save_draft"
-                        for event in events
-                    ),
-                    "comments": sum(
-                        event["action"]["action_type"] == "create_comment"
-                        and event["result"].get("success", False)
-                        for event in events
-                    ),
-                    "replies": sum(
-                        event["action"]["action_type"] == "reply_post"
-                        and event["result"].get("success", False)
-                        for event in events
-                    ),
-                    "model_calls": len(calls),
-                    "input_tokens": sum(call["input_tokens"] or 0 for call in calls),
-                    "output_tokens": sum(call["output_tokens"] or 0 for call in calls),
-                    "exposures": sum(
-                        world.db.execute(
-                            "SELECT COUNT(*) FROM agora_exposure WHERE session_id = ?",
+                    )
+                    write(',"recommendations":')
+                    array(
+                        '{"request_id":'
+                        + str(row[0])
+                        + ',"feed_type":'
+                        + encode(row[1])
+                        + ',"diagnostics":'
+                        + row[2]
+                        + "}"
+                        for row in world.db.execute(
+                            "SELECT request_id,feed_type,diagnostics_json FROM agora_request WHERE session_id=? ORDER BY request_id",
                             (sid,),
-                        ).fetchone()[0]
-                        for sid in ids
-                    ),
-                },
-            )
-        return metadata
-
-    def shutdown(self):
-        with self.lock:
-            for flags in self.controls.values():
-                flags["stop"] = True
-                flags["condition"].notify_all()
-        for thread in self.threads.values():
-            thread.join(timeout=2)
+                        )
+                    )
+                    write("}")
+                write('],"world_events":')
+                array(
+                    '{"event_id":'
+                    + str(row[0])
+                    + ',"tick":'
+                    + str(row[1])
+                    + ',"event_sequence":'
+                    + str(row[2])
+                    + ',"event_type":'
+                    + encode(row[3])
+                    + ',"actor_user_id":'
+                    + encode(row[4])
+                    + ',"target_type":'
+                    + encode(row[5])
+                    + ',"target_id":'
+                    + encode(row[6])
+                    + ',"payload":'
+                    + row[7]
+                    + "}"
+                    for row in world.db.execute(
+                        "SELECT event_id,tick,event_sequence,event_type,actor_user_id,target_type,target_id,payload FROM sandbox_event ORDER BY tick,event_sequence"
+                    )
+                )
+                write("}")
+            return path
+        except BaseException:
+            path.unlink(missing_ok=True)
+            raise
 
     def export(self, run_id):
-        value = self.inspect(run_id)
+        value = self.inspect(run_id, event_limit=None)
         from agora.session import SocialSession
 
         with self.snapshot(run_id) as world:

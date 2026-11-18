@@ -8,6 +8,7 @@ import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 
 import pytest
 import requests
@@ -52,6 +53,7 @@ def mounted_server(tmp_path_factory):
         stderr=subprocess.PIPE,
         text=True,
     )
+    (root / "server.pid").write_text(str(process.pid))
     console, native = [f"http://127.0.0.1:{port}" for port in ports]
     try:
         deadline = time.monotonic() + 15
@@ -322,3 +324,96 @@ def test_invalid_population_and_embedded_credentials_are_rejected(tmp_path):
     finally:
         manager.shutdown()
         world.close()
+
+
+def test_http_media_range_does_not_buffer_a_large_file(mounted_server):
+    import hashlib
+    import sqlite3
+
+    _console, native, root = mounted_server
+    account = requests.post(
+        native + "/v1/accounts",
+        json={"platform": "xiaohongshu", "handle": "media_stream_reader"},
+    ).json()
+    path = root / "mounted" / "media" / "objects" / "stream-test.mp4"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as stream:
+        stream.truncate(50 * 1024 * 1024)
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(65536):
+            digest.update(chunk)
+    db = sqlite3.connect(root / "mounted" / "sandbox.db")
+    db.execute(
+        "INSERT INTO media_asset(asset_id,media_type,object_key,mime_type,checksum_sha256,byte_size,status) VALUES (?,?,?,?,?,?,?)",
+        (
+            "stream-test",
+            "video",
+            "objects/stream-test.mp4",
+            "video/mp4",
+            digest.hexdigest(),
+            50 * 1024 * 1024,
+            "ready",
+        ),
+    )
+    db.execute(
+        "INSERT INTO creator_asset(user_id,asset_id) VALUES (?,?)",
+        (account["user_id"], "stream-test"),
+    )
+    db.commit()
+    db.close()
+    pid = (root / "server.pid").read_text()
+
+    def peak():
+        return int(
+            next(
+                line
+                for line in Path("/proc/" + pid + "/status").read_text().splitlines()
+                if line.startswith("VmHWM:")
+            ).split()[1]
+        )
+
+    before = peak()
+    headers = {"Authorization": "Bearer " + account["token"], "Range": "bytes=0-15"}
+    response = requests.get(native + "/v1/assets/stream-test", headers=headers)
+    assert response.status_code == 206 and response.content == bytes(16)
+    assert response.headers["Content-Range"] == f"bytes 0-15/{50 * 1024 * 1024}"
+    assert peak() - before < 8 * 1024
+    invalid = requests.get(
+        native + "/v1/assets/stream-test",
+        headers={**headers, "Range": "bytes=999999999-"},
+    )
+    assert invalid.status_code == 416
+
+
+def test_admission_rejects_extra_active_run_before_cloning(mounted_server):
+    console, _, root = mounted_server
+    first = requests.post(
+        console + "/api/runs",
+        json={
+            "agent_count": 4,
+            "focal_user_id": 4,
+            "ticks": 2,
+            "steps_per_tick": 8,
+            "pace_ms": 400,
+        },
+    ).json()
+    rid = first["run_id"]
+    try:
+        requests.post(
+            console + "/api/runs/" + rid + "/control", json={"command": "pause"}
+        ).raise_for_status()
+        before = len(list((root / "mounted" / "experiments").glob("*/manifest.json")))
+        blocked = requests.post(
+            console + "/api/runs",
+            json={"agent_count": 1, "focal_user_id": 4, "ticks": 1},
+        )
+        assert blocked.status_code == 400
+        assert (
+            len(list((root / "mounted" / "experiments").glob("*/manifest.json")))
+            == before
+        )
+    finally:
+        requests.post(
+            console + "/api/runs/" + rid + "/control", json={"command": "stop"}
+        )

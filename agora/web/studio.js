@@ -123,6 +123,9 @@ const screens = {
   communities: "社区列表",
   collection: "收藏专辑",
 };
+const observationCache = new Map();
+let frameObservation = null,
+  frameFetchVersion = 0;
 let selectedPlatform = platforms[query.get("platform")]
   ? query.get("platform")
   : "xiaohongshu";
@@ -213,7 +216,7 @@ function experimentConfig() {
   return {
     name:
       $("runName").value.trim() ||
-      `${platforms[selectedPlatform].name} · 受测账号运营`,
+      `${platforms[selectedPlatform].name} · 主账号运营`,
     agent_count: number("agentCount"),
     focal_user_id: number("focalUser"),
     provider_id: $("focalModel").value,
@@ -236,13 +239,13 @@ function updateSummary() {
   const count = number("agentCount") || 1;
   const config = experimentConfig();
   $("populationNote").textContent =
-    `1 个受测 agent + ${Math.max(0, count - 1)} 个背景账号`;
+    `1 个主 agent + ${Math.max(0, count - 1)} 个背景账号`;
   $("summaryPlatform").innerHTML =
     logo(selectedPlatform) +
     `<div><strong>${platforms[selectedPlatform].name}</strong><small>${platforms[selectedPlatform].subtitle}</small></div>`;
   $("summaryAgent").innerHTML =
     avatar(focal) +
-    `<div><strong>${esc(focal?.name || focal?.handle || "选择账号")}</strong><small>@${esc(focal?.handle || "")}</small></div><span class="small-badge">受测</span>`;
+    `<div><strong>${esc(focal?.name || focal?.handle || "选择账号")}</strong><small>@${esc(focal?.handle || "")}</small></div><span class="small-badge">主</span>`;
   $("summaryPopulation").textContent = `${Math.max(0, count - 1)} agents`;
   $("summaryTicks").textContent = `${config.ticks} rounds`;
   $("summaryActions").textContent =
@@ -252,7 +255,7 @@ function updateSummary() {
   const selected = providers.find((p) => p.provider_id === config.provider_id);
   $("modelNote").innerHTML =
     icon("link") +
-    `<span>${config.provider_id === "development" ? "当前使用规则驱动的开发策略，无模型 API 调用。添加模型连接后可运行真实模型账号。" : `受测模型：${esc(selected?.model_id || "")}。每账号请求上限 ${selected?.limits?.max_requests || "—"}，支持${selected?.supports_vision ? "图文" : "文字"}输入。`}</span>`;
+    `<span>${config.provider_id === "development" ? "当前使用规则驱动的开发策略，无模型 API 调用。添加模型连接后可运行真实模型账号。" : `主模型：${esc(selected?.model_id || "")}。每账号请求上限 ${selected?.limits?.max_requests || "—"}，支持${selected?.supports_vision ? "图文" : "文字"}输入。`}</span>`;
 }
 function renderPlatforms() {
   $("platformCards").innerHTML = Object.entries(platforms)
@@ -285,6 +288,10 @@ async function loadProviders() {
   updateSummary();
 }
 async function loadDeveloperPlatform() {
+  const capabilities = await api("/api/platforms");
+  $("agentCount").max = capabilities.capacity?.max_active_agents || 32;
+  if (number("agentCount") > Number($("agentCount").max))
+    $("agentCount").value = $("agentCount").max;
   renderPlatforms();
   setLinks();
   world = await api(platformPath("/api/world"));
@@ -345,6 +352,7 @@ function editModel(id) {
   $("providerTokens").value = p.limits.max_output_tokens || 1024;
   $("providerTimeout").value = p.limits.timeout_seconds || 60;
   $("providerVision").checked = p.supports_vision;
+  $("providerProxy").checked = p.trust_env;
   $("providerAuth").value = p.auth_style;
   $("modelFeedback").textContent = "编辑已有连接；API Key 留空会保留原凭据。";
   protocolFields();
@@ -364,6 +372,7 @@ async function saveModel(event) {
     api_key: $("providerKey").value || undefined,
     auth_style: $("providerAuth").value,
     supports_vision: $("providerVision").checked,
+    trust_env: $("providerProxy").checked,
     limits: {
       max_requests: number("providerBudget"),
       max_output_tokens: number("providerTokens"),
@@ -482,12 +491,14 @@ function renderActors() {
   $("actorCount").textContent = users.length;
   $("actorList").innerHTML = users
     .map((u) => {
-      const count = run.events.filter(
-        (e) =>
-          e.user_id === u.user_id &&
-          !["start_session", "end_session"].includes(e.action.action_type),
-      ).length;
-      return `<button type="button" class="actor-card ${u.user_id === selectedActor ? "selected" : ""}" data-actor="${u.user_id}">${avatar(u)}<span><span class="actor-card-name">${esc(u.name)}</span><small>${u.user_id === run.config.focal_user_id ? '<span class="actor-role">受测</span>' : "背景账号"} · ${count} 步</small></span></button>`;
+      const count =
+        run.actor_action_counts?.[u.user_id] ??
+        run.events.filter(
+          (e) =>
+            e.user_id === u.user_id &&
+            !["start_session", "end_session"].includes(e.action.action_type),
+        ).length;
+      return `<button type="button" class="actor-card ${u.user_id === selectedActor ? "selected" : ""}" data-actor="${u.user_id}">${avatar(u)}<span><span class="actor-card-name">${esc(u.name)}</span><small>${u.user_id === run.config.focal_user_id ? '<span class="actor-role">主</span>' : "背景账号"} · ${count} 步</small></span></button>`;
     })
     .join("");
   $("actorList").scrollTop = scrollTop;
@@ -509,12 +520,18 @@ function renderRun() {
   );
   if (option)
     option.textContent = `${run.name} · ${states[run.status] || run.status}`;
-  $("exportRun").disabled = false;
+  $("exportRun").disabled = ![
+    "completed",
+    "canceled",
+    "failed",
+    "interrupted",
+    "paused",
+  ].includes(run.status);
   $("runModelLabel").textContent =
     run.model === "persona-development" &&
     (!run.background_model || run.background_model === "persona-development")
       ? "规则驱动开发策略 · 模型调用 0"
-      : `受测 ${run.model === "persona-development" ? "开发策略" : run.model} · 背景 ${run.background_model === "persona-development" ? "开发策略" : run.background_model || run.model}`;
+      : `主 ${run.model === "persona-development" ? "开发策略" : run.model} · 背景 ${run.background_model === "persona-development" ? "开发策略" : run.background_model || run.model}`;
   $("runMetricsLabel").textContent =
     `${run.metrics.created_posts} 条发布 · ${run.metrics.comments + (run.metrics.replies || 0)} 次评论/回复 · ${run.metrics.exposures} 次曝光 · ${run.metrics.model_calls} 次模型调用`;
   $("pauseRun").hidden = run.status !== "running";
@@ -528,11 +545,11 @@ function renderFrame() {
   if (!actorData) return;
   const event = currentEvent();
   const observation =
-    replayIndex < 0 ? actorData.observation : event?.observation;
+    replayIndex < 0 ? actorData.observation : frameObservation;
   const user = run.users.find((u) => u.user_id === selectedActor);
   $("stageActor").innerHTML =
     avatar(user) +
-    `<div><strong>${esc(user?.name || "")}</strong><small>${selectedActor === run.config.focal_user_id ? "受测 agent" : "背景账号"} · ${esc(platforms[selectedPlatform].name)}</small></div>`;
+    `<div><strong>${esc(user?.name || "")}</strong><small>${selectedActor === run.config.focal_user_id ? "主 agent" : "背景账号"} · ${esc(platforms[selectedPlatform].name)}</small></div>`;
   $("screenBadge").textContent =
     screens[observation?.screen] || observation?.screen || "等待行动";
   $("frameTime").textContent = duration(observation?.elapsed_ms);
@@ -588,12 +605,15 @@ function renderFrame() {
 }
 async function loadActor(userId, version = loadVersion) {
   stopReplay();
+  frameFetchVersion++;
   selectedActor = userId;
   replayIndex = -1;
   actorSession = runWorld.sessions.find(
     (s) => s.user_id === userId,
   )?.session_id;
   actorData = null;
+  observationCache.clear();
+  frameObservation = null;
   renderActors();
   $("accountFrame").hidden = true;
   $("frameEmpty").hidden = false;
@@ -603,7 +623,8 @@ async function loadActor(userId, version = loadVersion) {
     "/api/run-session?run=" +
       encodeURIComponent(selectedRun) +
       "&id=" +
-      actorSession,
+      actorSession +
+      "&compact=1",
   );
   if (version !== loadVersion || selectedActor !== userId) return;
   actorData = data;
@@ -648,6 +669,13 @@ async function loadViewerPlatform() {
   setLinks();
   const data = await api(platformPath("/api/runs"));
   runList = data.runs;
+  if (selectedRun && !runList.some((r) => r.run_id === selectedRun)) {
+    try {
+      runList.unshift(
+        await api("/api/runs/" + encodeURIComponent(selectedRun)),
+      );
+    } catch {}
+  }
   $("viewerRun").innerHTML =
     '<option value="">选择一个实验</option>' +
     runList
@@ -690,6 +718,7 @@ async function pollViewer() {
         encodeURIComponent(id) +
         "&id=" +
         actorSession +
+        "&compact=1" +
         (last ? "&after=" + last : ""),
     );
     if (version !== loadVersion || actor !== selectedActor) return;
@@ -704,13 +733,36 @@ async function pollViewer() {
     polling = false;
   }
 }
-function chooseFrame(index) {
-  stopReplay();
-  replayIndex = Math.max(
+async function setFrame(index, stop = true) {
+  if (stop) stopReplay();
+  const target = Math.max(
     0,
     Math.min(index, (actorData?.trajectory?.length || 1) - 1),
   );
+  const step = actorData.trajectory[target]?.step;
+  if (!step) return;
+  const version = ++frameFetchVersion,
+    actor = selectedActor;
+  if (!observationCache.has(step)) {
+    const value = await api(
+      "/api/run-session?run=" +
+        encodeURIComponent(selectedRun) +
+        "&id=" +
+        actorSession +
+        "&step=" +
+        step,
+    );
+    if (version !== frameFetchVersion || actor !== selectedActor) return;
+    observationCache.set(step, value.observation);
+    if (observationCache.size > 4)
+      observationCache.delete(observationCache.keys().next().value);
+  }
+  replayIndex = target;
+  frameObservation = observationCache.get(step);
   renderFrame();
+}
+async function chooseFrame(index) {
+  return setFrame(index);
 }
 function playReplay() {
   if (replayTimer) {
@@ -722,15 +774,14 @@ function playReplay() {
   if (replayIndex < 0 || replayIndex === length - 1) replayIndex = 0;
   $("playReplay").textContent = "Ⅱ";
   $("playReplay").setAttribute("aria-label", "暂停回放");
-  renderFrame();
+  setFrame(replayIndex, false);
   replayTimer = setInterval(
     () => {
       if (replayIndex >= actorData.trajectory.length - 1) {
         stopReplay();
         return;
       }
-      replayIndex++;
-      renderFrame();
+      setFrame(replayIndex + 1, false);
     },
     1200 / Number($("replaySpeed").value),
   );
@@ -751,21 +802,17 @@ async function controlRun(command) {
   }
 }
 async function exportRun() {
-  try {
-    const data = await api(
-      "/api/runs/" + encodeURIComponent(selectedRun) + "/export",
-    );
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "agora-" + selectedRun + ".json";
-    link.click();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    toast(e.message);
-  }
+  if (
+    !run ||
+    !["completed", "canceled", "failed", "interrupted", "paused"].includes(
+      run.status,
+    )
+  )
+    return toast("请暂停或结束模拟后导出完整记录。");
+  const link = document.createElement("a");
+  link.href = route("/api/runs/" + encodeURIComponent(selectedRun) + "/export");
+  link.download = "agora-" + selectedRun + ".json";
+  link.click();
 }
 function wireDeveloper() {
   $("platformCards").onclick = async (e) => {
@@ -786,7 +833,10 @@ function wireDeveloper() {
     updateSummary();
   };
   $("moreAgents").onclick = () => {
-    $("agentCount").value = Math.min(100, number("agentCount") + 1);
+    $("agentCount").value = Math.min(
+      Number($("agentCount").max),
+      number("agentCount") + 1,
+    );
     updateSummary();
   };
   $("experimentForm").onsubmit = launch;

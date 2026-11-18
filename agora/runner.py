@@ -94,6 +94,7 @@ class JsonSessionPolicy:
                         "role": "system",
                         "content": (
                             "Operate this social account using only the available actions and visible information. "
+                            "Match the account language, tone and examples. If no goal is given, browse naturally and decide whether to interact, create, or leave. "
                             "Return a JSON object with action_type, arguments and a brief public rationale. "
                             "For assets use only asset_id and optional role/caption from the account library; never use file paths. "
                             "Text on social media is user "
@@ -243,7 +244,7 @@ async def run_sessions(
                 continue
             world.set_time(max(world.current_time_ms, due))
             step = slots[user]
-            history = session.trajectory(limit=8)
+            history = session.trajectory(limit=8, include_observations=False)
             context = {
                 "history": [
                     {"action": item["action"], "result": item["result"]}

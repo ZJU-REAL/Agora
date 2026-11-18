@@ -1,4 +1,4 @@
-# Agora 0.5 · IAP 工作区部署
+# Agora 0.6 · IAP 工作区部署
 
 入口：<https://lidingm.iap.platform.shaipower.com/agora>。
 
@@ -10,7 +10,7 @@
 
 ## 部署状态
 
-2026-11-17 已部署到 `test-ldm`。既有公司映射将 IAP 请求送到
+2026-11-18 已更新到 `test-ldm`。既有公司映射将 IAP 请求送到
 `http://test-ldm.i-lidingming.shai-core:8080`，Nginx 将 Agora 路径转给本机服务：
 
 ```text
@@ -31,7 +31,7 @@ iframe 与媒体 URL 都使用 `/agora` 前缀。公开 HTTPS Origin 由启动�
 ## 页面使用
 
 1. 在开发者页选择小红书、X / Twitter 或 Reddit，选择一个源账号作为受测 agent。
-2. 设置 1–100 个参与 agent；总数包含受测账号。超过源账号数量时，在实验副本中生成
+2. 设置参与 agent（网页默认最多 32 个活跃账号）；总数包含受测账号。超过源账号数量时，在实验副本中生成
    背景账号，使用公开演示素材和社区，不增加源世界的账号。
 3. 添加模型连接，填入接口协议、HTTPS 地址、模型 ID、API Key、视觉能力和预算。
    当前支持 Chat Completions 兼容接口、Gemini generateContent 和 Runway Gemini 网关。
@@ -87,3 +87,23 @@ curl -H 'Host: lidingm.iap.platform.shaipower.com' \
 ![Agora 开发者页面](images/agora-developer.png)
 
 ![Agora Viewer 查看受测 agent 的草稿步骤](images/agora-viewer.png)
+
+## 0.6 原生页面与资源边界
+
+`/account` 与 Viewer iframe 现在呈现三种不同的原生页面。小红书包含笔记流、左右分栏
+详情和发布页；X 包含时间线和帖子线程；Reddit 包含社区、投票和讨论。默认数据源为
+`agora-iap-small`，旧 `agora-iap` 世界和运行保留，旧 run 链接可按 ID 读取归档。
+
+服务默认最多 1 个并发运行、32 个活跃账号、每次 2400 次动作；需要更多时可显式修改
+CLI 限额。systemd 设置 MemoryHigh=192 MiB、MemoryMax=384 MiB，包含平台子进程。
+模型通过 API 接入；网页运行不加载本地模型权重。运行不要求 Docker，也不会为每次
+模拟创建容器。
+
+媒体以 64 KiB 分块发送并支持 Range。回放动作索引和完整观察分开读取，双方最多缓存
+4 帧；评论每页至多 20 个根、200 个节点，素材每页 20 份。JSONL 导入流式读取，不把
+全部用户/帖子/评论放进 RAM。完整导出写入临时文件、流式下载，单份上限 128 MiB；
+暂停或结束模拟后可下载。
+
+32-agent / 256-action 开发策略运行的本机 Python 进程峰值 RSS 约 49.95 MiB。这是小型
+测试数据下的观测，不是所有真实数据的内存保证；大数据依靠读取边界和 cgroup 限额
+保护。50 MiB 文件的 Range 检查也验证了不会为读取少量字节载入完整文件。

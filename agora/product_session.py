@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+
+from agora.distribution import reddit_hot, wilson_lower
 from agora.platforms import (
     contract_for,
     validate_creation,
@@ -9,6 +12,7 @@ from agora.platforms import (
 )
 
 NATIVE_SPECS = {
+    "view_asset_library": {"optional": ["offset"]},
     "load_comments": {"optional": ["sort", "offset", "limit"]},
     "delete_post": {"required": ["post_id"]},
     "edit_post": {"required": ["post_id", "body"], "optional": ["title"]},
@@ -60,6 +64,155 @@ NATIVE_SPECS = {
 
 
 class ProductSession:
+    def visible_library(self):
+        page = self.world.asset_library(
+            self.user_id, limit=20, offset=self.state.get("library_offset", 0)
+        )
+        selected = self.world.asset_library(
+            self.user_id,
+            asset_ids=[
+                s["asset_id"] for s in (self.state.get("draft") or {}).get("assets", [])
+            ],
+        )
+        return list({a["asset_id"]: a for a in page + selected}.values())
+
+    def show_created_post(self, pid):
+        post = self._check_visible(pid)
+        if self.world.preset.name == "x":
+            cards = [self._public_post(post, True)] + [
+                p for p in self.state["cards"] if p["post_id"] != pid
+            ]
+            self._store_cards(
+                "for_you",
+                cards[: self.config.slate_size],
+                {
+                    "candidate_count": len(cards),
+                    "decisions": [],
+                    "policy_version": "publication-insert-v1",
+                },
+            )
+        else:
+            self.state.update(
+                screen="detail",
+                current_post=self._public_post(post),
+                media_index=0,
+                video_position_ms=0,
+            )
+
+    def profile_view(self, uid, tab=None):
+        platform = self.world.preset.name
+        allowed = {
+            "xiaohongshu": {"notes", "saved"},
+            "x": {"posts", "replies", "media"},
+            "reddit": {"posts", "comments", "saved"},
+        }
+        tab = tab or ("notes" if platform == "xiaohongshu" else "posts")
+        if tab not in allowed.get(platform, {"posts"}):
+            raise ValueError("Unavailable profile tab")
+        if tab == "saved" and uid != self.user_id:
+            raise PermissionError("Saved content is private")
+        row = self.db.execute(
+            "SELECT user_id,user_name,name,bio,num_followers,num_followings FROM user WHERE user_id=?",
+            (uid,),
+        ).fetchone()
+        if row is None:
+            raise KeyError("Unknown profile")
+        profile = dict(
+            zip(("user_id", "handle", "name", "bio", "followers", "following"), row)
+        )
+        profile.update(
+            tab=tab,
+            following_author=bool(
+                self.db.execute(
+                    "SELECT 1 FROM follow WHERE follower_id=? AND followee_id=?",
+                    (self.user_id, uid),
+                ).fetchone()
+            ),
+        )
+        own_ids = [
+            r[0]
+            for r in self.db.execute(
+                "SELECT post_id FROM post WHERE user_id=? AND deleted=0 ORDER BY post_id DESC LIMIT 100",
+                (uid,),
+            )
+        ]
+        own_posts = self.world.get_feed(
+            self.user_id,
+            len(own_ids),
+            eligible_post_ids=own_ids,
+            record_impressions=False,
+            include_comments=False,
+        )
+        profile["received_likes"] = sum(p["num_likes"] for p in own_posts)
+        profile["received_saves"] = sum(p["num_collections"] for p in own_posts)
+        if tab == "saved":
+            ids = [
+                r[0]
+                for r in self.db.execute(
+                    "SELECT post_id FROM collection WHERE user_id=? ORDER BY collection_id DESC LIMIT 100",
+                    (uid,),
+                )
+            ]
+        else:
+            ids = [
+                r[0]
+                for r in self.db.execute(
+                    "SELECT post_id FROM post WHERE user_id=? AND deleted=0 ORDER BY post_id DESC LIMIT 100",
+                    (uid,),
+                )
+            ]
+        posts = self.world.get_feed(
+            self.user_id,
+            len(ids),
+            eligible_post_ids=ids,
+            record_impressions=False,
+            include_comments=False,
+        )
+        if tab == "replies":
+            posts = [p for p in posts if p.get("reply_to_post_id")]
+        elif tab == "media":
+            posts = [p for p in posts if p.get("assets")]
+        elif platform == "x" and tab == "posts":
+            posts = [p for p in posts if not p.get("reply_to_post_id")]
+        if tab == "comments":
+            rows = self.db.execute(
+                "SELECT comment_id,post_id,content,created_at,num_likes,num_dislikes FROM comment WHERE user_id=? AND deleted=0 ORDER BY comment_id DESC LIMIT 50",
+                (uid,),
+            ).fetchall()
+            parents = self.world.get_feed(
+                self.user_id,
+                len(rows),
+                eligible_post_ids=[r[1] for r in rows],
+                record_impressions=False,
+                include_comments=False,
+            )
+            parents = {p["post_id"]: p for p in parents}
+            profile["comments"] = [
+                {
+                    "comment_id": r[0],
+                    "post_id": r[1],
+                    "content": r[2],
+                    "created_at": r[3],
+                    "score": r[4] - r[5],
+                    "post_title": parents[r[1]].get("title"),
+                    "community": parents[r[1]].get("community"),
+                }
+                for r in rows
+                if r[1] in parents
+            ]
+            posts = []
+        posts.sort(key=lambda p: p["post_id"], reverse=True)
+        self._store_cards(
+            "profile",
+            [self._public_post(p, True) for p in posts],
+            {
+                "candidate_count": len(posts),
+                "decisions": [],
+                "policy_version": "profile-tabs-v1",
+            },
+        )
+        self.state.update(profile=profile, screen="profile")
+
     @property
     def contract(self):
         return contract_for(self.world)
@@ -67,6 +220,8 @@ class ProductSession:
     def product_actions(self):
         platform = self.world.preset.name
         names = {"view_saved", "edit_profile", "open_notification"}
+        if self.state["screen"] == "studio":
+            names.add("view_asset_library")
         detail = self.state["screen"] == "detail"
         visible_feed = self.state["screen"] in {
             "feed",
@@ -165,8 +320,18 @@ class ProductSession:
 
     def native_observation(self):
         value = {
+            "library_offset": self.state.get("library_offset", 0),
+            "library_total": self.db.execute(
+                "SELECT COUNT(*) FROM creator_asset WHERE user_id=?", (self.user_id,)
+            ).fetchone()[0]
+            if self.state["screen"] == "studio"
+            else 0,
             "contract": self.contract.to_dict(),
             "time_ms": self.world.current_time_ms,
+            "location": self.state.get("location"),
+            "tick_duration_ms": self.db.execute(
+                "SELECT tick_duration_ms FROM simulation_state WHERE singleton=1"
+            ).fetchone()[0],
             "media_index": self.state.get("media_index", 0),
             "video_position_ms": self.state.get("video_position_ms", 0),
         }
@@ -246,6 +411,7 @@ class ProductSession:
                         self.user_id,
                         len(ids),
                         record_impressions=False,
+                        include_comments=False,
                         eligible_post_ids=ids,
                     )
                 ]
@@ -264,7 +430,11 @@ class ProductSession:
         reference = post.get("original_post_id") or post.get("reply_to_post_id")
         if include_refs and reference is not None:
             original = self.world.get_feed(
-                self.user_id, 1, record_impressions=False, eligible_post_ids=[reference]
+                self.user_id,
+                1,
+                record_impressions=False,
+                include_comments=False,
+                eligible_post_ids=[reference],
             )
             post["original_post"] = (
                 self._public_post(original[0], True, False)
@@ -283,6 +453,7 @@ class ProductSession:
                     self.user_id,
                     1,
                     record_impressions=False,
+                    include_comments=False,
                     eligible_post_ids=[original["post_id"]],
                 )
                 original = self._public_post(root[0], False, False)
@@ -311,10 +482,22 @@ class ProductSession:
                     (self.user_id, original["post_id"]),
                 ).fetchone()
             )
+        post["following_author"] = bool(
+            self.db.execute(
+                "SELECT 1 FROM follow WHERE follower_id=? AND followee_id=?",
+                (self.user_id, post["author_id"]),
+            ).fetchone()
+        )
         return post
 
     def comment_page(self, post_id):
-        comments = self.world.get_thread(post_id)
+        sort = self.state.get("comment_sort", "best")
+        comments = self.world.get_thread(
+            post_id,
+            root_limit=self.state.get("comment_limit", 20),
+            root_offset=self.state.get("comment_offset", 0),
+            root_sort=sort,
+        )
         upvotes = {
             row[0]
             for row in self.db.execute(
@@ -346,22 +529,42 @@ class ProductSession:
             comments.sort(
                 key=lambda item: (
                     item["is_pinned"],
-                    item["num_likes"] - item["num_dislikes"],
+                    wilson_lower(item["num_likes"], item["num_dislikes"])
+                    if sort == "best"
+                    else item["num_likes"] - item["num_dislikes"],
                     item["comment_id"],
                 ),
                 reverse=True,
             )
-        offset, limit = (
-            self.state.get("comment_offset", 0),
-            self.state.get("comment_limit", 20),
-        )
-        return comments[offset : offset + limit]
+        return comments
 
     def _native_cards(self, surface, ids, sort="new"):
         posts = self.world.get_feed(
-            self.user_id, len(ids), record_impressions=False, eligible_post_ids=ids
+            self.user_id,
+            len(ids),
+            record_impressions=False,
+            include_comments=False,
+            eligible_post_ids=ids,
         )
-        if sort == "saved":
+        diagnostics = {
+            "candidate_count": len(posts),
+            "decisions": [],
+            "policy_version": f"{self.world.preset.name}-{sort}-v2",
+        }
+        if sort == "best":
+            ranked, diagnostics = self.engine.rank(
+                self.user_id,
+                self.world.current_tick,
+                self.db.execute(
+                    "SELECT seed FROM simulation_state WHERE singleton=1"
+                ).fetchone()[0],
+                self.state["refresh"],
+                eligible_post_ids=ids,
+            )
+            order = {pid: index for index, pid in enumerate(ranked)}
+            posts = [post for post in posts if post["post_id"] in order]
+            posts.sort(key=lambda item: order[item["post_id"]])
+        elif sort == "saved":
             order = {pid: index for index, pid in enumerate(ids)}
             posts.sort(key=lambda item: order[item["post_id"]])
         elif sort in {"new", "latest", "following"}:
@@ -372,6 +575,21 @@ class ProductSession:
             posts.sort(
                 key=lambda item: (
                     item["num_likes"] - item["num_dislikes"],
+                    item["post_id"],
+                ),
+                reverse=True,
+            )
+        elif self.world.preset.name == "reddit":
+            tick_ms = self.db.execute(
+                "SELECT tick_duration_ms FROM simulation_state WHERE singleton=1"
+            ).fetchone()[0]
+            posts.sort(
+                key=lambda item: (
+                    reddit_hot(
+                        item["num_likes"] - item["num_dislikes"],
+                        item["created_at"],
+                        tick_ms,
+                    ),
                     item["post_id"],
                 ),
                 reverse=True,
@@ -389,14 +607,13 @@ class ProductSession:
         self._store_cards(
             surface,
             [self._public_post(post, True) for post in posts[: self.config.slate_size]],
-            {
-                "candidate_count": len(posts),
-                "decisions": [],
-                "policy_version": f"{self.world.preset.name}-{sort}-v1",
-            },
+            diagnostics,
         )
+        self.state["feed_sort"] = sort
 
-    def product_feed(self, feed_type, community=None, location=None):
+    def product_feed(
+        self, feed_type, community=None, location=None, sort=None, time_range="all"
+    ):
         platform = self.world.preset.name
         if platform == "x" and feed_type == "following":
             ids = [
@@ -411,6 +628,7 @@ class ProductSession:
         if platform == "xiaohongshu" and feed_type == "nearby":
             if not isinstance(location, str) or not location.strip():
                 raise ValueError("Nearby discovery requires a location")
+            self.state["location"] = location
             ids = [
                 row[0]
                 for row in self.db.execute(
@@ -420,8 +638,13 @@ class ProductSession:
             ]
             self._native_cards("nearby", ids)
             return True
-        if platform == "reddit" and feed_type in {"home", "popular", "latest"}:
-            if feed_type == "home":
+        if platform == "reddit" and feed_type in {"for_you", "home"}:
+            self.state["feed_sort"] = "best"
+            return False
+        if platform == "reddit" and feed_type in {"following", "popular", "latest"}:
+            if sort is not None and sort not in {"best", "hot", "new", "top"}:
+                raise ValueError("Unavailable Reddit sort")
+            if feed_type == "following":
                 ids = [
                     row[0]
                     for row in self.db.execute(
@@ -436,8 +659,35 @@ class ProductSession:
                         "SELECT post_id FROM post ORDER BY post_id DESC LIMIT 500"
                     )
                 ]
+            windows = {
+                "hour": 3600000,
+                "day": 86400000,
+                "week": 604800000,
+                "month": 2592000000,
+                "year": 31536000000,
+                "all": None,
+            }
+            if time_range not in windows:
+                raise ValueError("Unknown top-post time range")
+            self.state["time_range"] = time_range
+            if windows[time_range] is not None:
+                tick_ms = self.db.execute(
+                    "SELECT tick_duration_ms FROM simulation_state WHERE singleton=1"
+                ).fetchone()[0]
+                cutoff = self.world.current_tick - windows[time_range] // tick_ms
+                ids = [
+                    row[0]
+                    for row in self.db.execute(
+                        "SELECT post_id FROM post WHERE post_id IN (SELECT value FROM json_each(?)) AND CAST(created_at AS INTEGER)>=?",
+                        (json.dumps(ids), cutoff),
+                    )
+                ]
             self._native_cards(
-                feed_type, ids, "hot" if feed_type != "latest" else "new"
+                feed_type,
+                ids,
+                "new"
+                if feed_type == "latest"
+                else sort or ("best" if feed_type == "following" else "hot"),
             )
             return True
         return False
@@ -445,6 +695,12 @@ class ProductSession:
     def dispatch_product(self, action, args):
         result, elapsed = {"success": True}, 300
         user, current = self.user_id, self.state.get("current_post")
+        if action == "view_asset_library":
+            offset = args.get("offset", 0)
+            if type(offset) is not int or offset < 0:
+                raise ValueError("Invalid asset-library offset")
+            self.state["library_offset"] = offset
+            return result, 300
         if action == "undo_repost":
             row = self.db.execute(
                 "SELECT post_id FROM post WHERE user_id=? AND original_post_id=? AND post_type='repost' AND deleted=0",
@@ -501,7 +757,12 @@ class ProductSession:
             creation = {key: value for key, value in args.items() if key != "post_id"}
             self._validate_creation(creation)
             post_type = validate_creation(
-                "x", creation, self.world.asset_library(user), self.contract
+                "x",
+                creation,
+                self.world.asset_library(
+                    user, asset_ids=[a["asset_id"] for a in creation.get("assets", [])]
+                ),
+                self.contract,
             )
             assets = self.world.library_assets(user, creation.pop("assets", []))
             creation.pop("post_type", None)
@@ -608,7 +869,9 @@ class ProductSession:
                     "community": current.get("community"),
                     "assets": [],
                 },
-                self.world.asset_library(user),
+                self.world.asset_library(
+                    user, asset_ids=[a["asset_id"] for a in creation.get("assets", [])]
+                ),
             )
             self.world.edit_post(user, **args)
         elif action in {"edit_comment", "delete_comment"}:
@@ -620,7 +883,7 @@ class ProductSession:
                 args.get("limit", 20),
             )
             if (
-                sort not in {"best", "new"}
+                sort not in {"best", "new", "top"}
                 or type(offset) is not int
                 or offset < 0
                 or type(limit) is not int
@@ -674,7 +937,7 @@ class ProductSession:
             available = {
                 item["name"]: item for item in self.world.list_communities(user)
             }
-            if community not in available or sort not in {"hot", "new", "top"}:
+            if community not in available or sort not in {"best", "hot", "new", "top"}:
                 raise ValueError("Unknown community or sort")
             ids = [
                 row[0]

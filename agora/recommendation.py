@@ -13,12 +13,13 @@ import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 
+from agora.distribution import PROFILES
 from agora.storage import ensure_schema
 
 
 @dataclass(frozen=True)
 class RecommendationConfig:
-    policy_version: str = "agora-hybrid-v2"
+    policy_version: str = "agora-hybrid-v3"
     channel_limit: int = 100
     slate_size: int = 30
     page_size: int = 6
@@ -35,7 +36,11 @@ class RecommendationConfig:
     collaborative_weight: float = 0.6
 
     def __post_init__(self):
-        if self.policy_version not in {"agora-hybrid-v1", "agora-hybrid-v2"}:
+        if self.policy_version not in {
+            "agora-hybrid-v1",
+            "agora-hybrid-v2",
+            "agora-hybrid-v3",
+        }:
             raise ValueError("Unsupported recommendation policy version")
         for name in ("channel_limit", "slate_size", "page_size"):
             value = getattr(self, name)
@@ -71,10 +76,14 @@ def _noise(seed: int, user: int, tick: int, refresh: int, post: int) -> float:
 
 class RecommendationEngine:
     def __init__(
-        self, db: sqlite3.Connection, config: RecommendationConfig | None = None
+        self,
+        db: sqlite3.Connection,
+        config: RecommendationConfig | None = None,
+        platform="generic",
     ):
         self.db = db
         self.config = config or RecommendationConfig()
+        self.platform = platform
         ensure_schema(db)
 
     def interests(self, user_id: int, tick: int) -> dict[str, float]:
@@ -132,6 +141,7 @@ class RecommendationEngine:
         seen_ids=(),
         query: str | None = None,
         community: str | None = None,
+        eligible_post_ids=None,
     ) -> tuple[list[int], dict]:
         if feed_type not in {"discover", "following", "search"}:
             raise ValueError("Unknown feed type")
@@ -144,6 +154,9 @@ class RecommendationEngine:
             + " AND p.user_id != :viewer AND p.deleted = 0 AND p.removed_by IS NULL"
         )
         gate += " AND NOT EXISTS (SELECT 1 FROM community nc WHERE nc.name = p.community AND nc.visibility = 'private' AND NOT EXISTS (SELECT 1 FROM community_member nm WHERE nm.community = nc.name AND nm.user_id = :viewer))"
+        if eligible_post_ids is not None:
+            gate += " AND p.post_id IN (SELECT value FROM json_each(:eligible))"
+            params["eligible"] = json.dumps(list(eligible_post_ids))
         # Explicit post-level negative feedback is stronger than topic decay.
         gate += (
             " AND NOT EXISTS (SELECT 1 FROM agora_feedback nf WHERE "
@@ -187,6 +200,11 @@ class RecommendationEngine:
                 "AND EXISTS (SELECT 1 FROM follow f WHERE "
                 "f.follower_id = :viewer AND f.followee_id = p.user_id)",
             )
+            if self.platform == "reddit":
+                retrieve(
+                    "subscriptions",
+                    "AND EXISTS (SELECT 1 FROM community_member cm WHERE cm.community=p.community AND cm.user_id=:viewer)",
+                )
             positive = [
                 topic
                 for topic, weight in sorted(
@@ -214,7 +232,7 @@ class RecommendationEngine:
             ).fetchone()[0]
             params["pivot"] = int(_noise(seed, user_id, tick, refresh, 0) * max_id)
             retrieve("explore", order="(p.post_id < :pivot), p.post_id")
-            if self.config.policy_version == "agora-hybrid-v2":
+            if self.config.policy_version in {"agora-hybrid-v2", "agora-hybrid-v3"}:
                 neighbors = {
                     row[0]: row[1]
                     for row in self.db.execute(
@@ -238,6 +256,12 @@ class RecommendationEngine:
             row[0]
             for row in self.db.execute(
                 "SELECT followee_id FROM follow WHERE follower_id = ?", (user_id,)
+            )
+        }
+        subscriptions = {
+            row[0]
+            for row in self.db.execute(
+                "SELECT community FROM community_member WHERE user_id=?", (user_id,)
             )
         }
         exposure_counts = Counter()
@@ -270,10 +294,10 @@ class RecommendationEngine:
                 "SELECT p.post_id, p.user_id, p.created_at, p.num_likes, "
                 "p.num_shares, p.num_dislikes, "
                 "(SELECT COUNT(*) FROM collection c WHERE c.post_id = p.post_id), "
-                "(SELECT COUNT(*) FROM comment c WHERE c.post_id = p.post_id), "
+                "(SELECT COUNT(*) FROM comment c WHERE c.post_id = p.post_id AND c.deleted=0) + (SELECT COUNT(*) FROM post reply WHERE reply.reply_to_post_id=p.post_id AND reply.deleted=0), "
                 "(SELECT COUNT(*) FROM agora_feedback fb WHERE fb.post_id = p.post_id "
                 "AND fb.kind = 'open_post' AND fb.user_id != p.user_id), "
-                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id AND e.user_id != p.user_id) "
+                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id AND e.user_id != p.user_id), p.community "
                 "FROM post p WHERE p.post_id IN (" + ",".join("?" for _ in chunk) + ")",
                 chunk,
             ).fetchall()
@@ -288,8 +312,13 @@ class RecommendationEngine:
                 comments,
                 clicks,
                 impressions,
+                post_community,
             ) in rows:
-                age = max(0, tick - int(created)) if str(created).isdigit() else 0
+                age = (
+                    max(0, tick - int(created))
+                    if str(created).lstrip("-").isdigit()
+                    else 0
+                )
                 affinity = sum(interests.get(t, 0) for t in topics[post]) / max(
                     1, len(topics[post])
                 )
@@ -299,18 +328,45 @@ class RecommendationEngine:
                 volume = max(
                     0, likes + 2 * collections + 1.5 * comments + 2 * shares - dislikes
                 )
+                profile = PROFILES.get(self.platform, PROFILES["generic"])
+                if self.config.policy_version == "agora-hybrid-v3":
+                    volume = max(
+                        0,
+                        likes * profile["likes"]
+                        + collections * profile["saves"]
+                        + comments * profile["comments"]
+                        + shares * profile["shares"]
+                        - dislikes,
+                    )
                 quality = ctr + min(1.0, math.log1p(volume) / 10)
                 components = {
                     "topic": self.config.topic_weight * affinity,
-                    "following": self.config.following_weight * (author in following),
+                    "following": self.config.following_weight
+                    * (
+                        (post_community in subscriptions)
+                        if self.platform == "reddit"
+                        else (author in following)
+                    ),
                     "quality": self.config.quality_weight * quality,
                     "freshness": self.config.freshness_weight
+                    * (
+                        profile["freshness"]
+                        if self.config.policy_version == "agora-hybrid-v3"
+                        else 1
+                    )
                     * 0.5 ** (age / self.config.freshness_half_life_ticks),
                     "fatigue": -self.config.fatigue_weight
                     * math.log1p(exposure_counts[post]),
                     "collaborative": self.config.collaborative_weight
                     * collaborative[post],
                 }
+                if self.config.policy_version == "agora-hybrid-v3":
+                    components["cold_start"] = (
+                        profile["trial"]
+                        * 10
+                        / (impressions + 10)
+                        * 0.5 ** (age / self.config.freshness_half_life_ticks)
+                    )
                 records[post] = {
                     "post_id": post,
                     "author_id": author,

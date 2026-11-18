@@ -15,7 +15,7 @@ from agora.product_session import NATIVE_SPECS, ProductSession
 from agora.recommendation import RecommendationConfig, RecommendationEngine
 
 ACTION_SPECS = {
-    "refresh": {"optional": ["feed_type", "location"]},
+    "refresh": {"optional": ["feed_type", "location", "sort", "time_range"]},
     "scroll": {},
     "open_post": {"required": ["post_id"]},
     "back": {},
@@ -45,7 +45,7 @@ ACTION_SPECS = {
             "url",
         ],
     },
-    "view_profile": {"optional": ["user_id"]},
+    "view_profile": {"optional": ["user_id", "tab"]},
     "open_notifications": {},
     "open_studio": {},
     "save_draft": {
@@ -98,7 +98,7 @@ class SocialSession(ProductSession):
         for key, value in {"draft": None, "profile": None, "notifications": []}.items():
             self.state.setdefault(key, value)
         self.config = RecommendationConfig(**json.loads(row[2]))
-        self.engine = RecommendationEngine(self.db, self.config)
+        self.engine = RecommendationEngine(self.db, self.config, world.preset.name)
 
     @classmethod
     def start(cls, world, user_id: int, config: RecommendationConfig | None = None):
@@ -238,6 +238,7 @@ class SocialSession(ProductSession):
                 self.user_id,
                 1,
                 record_impressions=False,
+                include_comments=False,
                 eligible_post_ids=[current_post["post_id"]],
             )
             current_post = self._public_post(visible[0]) if visible else None
@@ -247,7 +248,11 @@ class SocialSession(ProductSession):
         fresh = {
             post["post_id"]: self._public_post(post, True)
             for post in self.world.get_feed(
-                self.user_id, len(ids), record_impressions=False, eligible_post_ids=ids
+                self.user_id,
+                len(ids),
+                record_impressions=False,
+                include_comments=False,
+                eligible_post_ids=ids,
             )
         }
         cards = [fresh[pid] for pid in ids if pid in fresh]
@@ -263,12 +268,16 @@ class SocialSession(ProductSession):
                 "elapsed_ms": self.state["elapsed_ms"],
                 "feed_type": self.state["feed_type"],
                 "page": self.state["page"],
+                "query": self.state.get("query", ""),
+                "feed_sort": self.state.get("feed_sort", "best"),
+                "time_range": self.state.get("time_range", "all"),
+                "comment_offset": self.state.get("comment_offset", 0),
                 "cards": cards,
                 "post": current_post,
                 "draft": self.state["draft"],
                 "profile": self.state["profile"],
                 "notifications": self.state["notifications"],
-                "asset_library": self.world.asset_library(self.user_id)
+                "asset_library": self.visible_library()
                 if self.state["screen"] == "studio"
                 else [],
                 "available_actions": self.available_actions(),
@@ -314,11 +323,22 @@ class SocialSession(ProductSession):
             )
         return self.normalize_post(result, preview, include_refs)
 
-    def _request(self, feed_type: str, query=None, community=None, location=None):
-        if feed_type != "search" and self.product_feed(feed_type, community, location):
+    def _request(
+        self,
+        feed_type: str,
+        query=None,
+        community=None,
+        location=None,
+        sort=None,
+        time_range="all",
+    ):
+        self.state["query"] = query or ""
+        if feed_type != "search" and self.product_feed(
+            feed_type, community, location, sort, time_range
+        ):
             return
         requested_type = feed_type
-        if feed_type == "for_you":
+        if feed_type in {"for_you", "home"}:
             feed_type = "discover"
         seed = self.db.execute(
             "SELECT seed FROM simulation_state WHERE singleton = 1"
@@ -334,7 +354,11 @@ class SocialSession(ProductSession):
             community,
         )
         posts = self.world.get_feed(
-            self.user_id, len(ids), record_impressions=False, eligible_post_ids=ids
+            self.user_id,
+            len(ids),
+            record_impressions=False,
+            include_comments=False,
+            eligible_post_ids=ids,
         )
         by_id = {post["post_id"]: post for post in posts}
         cards = [
@@ -377,6 +401,7 @@ class SocialSession(ProductSession):
             self.user_id,
             len(all_cards),
             record_impressions=False,
+            include_comments=False,
             eligible_post_ids=[
                 post["post_id"]
                 for post in all_cards[start : start + self.config.page_size]
@@ -494,6 +519,7 @@ class SocialSession(ProductSession):
                 self.user_id,
                 1,
                 record_impressions=False,
+                include_comments=False,
                 eligible_post_ids=[current_id],
             )
             if live:
@@ -575,6 +601,8 @@ class SocialSession(ProductSession):
                     "author_id"
                 ):
                     authors.add(current["original_post"]["author_id"])
+            if self.state["screen"] == "profile" and self.state.get("profile"):
+                authors.add(self.state["profile"]["user_id"])
             if args["followee_id"] not in authors:
                 raise PermissionError("Only a visible author can be followed")
         if "comment_id" in args:
@@ -600,46 +628,22 @@ class SocialSession(ProductSession):
                 ):
                     known.add(current["original_post"]["author_id"])
             known.update(item["actor_id"] for item in self.state["notifications"])
+            if self.state["screen"] == "profile" and self.state.get("profile"):
+                known.add(self.state["profile"]["user_id"])
+            if current:
+                queue = list(current.get("comments", []))
+                while queue:
+                    comment = queue.pop()
+                    known.add(comment["author_id"])
+                    queue.extend(comment.get("replies", []))
             if uid not in known:
                 raise PermissionError("Only known profiles can be opened")
-            profile = self.db.execute(
-                "SELECT user_id, user_name, name, bio, num_followers, num_followings FROM user WHERE user_id = ?",
-                (uid,),
-            ).fetchone()
-            if profile is None:
-                raise KeyError("Unknown profile")
-            self.state["profile"] = dict(
-                zip(
-                    ("user_id", "handle", "name", "bio", "followers", "following"),
-                    profile,
-                )
-            )
-            ids = [
-                row[0]
-                for row in self.db.execute(
-                    "SELECT post_id FROM post WHERE user_id = ? ORDER BY post_id DESC LIMIT 100",
-                    (uid,),
-                )
-            ]
-            posts = self.world.get_feed(
-                self.user_id, 100, record_impressions=False, eligible_post_ids=ids
-            )
-            posts.sort(key=lambda post: post["post_id"], reverse=True)
-            self._store_cards(
-                "profile",
-                [self._public_post(post, True) for post in posts],
-                {
-                    "candidate_count": len(posts),
-                    "decisions": [],
-                    "policy_version": "profile-chronological-v1",
-                },
-            )
-            self.state["screen"] = "profile"
+            self.profile_view(uid, args.get("tab"))
         elif action_type == "open_notifications":
             notifications = []
             ids = []
             for row in self.db.execute(
-                "SELECT notification_id, actor_id, kind, post_id, comment_id, content, tick, read FROM notification WHERE recipient_id = ? ORDER BY notification_id DESC LIMIT 50",
+                "SELECT n.notification_id, n.actor_id, n.kind, n.post_id, n.comment_id, n.content, n.tick, n.read, u.name, u.user_name FROM notification n JOIN user u ON u.user_id=n.actor_id WHERE n.recipient_id = ? ORDER BY n.notification_id DESC LIMIT 50",
                 (self.user_id,),
             ):
                 if row[3] is not None:
@@ -660,6 +664,8 @@ class SocialSession(ProductSession):
                                 "content",
                                 "tick",
                                 "read",
+                                "actor_name",
+                                "actor_handle",
                             ),
                             row,
                         )
@@ -667,7 +673,11 @@ class SocialSession(ProductSession):
                 )
             self.state["notifications"] = notifications
             posts = self.world.get_feed(
-                self.user_id, len(ids), record_impressions=False, eligible_post_ids=ids
+                self.user_id,
+                len(ids),
+                record_impressions=False,
+                include_comments=False,
+                eligible_post_ids=ids,
             )
             self._store_cards(
                 "notifications",
@@ -695,6 +705,7 @@ class SocialSession(ProductSession):
             result["post_id"] = self._publish(self.state["draft"])
             result["creation"] = copy.deepcopy(self.state["draft"])
             self.state["draft"] = None
+            self.show_created_post(result["post_id"])
             elapsed = 1000
         elif action_type == "refresh":
             feed_type = args.get(
@@ -703,9 +714,14 @@ class SocialSession(ProductSession):
                 if self.state["feed_type"] in self.contract.feeds
                 else self.contract.feeds[0],
             )
-            if feed_type not in set(self.contract.feeds) | {"discover"}:
+            if feed_type not in set(self.contract.feeds) | {"discover", "home"}:
                 raise ValueError("Unavailable feed")
-            self._request(feed_type, location=args.get("location"))
+            self._request(
+                feed_type,
+                location=args.get("location"),
+                sort=args.get("sort"),
+                time_range=args.get("time_range", "all"),
+            )
             elapsed = 800
         elif action_type == "search":
             if not isinstance(args["query"], str) or len(args["query"]) > 200:
@@ -796,6 +812,7 @@ class SocialSession(ProductSession):
         elif action_type == "create_post":
             result["post_id"] = self._publish(args)
             result["creation"] = copy.deepcopy(args)
+            self.show_created_post(result["post_id"])
             elapsed = 30000
         elif action_type == "create_comment":
             if (
@@ -805,6 +822,8 @@ class SocialSession(ProductSession):
             ):
                 raise ValueError("content must be nonempty and at most 5000 characters")
             result = await self.world.create_comment(self.user_id, **args)
+            if result.get("success") and self.world.preset.name == "reddit":
+                self.world.vote_comment(self.user_id, result["comment_id"], 1)
             if result.get("success"):
                 self._feedback(args["post_id"], action_type)
             elapsed = 10000
@@ -847,7 +866,9 @@ class SocialSession(ProductSession):
         post_type = validate_creation(
             self.world.preset.name,
             args,
-            self.world.asset_library(self.user_id),
+            self.world.asset_library(
+                self.user_id, asset_ids=[a["asset_id"] for a in args.get("assets", [])]
+            ),
             self.contract,
         )
         self.world._validate_post(
@@ -862,7 +883,9 @@ class SocialSession(ProductSession):
         post_type = validate_creation(
             self.world.preset.name,
             args,
-            self.world.asset_library(self.user_id),
+            self.world.asset_library(
+                self.user_id, asset_ids=[a["asset_id"] for a in args.get("assets", [])]
+            ),
             self.contract,
         )
         assets = self.world.library_assets(self.user_id, args.pop("assets", []))
@@ -882,39 +905,70 @@ class SocialSession(ProductSession):
         )
         if url:
             self.db.execute("UPDATE post SET link_url=? WHERE post_id=?", (url, pid))
+        if self.world.preset.name == "reddit":
+            self.world.vote_post(self.user_id, pid, 1)
         return pid
 
     def _check_visible(self, post_id):
         posts = self.world.get_feed(
-            self.user_id, 1, record_impressions=False, eligible_post_ids=[post_id]
+            self.user_id,
+            1,
+            record_impressions=False,
+            include_comments=False,
+            eligible_post_ids=[post_id],
         )
         if not posts:
             raise PermissionError("This post is no longer visible")
         return posts[0]
 
-    def trajectory(self, limit=None, after_step=0) -> list[dict]:
+    def observe_at(self, step):
+        row = self.db.execute(
+            "SELECT observation_json FROM agora_session_event WHERE session_id=? AND step=?",
+            (self.session_id, step),
+        ).fetchone()
+        if row is None:
+            raise KeyError("Unknown session step")
+        return json.loads(row[0])
+
+    def trajectory(
+        self, limit=None, after_step=0, include_observations=True, compact=False
+    ) -> list[dict]:
+        from agora.replay import preview_action
+
+        fields = "step,tick,elapsed_ms,action_json,result_json" + (
+            ",observation_json" if include_observations else ""
+        )
         query = (
-            "SELECT step, tick, elapsed_ms, action_json, result_json, observation_json "
-            "FROM agora_session_event WHERE session_id = ? AND step > ? ORDER BY step"
+            "SELECT "
+            + fields
+            + " FROM agora_session_event WHERE session_id=? AND step>? ORDER BY step"
         )
         params = (self.session_id, after_step)
         if limit is not None:
             query = query.removesuffix("ORDER BY step") + "ORDER BY step DESC LIMIT ?"
             params += (limit,)
-        rows = self.db.execute(query, params).fetchall()
-        if limit is not None:
-            rows.reverse()
-        return [
-            {
+        rows = self.db.execute(query, params)
+        result = []
+        for row in rows:
+            action, value = json.loads(row[3]), json.loads(row[4])
+            shortened = False
+            if compact:
+                action, value, shortened = preview_action(action, value)
+            event = {
                 "step": row[0],
                 "tick": row[1],
                 "elapsed_ms": row[2],
-                "action": json.loads(row[3]),
-                "result": json.loads(row[4]),
-                "observation": json.loads(row[5]),
+                "action": action,
+                "result": value,
             }
-            for row in rows
-        ]
+            if include_observations:
+                event["observation"] = json.loads(row[5])
+            if shortened:
+                event["preview_truncated"] = True
+            result.append(event)
+        if limit is not None:
+            result.reverse()
+        return result
 
     def diagnostics(self) -> list[dict]:
         return [
