@@ -119,6 +119,10 @@ agora-benchmark --help
 生成，用于验证基础设施，**不是 LLM 输出或人类行为证据**。研究页面保留独立受控 Arena、
 Artifact、多 seed、预算和跨语境协议。
 
+AI 接入的软件链路已通过隔离 HTTPS 模型接口和三平台 Viewer/导出联调。真实模型需要
+配置具体接口后验收；外部 SDK 源世界会话目前不会自动归档为 Viewer 实验。
+接入步骤、受控测试证据与边界见 [AI 模拟链路验收](docs/ai-chain-readiness.md)。
+
 ```text
 agora/api.py             三平台 hub 与 AI 账号 API
 agora/client.py          AI 客户端与模型桥接

@@ -219,6 +219,47 @@ def test_provider_connection_test_redacts_errors(tmp_path, monkeypatch):
     assert "test-only-key" not in json.dumps(result)
 
 
+@pytest.mark.parametrize(
+    "text,valid",
+    [
+        ('{"ok": true}', True),
+        ("not JSON test-only-key", False),
+        ("[]", False),
+        ('{"ok": false}', False),
+        ('{"ok": 1}', False),
+    ],
+)
+def test_connection_probe_requires_the_json_contract(
+    tmp_path, monkeypatch, text, valid
+):
+    registry = ProviderRegistry(tmp_path / ".private")
+    saved = registry.save(
+        {
+            "model_id": "test-model",
+            "base_url": "https://model.example/v1",
+            "api_key": "test-only-key",
+        }
+    )
+
+    class Client:
+        calls = 0
+
+        async def complete(self, messages):
+            self.calls += 1
+            return ModelResponse(text, "test-model")
+
+    client = Client()
+    monkeypatch.setattr(
+        "agora.provider_registry.build_model_client", lambda spec: client
+    )
+    result = registry.test(saved["provider_id"])
+    assert result["success"] is valid
+    assert client.calls == 1
+    assert "test-only-key" not in json.dumps(result)
+    if not valid:
+        assert result["error_type"] == "ModelContractError"
+
+
 @pytest.mark.parametrize("platform", ["xiaohongshu", "x", "reddit"])
 def test_agent_count_expands_only_the_experiment(platform, tmp_path):
     world = open_world("source", tmp_path, platform)

@@ -201,6 +201,16 @@ class ProviderRegistry:
                     "success": False,
                     "error": "服务返回的模型 ID 与配置不一致，请核对模型 ID。",
                 }
+            try:
+                probe = json.loads(response.text)
+            except (json.JSONDecodeError, TypeError):
+                probe = None
+            if not isinstance(probe, dict) or probe.get("ok") is not True:
+                return {
+                    "success": False,
+                    "error": "模型已响应，但未返回要求的 JSON。请检查 JSON 输出支持和输出 token 上限。",
+                    "error_type": "ModelContractError",
+                }
             return {
                 "success": True,
                 "model_id": response.model_id,
