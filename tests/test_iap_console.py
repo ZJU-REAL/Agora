@@ -94,6 +94,17 @@ def test_developer_viewer_and_embedded_account_are_mounted(mounted_server):
         assert response.ok
         assert response.headers["Content-Type"] == "font/woff2"
         assert response.content.startswith(b"wOF2")
+    for artwork, mime in [
+        ("agora-mark.png", "image/png"),
+        ("agora-favicon.png", "image/png"),
+        ("agora-world.webp", "image/webp"),
+        ("agora-wordmark.webp", "image/webp"),
+    ]:
+        response = requests.get(console + "/static/" + artwork)
+        assert response.ok and response.headers["Content-Type"] == mime
+        assert response.content.startswith(
+            b"\x89PNG" if mime == "image/png" else b"RIFF"
+        )
     account = requests.get(console + "/account?embed=1").text
     assert 'href="/agora/static/embed.css"' in account
     assert "agora:frame" in account

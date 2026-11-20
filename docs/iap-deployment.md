@@ -2,11 +2,11 @@
 
 入口：<https://lidingm.iap.platform.shaipower.com/agora>。
 
-| 页面 | 地址 | 用途 |
-|---|---|---|
-| 开发者 | `/agora/developer` | 平台、受测账号、agent 数量、模型连接、任务与运行设置 |
-| Viewer | `/agora/viewer` | 实时平台画面、账号切换、公开选择理由、素材、时间线和回放 |
-| AI 账号 API | `/agora/v1` | 公司 IAP 权限内的账号接口；服务器内可直接用 `127.0.0.1:8766/v1` |
+| 页面        | 地址               | 用途                                                            |
+| ----------- | ------------------ | --------------------------------------------------------------- |
+| 开发者      | `/agora/developer` | 平台、受测账号、agent 数量、模型连接、任务与运行设置            |
+| Viewer      | `/agora/viewer`    | 实时平台画面、账号切换、公开选择理由、素材、时间线和回放        |
+| AI 账号 API | `/agora/v1`        | 公司 IAP 权限内的账号接口；服务器内可直接用 `127.0.0.1:8766/v1` |
 
 ## 部署状态
 
@@ -123,3 +123,17 @@ Developer 和 Viewer 采用用户指定的 Family 参考风格，平台 iframe �
 ![手机端 Developer](images/workspace-family/developer-mobile.png)
 
 ![手机端 Viewer](images/workspace-family/viewer-mobile.png)
+
+## 0.6.3 插画品牌
+
+`agora_icon.png` 和 `agora_text.png` 是用户提供的正式图标与文字标识，原文件保持不变。
+浏览器使用透明缩放版 PNG/WebP，来源、转换和指纹见 `licenses/agora-artwork.json`。
+四个网页派生资源总计约 163 KiB，全部由 `/agora/static/` 本地提供，不依赖外部图片服务。
+
+![Developer 插画版](images/workspace-illustrated/developer-desktop.png)
+
+![Viewer 插画版](images/workspace-illustrated/viewer-desktop.png)
+
+![手机端 Developer](images/workspace-illustrated/developer-mobile.png)
+
+![手机端 Viewer](images/workspace-illustrated/viewer-mobile.png)

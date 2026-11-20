@@ -10,7 +10,7 @@ __all__ = [
     "SocialSession",
     "WorldConfig",
 ]
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 
 def __getattr__(name):

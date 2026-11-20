@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
+    <link rel="icon" type="image/png" href="/static/agora-favicon.png" />
+    <link rel="apple-touch-icon" href="/static/agora-mark.png" />
     <title>Agora · 社交模拟实验室</title>
     <link rel="stylesheet" href="/static/studio.css" />
     <script src="/static/studio.js" defer></script>
@@ -87,9 +89,13 @@
     </svg>
     <header class="masthead">
       <a class="brand" data-route="/developer" aria-label="Agora 首页"
-        ><span class="brand-mark"><span></span><span></span><span></span></span
-        >Agora<span class="brand-dot">.</span></a
-      >
+        ><img
+          class="brand-wordmark"
+          src="/static/agora-wordmark.webp"
+          alt="Agora"
+          width="184"
+          height="72"
+      /></a>
       <span class="brand-description">社交模拟工作台</span>
       <nav class="mode-nav" aria-label="页面模式">
         <a data-route="/developer" data-mode="developer"
@@ -124,9 +130,13 @@
         <div class="sidebar-bottom">
           <span class="sidebar-label">Agora sandbox</span>
           <div class="lab-card">
-            <div class="lab-icon">
-              <svg><use href="#i-users" /></svg>
-            </div>
+            <img
+              class="lab-art"
+              src="/static/agora-mark.png"
+              width="52"
+              height="52"
+              alt=""
+            />
             <strong>一个世界，多种视角</strong>
             <p>让 AI 在社交场景中浏览、创作、互动。</p>
             <span class="small-badge">3 个独立平台</span>
@@ -143,14 +153,29 @@
       </aside>
       <main class="developer-main">
         <div class="breadcrumb">工作区 <span>/</span> 模拟配置</div>
-        <div class="page-heading">
+        <div class="page-heading playful-heading">
           <div>
-            <h1>让 AI 走进社交世界<span>.</span></h1>
-            <p>选择平台、账号和模型，搭好一个世界，再观察其中发生的每一步。</p>
+            <h1>
+              让 AI 走进<span class="headline-highlight">社交世界</span>。
+            </h1>
+            <p>选择平台、账号和模型，看看 AI 如何浏览、创作和互动。</p>
           </div>
-          <span class="outline-badge"
-            ><span class="online-dot"></span>平台已就绪</span
-          >
+          <div class="world-art" aria-hidden="true">
+            <img
+              src="/static/agora-world.webp"
+              width="228"
+              height="206"
+              alt=""
+            /><svg class="art-star star-one" viewBox="0 0 24 24">
+              <path
+                d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"
+              /></svg
+            ><svg class="art-star star-two" viewBox="0 0 24 24">
+              <path
+                d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"
+              /></svg
+            ><span class="art-dot"></span>
+          </div>
         </div>
         <div class="config-layout">
           <form id="experimentForm" class="config-form">
@@ -304,8 +329,12 @@
             </div>
           </form>
           <aside class="run-summary">
-            <div class="summary-top"></div>
-            <h2>准备好，开始模拟</h2>
+            <div class="summary-top">
+              <h2>准备好，开始模拟</h2>
+              <span class="summary-ready" aria-hidden="true"
+                ><svg><use href="#i-play" /></svg
+              ></span>
+            </div>
             <div id="summaryPlatform" class="summary-platform"></div>
             <div class="summary-agent" id="summaryAgent"></div>
             <dl class="summary-values">
@@ -373,7 +402,7 @@
       </main>
     </div>
     <main class="viewer-page" id="viewerPage" hidden>
-      <div class="viewer-heading">
+      <div class="viewer-heading playful-viewer-heading">
         <div>
           <div class="breadcrumb">工作区 <span>/</span> Viewer</div>
           <h1 id="viewerTitle">观察 AI 的每一步<span>.</span></h1>
@@ -402,7 +431,7 @@
       </div>
       <div id="viewerEmpty" class="viewer-empty">
         <div class="empty-symbol" aria-hidden="true">
-          <svg><use href="#i-eye" /></svg>
+          <img src="/static/agora-world.webp" width="244" height="220" alt="" />
         </div>
 
         <h2>选择一场实验，开始观察</h2>

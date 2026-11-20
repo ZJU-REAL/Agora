@@ -1,28 +1,28 @@
 # Developer / Viewer 方向约定
 
-范围：`agora/web/studio.html`、`studio.css`、`studio.js`，访客模式 Operate。
-依据用户已明确的产品角色、现有运行流程与指定 Family 参考，不另换页面概念。
+范围仍限于框架工作台；三种原生社媒页面保持独立。模式 Operate。
 
 ## Direction contract
 
-THESIS：暖白的社交模拟工作台。Developer 聚焦平台、参与者、模型和启动；Viewer 聚焦
-一个账号的真实历史画面与对应动作，不用装饰挤占操作空间。
+THESIS：带有动漫插画细节的社交世界工作台。用户明确否定单一暖色表单风格，需要看得见
+角色与插画、清爽底色和适量色彩，同时保持配置和观察可操作。
 
-OWN-WORLD：Family 的 #fbfaf9 暖白、#f2f0ed 石色、#121212 墨黑，圆润标题、黑色胶囊
-主操作、明亮的小型选择提示。公开授权的 Bricolage Grotesque 标题、Inter 正文字体本地
-提供；中文保留系统字体回退。三种社媒 iframe 的颜色、布局、脚本保持原状。
+OWN-WORLD：用户指定的 `agora_icon.png` 是正式图标和主视觉，保留原画。近白底、蓝紫色
+标题与选中状态，少量桃粉、奶油金和薄荷色承接原图配色。图标用于导航，完整插画用于
+Developer 标题区和 Viewer 空状态；工作区使用克制的色块、角标和细线。
 
-STORY：开发者先选平台与参与者，接模型并调整预算，再启动独立世界；观察者选择运行
-和账号，在平台画面旁查看理由与时间线，播放、定位步骤或放大平台画面。
+STORY：配置平台、账号和模型后启动；选择实验与账号后观看每一步。插画只用于品牌和
+导航情境，不冒充账号数据、模拟状态或模型能力。
 
-FIRST VIEWPORT：暖白顶栏、轻量左导航；Developer 主列显示平台与参与者配置，右列
-石色启动摘要。Viewer 紧凑运行标题和筛选栏下，平台画面占最大区域，账号与动作分居
-两侧；窄屏先保证画面与回放控件可用，其余面板顺序排列。
+FIRST VIEWPORT：Developer 标题与项目插画形成清晰主视觉，三种平台选项各有浅色底，
+右侧仍是启动摘要；Viewer 标题与筛选区域更清爽，原生画面占主体，回放和账号切换可达。
+手机保留品牌图标和少量插画，控制面板不被装饰遮挡。
 
-FORM：seed: none (pinned)。用户原话：“跟觉这种风格……就主要是我们的框架前端页面……
-developer 还有 viewer 页面都需要优化一下”；保留现有配置与单账号回放体验。
+FORM：seed: none (pinned)。用户要求“动漫风一些……可以适当做一些，但是也不要太花……
+还是参考我给的风格”，并给出“之后我们就用这个作为我们的项目图标了，风格也可以
+略微借鉴一下”的原图。配置与精确回放的既有流程保持。
 
 FINISH：unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
-命名交互：Viewer 放大画面时只改变外层排布，iframe 保持同一个实例和历史步骤。运动
-只用于按钮、面板和选中状态的 160–200ms 反馈，减少动态效果偏好时取消过渡。
+命名交互：放大平台画面保持同一 iframe 和历史步骤。色彩及按钮反馈仍为短过渡，无
+持续飘动、粒子或动画循环；减少动态效果偏好下取消过渡。

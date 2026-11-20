@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agora-social"
-version = "0.6.2"
+version = "0.6.3"
 description = "Agora: observable AI social simulation experiments and platform infrastructure"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -27,5 +27,5 @@ agora-stress-world = "scripts.stress_world:main"
 include = ["agora*", "oasis*", "benchmarks*", "scripts*"]
 
 [tool.setuptools.package-data]
-agora = ["web/*.html", "web/*.js", "web/*.css", "web/*.woff2", "fixtures/*.json", "fixtures/media/*.jpg"]
+agora = ["web/*.html", "web/*.js", "web/*.css", "web/*.woff2", "web/*.png", "web/*.webp", "web/*.webp.json", "fixtures/*.json", "fixtures/media/*.jpg"]
 oasis = ["schema/*.sql", "social_platform/schema/*.sql"]

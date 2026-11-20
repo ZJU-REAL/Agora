@@ -222,6 +222,16 @@ def test_mobile_workspace_primary_action_and_models_are_reachable(
     try:
         page.goto(root + "/developer")
         page.wait_for_function("world?.users?.length > 0", polling=100)
+        assert (
+            page.locator(".brand-wordmark")
+            .get_attribute("src")
+            .endswith("agora-wordmark.webp")
+        )
+        assert (
+            page.locator("link[rel=icon]")
+            .get_attribute("href")
+            .endswith("agora-favicon.png")
+        )
         bounds = page.locator("#launchButton").bounding_box()
         assert bounds and bounds["y"] + bounds["height"] <= 844
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
@@ -246,6 +256,16 @@ def test_workspace_launch_and_expand_preserve_readonly_native_frame(
     try:
         page.goto(root + "/developer")
         page.wait_for_function("world?.users?.length > 0", polling=100)
+        assert (
+            page.locator(".brand-wordmark")
+            .get_attribute("src")
+            .endswith("agora-wordmark.webp")
+        )
+        assert (
+            page.locator("link[rel=icon]")
+            .get_attribute("href")
+            .endswith("agora-favicon.png")
+        )
         page.locator("#agentCount").fill("2")
         page.locator("#ticks").fill("1")
         page.locator("#steps").fill("2")

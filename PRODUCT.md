@@ -30,7 +30,8 @@ IAP `/agora` 路径，三种社媒页面在独立 iframe 中保持原生平台�
 ## Brand Commitments
 
 产品名 Agora。本轮用户指定 Refero Family 风格用于 Developer 和 Viewer 框架，
-明确保留三种社媒的原生页面。参考：
+明确保留三种社媒的原生页面。用户随后要求加强动漫插画、减少单一暖黄底色，并指定
+`agora_icon.png` 为正式项目图标及蓝紫色插画的视觉依据。参考：
 https://styles.refero.design/style/1bcae895-2245-4d33-aa43-1c1e80719554
 
 ## Evidence on Hand

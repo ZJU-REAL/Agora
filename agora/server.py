@@ -137,6 +137,10 @@ def make_handler(
                     "/static/platform.js",
                     "/static/console-display.woff2",
                     "/static/console-body.woff2",
+                    "/static/agora-mark.png",
+                    "/static/agora-favicon.png",
+                    "/static/agora-world.webp",
+                    "/static/agora-wordmark.webp",
                 }:
                     self.reply(
                         200,
@@ -145,11 +149,13 @@ def make_handler(
                             / "web"
                             / parsed.path.rsplit("/", 1)[-1]
                         ).read_bytes(),
-                        "font/woff2"
-                        if parsed.path.endswith(".woff2")
-                        else "text/javascript; charset=utf-8"
-                        if parsed.path.endswith(".js")
-                        else "text/css; charset=utf-8",
+                        {
+                            ".woff2": "font/woff2",
+                            ".png": "image/png",
+                            ".webp": "image/webp",
+                            ".js": "text/javascript; charset=utf-8",
+                            ".css": "text/css; charset=utf-8",
+                        }[Path(parsed.path).suffix],
                     )
                 elif parsed.path == "/api/platforms":
                     self.reply(
