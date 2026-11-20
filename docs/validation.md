@@ -1,5 +1,24 @@
 # 验证状态
 
+## 2026-11-20 Agora 0.6.1 原生页面细节
+
+完整命令 `.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database`
+通过 **256 项检查**，没有失败或跳过；Python 与网页格式检查通过。
+
+新增 `tests/test_native_ui.py` 在独立小型世界中检查三平台吸附区域拼接、滚动位置保留、
+相同观察复用 DOM、上传/素材分页后的未存文字与选图、原生表单发布、Reddit 手机社区
+导航、X 手机发布/加权字数，以及历史画面只读、不受当前表单污染。浏览器测试需要
+`pip install -e '.[test]' 'playwright>=1.42,<2'` 和 Chromium；可用 `AGORA_CHROMIUM` 指定已有二进制。
+未安装浏览器时仅该模块跳过；常规后端测试不依赖浏览器。
+
+本轮没有扩大种子数据、加载本地模型、增加模拟并发，也没有引入 Docker。页面临时状态
+最多 8 个视图，完整观察缓存仍最多 4 帧。截图审查涵盖桌面、紧凑 Viewer 宽度和手机。
+自动设计扫描的静态路径解析无法识别服务器 `/static/` 挂载，因此以实际 HTTP 和渲染验证
+资源加载；扫描提示的旧 X 字体声明已随 SVG 标识清理。
+
+本机 Chromium 合成滚轮操作曾等待输入确认卡住，滚动几何回归改用浏览器原生 scroll API；
+物理鼠标/触屏、Safari 和高刷新率帧率尚未验收。界面没有添加滚动劫持或惯性动画。
+
 ## 2026-11-18 Agora 0.6 原生模拟器与资源验收
 
 完整命令 `.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database`

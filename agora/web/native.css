@@ -1,4 +1,11 @@
 :root {
+  --shell-height: 38px;
+  --xhs-header-height: 80px;
+  --reddit-header-height: 64px;
+  --platform-accent: #ff2442;
+  --text-secondary: #666;
+  scrollbar-gutter: stable;
+  scroll-padding-top: calc(var(--shell-height) + 120px);
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", sans-serif;
@@ -78,6 +85,9 @@ svg {
   display: none !important;
 }
 .sandbox-bar {
+  position: sticky;
+  top: 0;
+  z-index: 25;
   height: 38px;
   background: #f5f7f9;
   border-bottom: 1px solid #e7ecf0;
@@ -195,7 +205,7 @@ svg {
   list-style: none;
   cursor: pointer;
   padding: 4px;
-  color: #999;
+  color: var(--text-secondary);
 }
 .p-post-menu summary::-webkit-details-marker {
   display: none;
@@ -260,7 +270,7 @@ svg {
 .p-empty {
   padding: 75px 20px;
   text-align: center;
-  color: #bbb;
+  color: var(--text-secondary);
   grid-column: 1/-1;
   column-span: all;
 }
@@ -273,17 +283,17 @@ svg {
   font-size: 15px;
   font-weight: 500;
   margin: 18px 0 8px;
-  color: #999;
+  color: var(--text-secondary);
 }
 .p-empty p {
   font-size: 12px;
-  color: #aaa;
+  color: var(--text-secondary);
   line-height: 1.8;
 }
 .p-more-feed {
   display: block;
   margin: 28px auto 40px;
-  color: #999;
+  color: var(--text-secondary);
   font-size: 12px;
   padding: 10px 22px;
   border-radius: 20px;
@@ -349,7 +359,7 @@ svg {
 }
 .p-dialog-head button {
   font-size: 25px;
-  color: #999;
+  color: var(--text-secondary);
 }
 .p-dialog label {
   display: flex;
@@ -410,7 +420,7 @@ svg {
 }
 .xhs-sidebar {
   position: fixed;
-  top: 38px;
+  top: var(--shell-height);
   bottom: 0;
   left: 0;
   width: 216px;
@@ -443,7 +453,7 @@ svg {
 .xhs-nav-footer > span {
   display: block;
   font-size: 10px;
-  color: #c1c1c1;
+  color: var(--text-secondary);
   margin: 20px 15px 0;
 }
 .xhs-nav-footer .p-nav {
@@ -451,8 +461,8 @@ svg {
 }
 .xhs-header {
   position: sticky;
-  top: 38px;
-  height: 80px;
+  top: var(--shell-height);
+  height: var(--xhs-header-height);
   padding: 17px 32px 17px 248px;
   background: #fff;
   display: flex;
@@ -468,7 +478,7 @@ svg {
 .xhs-header-note {
   margin-left: auto;
   font-size: 12px;
-  color: #999;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 .xhs-main {
@@ -481,8 +491,8 @@ svg {
   gap: 25px;
   align-items: center;
   margin: 3px 0 18px;
-  font-size: 15px;
-  color: #999;
+  font-size: 16px;
+  color: var(--text-secondary);
 }
 .xhs-feed-switch .active {
   font-weight: 650;
@@ -506,7 +516,7 @@ svg {
   overflow: auto;
   white-space: nowrap;
   font-size: 14px;
-  color: #777;
+  color: var(--text-secondary);
 }
 .xhs-categories > * {
   padding: 9px 16px;
@@ -539,6 +549,7 @@ svg {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 4 / 5;
   max-height: 365px;
   object-fit: cover;
 }
@@ -570,7 +581,7 @@ svg {
   padding: 11px 3px 0;
 }
 .xhs-card h3 {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.55;
   font-weight: 500;
   margin: 0 0 10px;
@@ -588,7 +599,7 @@ svg {
 }
 .xhs-card-meta .p-author-link {
   max-width: 75%;
-  font-size: 11px;
+  font-size: 12px;
   gap: 6px;
 }
 .xhs-card-meta .p-avatar {
@@ -617,6 +628,7 @@ svg {
 .xhs-note-overlay {
   position: fixed;
   inset: 0;
+  overscroll-behavior: contain;
   background: #0008;
   z-index: 40;
   display: flex;
@@ -626,7 +638,7 @@ svg {
 }
 .xhs-note {
   width: min(1080px, 100%);
-  height: min(820px, 90vh);
+  height: min(820px, 90dvh);
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   border-radius: 19px;
@@ -691,15 +703,17 @@ svg {
 }
 .note-author .p-author-link {
   flex: 1;
-  font-size: 12px;
+  font-size: 14px;
 }
 .note-author .p-follow {
-  font-size: 11px;
+  font-size: 13px;
   padding: 7px 14px;
 }
 .note-scroll {
   padding: 20px 24px;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   flex: 1;
   min-height: 0;
   scrollbar-width: thin;
@@ -712,7 +726,7 @@ svg {
   margin: 0 0 14px;
 }
 .note-content {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.85;
   color: #444;
   white-space: normal;
@@ -727,16 +741,16 @@ svg {
   font-size: 13px;
 }
 .note-location {
-  font-size: 10px;
-  color: #aaa;
+  font-size: 12px;
+  color: var(--text-secondary);
   margin: 18px 0 22px;
 }
 .note-comments-title {
   border-top: 1px solid #f0f0f0;
   padding-top: 20px;
   margin-bottom: 18px;
-  color: #aaa;
-  font-size: 11px;
+  color: var(--text-secondary);
+  font-size: 14px;
 }
 .p-comment {
   display: flex;
@@ -757,8 +771,8 @@ svg {
   display: flex;
   gap: 7px;
   align-items: center;
-  font-size: 11px;
-  color: #999;
+  font-size: 13px;
+  color: var(--text-secondary);
   margin: 3px 0 7px;
 }
 .comment-identity b {
@@ -770,7 +784,7 @@ svg {
   border-radius: 3px;
 }
 .comment-body {
-  font-size: 12px;
+  font-size: 14px;
   color: #555;
   line-height: 1.75;
   overflow-wrap: anywhere;
@@ -779,13 +793,13 @@ svg {
   display: flex;
   align-items: center;
   gap: 13px;
-  font-size: 9px;
-  color: #aaa;
+  font-size: 12px;
+  color: var(--text-secondary);
   margin-top: 7px;
   flex-wrap: wrap;
 }
 .comment-meta button {
-  font-size: 9px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -818,12 +832,12 @@ svg {
   font-size: 7px;
 }
 .comment-replies .comment-body {
-  font-size: 11px;
+  font-size: 14px;
 }
 .p-load-comments {
   display: block;
   margin: 12px auto;
-  color: #999;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 .note-bottom {
@@ -849,7 +863,7 @@ svg {
 .note-read {
   margin-left: auto;
   font-size: 10px;
-  color: #bbb;
+  color: var(--text-secondary);
 }
 .folder-action .p-icon {
   width: 17px;
@@ -874,13 +888,13 @@ svg {
   max-height: 70px;
   flex: 1;
   width: 0;
-  font-size: 11px;
+  font-size: 16px;
   color: #555;
   line-height: 1.5;
 }
 .p-comment-form .p-primary {
   padding: 8px 13px;
-  font-size: 10px;
+  font-size: 13px;
 }
 .note-close {
   position: absolute;
@@ -927,7 +941,7 @@ svg {
 }
 .search-heading span {
   font-size: 11px;
-  color: #aaa;
+  color: var(--text-secondary);
 }
 .search-heading h2 {
   font-size: 21px;
@@ -955,7 +969,7 @@ svg {
   border-bottom: 1px solid #eee;
   padding-bottom: 15px;
   font-size: 12px;
-  color: #bbb;
+  color: var(--text-secondary);
   margin-bottom: 24px;
 }
 .composer-tabs .active {
@@ -993,7 +1007,7 @@ svg {
 }
 .composer-fields input::placeholder,
 .composer-fields textarea::placeholder {
-  color: #bbb;
+  color: var(--text-secondary);
   font-weight: 400;
 }
 .composer-subfields {
@@ -1016,7 +1030,7 @@ svg {
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  color: #999;
+  color: var(--text-secondary);
   margin: 27px 0 15px;
 }
 .p-upload {
@@ -1030,8 +1044,21 @@ svg {
   cursor: pointer;
   font-size: 11px;
 }
+.p-upload {
+  position: relative;
+}
 .p-upload input {
-  display: none;
+  display: block;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.p-upload:focus-within {
+  outline: 2px solid var(--platform-accent);
+  outline-offset: 3px;
 }
 .p-upload .p-icon {
   width: 15px;
@@ -1123,7 +1150,7 @@ svg {
   align-items: center;
   padding: 25px 0;
   font-size: 11px;
-  color: #aaa;
+  color: var(--text-secondary);
   flex-wrap: wrap;
 }
 .composer-footer > span {
@@ -1135,7 +1162,7 @@ svg {
   border: 1px solid #e9e9e9;
   border-radius: 20px;
   font-size: 11px;
-  color: #999;
+  color: var(--text-secondary);
 }
 .composer-footer .p-draft-publish {
   color: #ff2442 !important;
@@ -1148,7 +1175,7 @@ svg {
   gap: 12px;
   width: 100%;
   font-size: 12px;
-  color: #bbb;
+  color: var(--text-secondary);
   padding: 24px;
 }
 .community-picker {
@@ -1174,7 +1201,7 @@ svg {
   font-size: 12px;
 }
 .notifications-page h1 {
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 650;
   margin: 20px 0;
 }
@@ -1182,9 +1209,9 @@ svg {
   display: flex;
   gap: 25px;
   border-bottom: 1px solid #eee;
-  padding-bottom: 14px;
-  font-size: 13px;
-  color: #999;
+  padding-bottom: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 .notification-tabs .active {
   color: #333;
@@ -1195,7 +1222,7 @@ svg {
   gap: 15px;
   padding: 24px 5px;
   border-bottom: 1px solid #f1f1f1;
-  font-size: 12px;
+  font-size: 15px;
 }
 .notification-row > .p-avatar {
   width: 39px;
@@ -1210,7 +1237,7 @@ svg {
 }
 .notification-row span {
   font-size: 11px;
-  color: #999;
+  color: var(--text-secondary);
 }
 .notification-row p {
   margin: 9px 0;
@@ -1218,7 +1245,7 @@ svg {
 }
 .notification-row small {
   font-size: 9px;
-  color: #bbb;
+  color: var(--text-secondary);
 }
 .p-profile {
   margin-bottom: 25px;
@@ -1236,7 +1263,7 @@ svg {
 }
 .profile-content span:not(.p-avatar) {
   font-size: 10px;
-  color: #aaa;
+  color: var(--text-secondary);
 }
 .profile-content p {
   font-size: 12px;
@@ -1246,7 +1273,7 @@ svg {
 }
 .profile-stats {
   font-size: 11px;
-  color: #999;
+  color: var(--text-secondary);
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -1264,7 +1291,7 @@ svg {
   border-radius: 20px;
   font-size: 11px;
   margin-left: auto;
-  color: #999;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 .profile-tabs {
@@ -1274,7 +1301,7 @@ svg {
   padding: 0 0 14px;
   justify-content: center;
   font-size: 14px;
-  color: #999;
+  color: var(--text-secondary);
 }
 .profile-tabs .active {
   color: #333;
@@ -1300,7 +1327,6 @@ svg {
 .brand-x {
   font-size: 34px;
   color: #0f1419;
-  font-family: Arial;
   line-height: 1;
   padding: 4px 15px 25px;
 }
@@ -1314,8 +1340,8 @@ svg {
 }
 .x-sidebar {
   position: sticky;
-  top: 38px;
-  height: calc(100vh - 38px);
+  top: var(--shell-height);
+  height: calc(100dvh - var(--shell-height));
   display: flex;
   flex-direction: column;
   padding: 20px 16px 17px 8px;
@@ -1355,7 +1381,7 @@ svg {
   gap: 10px;
   align-items: center;
   margin: auto 7px 0;
-  font-size: 11px;
+  font-size: 14px;
   padding: 12px 0;
 }
 .x-account > div {
@@ -1370,7 +1396,7 @@ svg {
   margin-bottom: 5px;
 }
 .x-account small {
-  font-size: 10px;
+  font-size: 13px;
   color: #536471;
 }
 .x-account > .p-icon {
@@ -1387,11 +1413,6 @@ svg {
   align-items: center;
   gap: 25px;
   padding: 17px 18px;
-  background: #ffffffef;
-  position: sticky;
-  top: 38px;
-  z-index: 7;
-  backdrop-filter: blur(8px);
 }
 .x-sticky-heading h1 {
   font-size: 19px;
@@ -1410,10 +1431,7 @@ svg {
   border-bottom: 1px solid #eff3f4;
   color: #536471;
   font-size: 13px;
-  position: sticky;
-  top: 95px;
   background: #fff;
-  z-index: 6;
 }
 .x-feed-tabs button {
   flex: 1;
@@ -1508,7 +1526,7 @@ svg {
 }
 .x-author > span {
   color: #536471;
-  font-size: 10px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1522,7 +1540,7 @@ svg {
   height: 17px;
 }
 .x-post-text {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.55;
   margin: 5px 0 12px;
   overflow-wrap: anywhere;
@@ -1586,7 +1604,7 @@ svg {
   color: #536471;
   gap: 11px;
   padding-top: 7px;
-  font-size: 10px;
+  font-size: 13px;
 }
 .x-reactions button {
   display: flex;
@@ -1640,7 +1658,7 @@ svg {
 }
 .x-post-detail .x-post-text {
   margin-top: 20px;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.65;
 }
 .x-post-detail .x-media-grid img {
@@ -1667,7 +1685,7 @@ svg {
 .x-main > .p-comment-form textarea {
   background: transparent;
   border-radius: 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 .x-right {
   padding: 10px 20px;
@@ -1676,7 +1694,7 @@ svg {
 .x-right .p-search {
   background: #f5f8fa;
   position: sticky;
-  top: 48px;
+  top: calc(var(--shell-height) + 10px);
   margin-bottom: 22px;
 }
 .x-right .p-search > svg {
@@ -1701,7 +1719,7 @@ svg {
   padding: 8px 0 12px;
 }
 .x-topic small {
-  font-size: 10px;
+  font-size: 13px;
   color: #536471;
   display: block;
   margin-bottom: 5px;
@@ -1718,7 +1736,7 @@ svg {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 10px;
+  font-size: 14px;
   margin: 17px 0;
 }
 .x-suggest > div {
@@ -1735,7 +1753,7 @@ svg {
 }
 .x-suggest small {
   color: #536471;
-  font-size: 9px;
+  font-size: 13px;
   display: block;
   overflow: hidden;
   white-space: nowrap;
@@ -1760,7 +1778,7 @@ svg {
   border-color: #d4dce2;
 }
 .x-right-footer {
-  font-size: 9px;
+  font-size: 12px;
   color: #84929e;
   line-height: 1.8;
   padding: 0 10px;
@@ -1851,10 +1869,10 @@ svg {
   font-weight: 750;
 }
 .reddit-header {
-  height: 64px;
+  height: var(--reddit-header-height);
   border-bottom: 1px solid #edeff1;
   position: sticky;
-  top: 38px;
+  top: var(--shell-height);
   z-index: 12;
   background: #fff;
   display: flex;
@@ -1885,7 +1903,7 @@ svg {
   display: flex;
   gap: 7px;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   white-space: nowrap;
 }
 .reddit-inbox {
@@ -1898,7 +1916,7 @@ svg {
 }
 .reddit-sidebar {
   position: fixed;
-  top: 102px;
+  top: calc(var(--shell-height) + var(--reddit-header-height));
   bottom: 0;
   left: 0;
   width: 210px;
@@ -1911,7 +1929,7 @@ svg {
   background: #fff;
 }
 .reddit-sidebar .p-nav {
-  font-size: 12px;
+  font-size: 14px;
   padding: 11px 15px;
   border-radius: 8px;
   gap: 10px;
@@ -1930,7 +1948,7 @@ svg {
   margin-top: 18px;
 }
 .reddit-nav-section h3 {
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 1px;
   font-weight: 500;
   color: #74818a;
@@ -1979,7 +1997,7 @@ svg {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: 13px;
   margin-bottom: 10px;
 }
 .reddit-post-top > .community-avatar {
@@ -1988,7 +2006,7 @@ svg {
   font-size: 8px;
 }
 .reddit-post-top .p-community-link {
-  font-size: 10px;
+  font-size: 14px;
 }
 .reddit-post-top > span:not(.community-avatar) {
   color: #839094;
@@ -2005,7 +2023,7 @@ svg {
   color: #1a282d;
 }
 .reddit-body {
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.85;
   color: #536368;
   margin: 9px 0 13px;
@@ -2039,7 +2057,7 @@ svg {
   background: #eef1f3;
   border-radius: 20px;
   padding: 7px 8px;
-  font-size: 11px;
+  font-size: 14px;
   white-space: nowrap;
 }
 .vote-pill button {
@@ -2071,7 +2089,7 @@ svg {
   border-radius: 20px;
   background: #eef1f3;
   padding: 9px 13px;
-  font-size: 10px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .reddit-pill .p-icon {
@@ -2100,7 +2118,7 @@ svg {
   border-bottom: 1px solid #e5eaed;
 }
 .reddit-home-tabs button {
-  font-size: 13px;
+  font-size: 15px;
   padding: 10px 17px;
   border-radius: 20px;
   color: #6c7e86;
@@ -2151,16 +2169,16 @@ svg {
 }
 .reddit-right {
   position: sticky;
-  top: 118px;
+  top: calc(var(--shell-height) + var(--reddit-header-height) + 16px);
   height: fit-content;
   background: #f5f8fa;
   border-radius: 13px;
   padding: 20px;
-  font-size: 11px;
+  font-size: 14px;
   color: #536b77;
 }
 .reddit-right h2 {
-  font-size: 12px;
+  font-size: 16px;
   color: #344e5a;
   margin: 0 0 10px;
   font-weight: 650;
@@ -2289,11 +2307,11 @@ svg {
   margin: 14px 0;
 }
 .reddit-detail .reddit-body {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.8;
 }
 .reddit-author-line {
-  font-size: 10px;
+  font-size: 13px;
   color: #7b8d96;
   margin: 8px 0;
 }
@@ -2328,7 +2346,7 @@ svg {
   border: 1px solid #dfe7eb;
   border-radius: 15px;
   min-height: 52px;
-  font-size: 12px;
+  font-size: 16px;
 }
 .reddit-comments .p-comment-form .p-primary {
   padding: 9px 13px;
@@ -2351,13 +2369,13 @@ svg {
   gap: 10px;
 }
 .reddit-comments .comment-identity {
-  color: #667c86;
-  font-size: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
   font-weight: 600;
 }
 .reddit-comments .comment-body {
   color: #405862;
-  font-size: 12px;
+  font-size: 14px;
 }
 .reddit-comments .comment-replies {
   border-left-color: #dce4e8;
@@ -2598,10 +2616,10 @@ svg {
     display: none;
   }
   .xhs-card h3 {
-    font-size: 12px;
+    font-size: 15px;
   }
   .xhs-card-meta .p-author-link {
-    font-size: 10px;
+    font-size: 12px;
   }
   .xhs-masonry {
     column-gap: 16px;
@@ -2619,7 +2637,7 @@ svg {
     gap: 7px;
   }
   .note-author .p-author-link {
-    font-size: 11px;
+    font-size: 14px;
     gap: 7px;
   }
   .note-author .p-avatar {
@@ -2628,7 +2646,7 @@ svg {
     font-size: 8px;
   }
   .note-author .p-follow {
-    font-size: 10px;
+    font-size: 13px;
     padding: 6px 11px;
   }
   .note-scroll {
@@ -2638,7 +2656,7 @@ svg {
     font-size: 16px;
   }
   .note-content {
-    font-size: 12px;
+    font-size: 16px;
   }
   .note-topics {
     font-size: 11px;
@@ -2718,7 +2736,7 @@ svg {
     padding: 17px 8px;
   }
   .reddit-sidebar .p-nav {
-    font-size: 10px;
+    font-size: 14px;
     padding: 11px 12px;
   }
   .reddit-header {
@@ -2732,7 +2750,7 @@ svg {
     font-size: 26px;
   }
   .reddit-right {
-    font-size: 10px;
+    font-size: 14px;
     padding: 15px;
   }
   .reddit-post h2 {
@@ -2749,7 +2767,7 @@ svg {
   }
   .xhs-categories {
     gap: 4px;
-    font-size: 12px;
+    font-size: 14px;
   }
   .xhs-categories > * {
     padding: 8px 13px;
@@ -2761,12 +2779,12 @@ svg {
     padding: 9px 2px 0;
   }
   .xhs-card h3 {
-    font-size: 12px;
+    font-size: 15px;
     margin-bottom: 8px;
   }
   .xhs-card-meta .p-author-link {
     max-width: 70%;
-    font-size: 9px;
+    font-size: 12px;
   }
   .xhs-card-meta .p-avatar {
     width: 20px;
@@ -2793,13 +2811,13 @@ svg {
     font-size: 18px;
   }
   .x-post-text {
-    font-size: 14px;
+    font-size: 16px;
   }
   .x-author .p-author-link {
-    font-size: 13px;
+    font-size: 15px;
   }
   .x-author > span {
-    font-size: 11px;
+    font-size: 14px;
   }
   .x-post-layout > .p-avatar {
     width: 37px;
@@ -2851,7 +2869,7 @@ svg {
     font-size: 19px;
   }
   .reddit-body {
-    font-size: 13px;
+    font-size: 16px;
   }
   .reddit-post-media > img {
     max-height: 370px;
@@ -2904,11 +2922,11 @@ svg {
     display: none;
   }
   .note-author .p-author-link {
-    font-size: 10px;
+    font-size: 14px;
   }
   .note-author .p-follow {
     padding: 5px 9px;
-    font-size: 9px;
+    font-size: 13px;
   }
   .note-reactions {
     gap: 12px;
@@ -2923,26 +2941,26 @@ svg {
   }
   .p-comment-form .p-primary {
     padding: 8px 11px;
-    font-size: 9px;
+    font-size: 13px;
   }
   .note-scroll h1 {
     font-size: 14px;
   }
   .note-content {
-    font-size: 11px;
+    font-size: 16px;
   }
   .note-topics {
     font-size: 10px;
   }
   .comment-body {
-    font-size: 11px;
+    font-size: 14px;
   }
   .comment-meta {
     gap: 8px;
-    font-size: 8px;
+    font-size: 12px;
   }
   .comment-identity {
-    font-size: 10px;
+    font-size: 13px;
   }
   .p-comment > .p-avatar {
     width: 23px;
@@ -3016,7 +3034,7 @@ svg {
   }
   .reddit-home-tabs button {
     padding: 9px 14px;
-    font-size: 12px;
+    font-size: 15px;
   }
   .reddit-center {
     padding: 15px 14px;
@@ -3029,17 +3047,17 @@ svg {
   }
   .reddit-pill {
     padding: 8px 11px;
-    font-size: 9px;
+    font-size: 13px;
   }
   .vote-pill {
-    font-size: 10px;
+    font-size: 14px;
     padding: 6px;
   }
   .reddit-detail h2 {
     font-size: 21px;
   }
   .reddit-comments .comment-body {
-    font-size: 12px;
+    font-size: 14px;
   }
   .reddit-main .profile-content > .p-avatar {
     width: 66px;
@@ -3126,7 +3144,7 @@ svg {
     font-size: 7px;
   }
   .xhs-header {
-    height: 56px;
+    height: var(--xhs-header-height);
     padding: 9px 12px;
     gap: 9px;
   }
@@ -3145,11 +3163,11 @@ svg {
     justify-content: center;
     gap: 25px;
     margin: 3px 0 18px;
-    font-size: 13px;
+    font-size: 16px;
   }
   .xhs-categories {
     gap: 5px;
-    font-size: 11px;
+    font-size: 14px;
     margin-bottom: 18px;
   }
   .xhs-categories > * {
@@ -3165,11 +3183,11 @@ svg {
     border-radius: 11px;
   }
   .xhs-card h3 {
-    font-size: 12px;
+    font-size: 15px;
     margin: 0 0 8px;
   }
   .xhs-card-meta .p-author-link {
-    font-size: 9px;
+    font-size: 12px;
     max-width: 76%;
   }
   .xhs-card-meta .p-avatar {
@@ -3192,12 +3210,13 @@ svg {
     display: block;
     overflow: visible;
     overflow-y: auto;
+    overscroll-behavior: contain;
     box-shadow: none;
   }
   .note-media {
     height: 420px;
     max-height: 57vh;
-    padding-top: 48px;
+    padding-top: calc(var(--shell-height) + 10px);
     background: #fafafa;
   }
   .note-panel {
@@ -3218,10 +3237,10 @@ svg {
     height: 27px;
   }
   .note-author .p-author-link {
-    font-size: 11px;
+    font-size: 14px;
   }
   .note-author .p-follow {
-    font-size: 10px;
+    font-size: 13px;
     padding: 6px 14px;
     margin-left: auto;
   }
@@ -3233,7 +3252,7 @@ svg {
     font-size: 17px;
   }
   .note-content {
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1.8;
   }
   .note-topics {
@@ -3276,7 +3295,7 @@ svg {
     padding: 6px 12px;
   }
   .note-comments-title {
-    font-size: 11px;
+    font-size: 14px;
   }
   .p-comment {
     gap: 8px;
@@ -3286,13 +3305,13 @@ svg {
     height: 27px;
   }
   .comment-identity {
-    font-size: 11px;
+    font-size: 13px;
   }
   .comment-body {
-    font-size: 12px;
+    font-size: 14px;
   }
   .comment-meta {
-    font-size: 9px;
+    font-size: 12px;
     gap: 12px;
   }
   .note-read {
@@ -3320,7 +3339,7 @@ svg {
     height: 90px;
   }
   .composer-footer > button {
-    font-size: 10px;
+    font-size: 14px;
   }
   .composer-selected .selected-asset {
     width: 72px;
@@ -3378,7 +3397,6 @@ svg {
     font-size: 18px;
   }
   .x-feed-tabs {
-    top: 89px;
     font-size: 12px;
   }
   .x-feed-tabs button {
@@ -3400,14 +3418,14 @@ svg {
     padding: 14px 12px;
   }
   .x-post-text {
-    font-size: 13px;
+    font-size: 16px;
   }
   .x-author .p-author-link {
-    font-size: 11px;
+    font-size: 15px;
     max-width: 60%;
   }
   .x-author > span {
-    font-size: 9px;
+    font-size: 14px;
     max-width: 60%;
   }
   .x-post-layout {
@@ -3419,7 +3437,7 @@ svg {
     font-size: 9px;
   }
   .x-reactions {
-    font-size: 9px;
+    font-size: 13px;
   }
   .x-media-grid {
     border-radius: 12px;
@@ -3448,7 +3466,7 @@ svg {
     padding: 14px 11px 30px;
   }
   .reddit-header {
-    height: 58px;
+    height: var(--reddit-header-height);
     padding: 9px 11px;
     gap: 10px;
   }
@@ -3488,7 +3506,7 @@ svg {
     padding-bottom: 11px;
   }
   .reddit-home-tabs button {
-    font-size: 12px;
+    font-size: 15px;
     padding: 9px 14px;
   }
   .reddit-post {
@@ -3500,16 +3518,16 @@ svg {
     margin: 11px 0 12px;
   }
   .reddit-body {
-    font-size: 12px;
+    font-size: 16px;
     line-height: 1.75;
   }
   .reddit-post-top {
-    font-size: 9px;
+    font-size: 13px;
     gap: 6px;
     margin-bottom: 8px;
   }
   .reddit-post-top .p-community-link {
-    font-size: 10px;
+    font-size: 14px;
   }
   .reddit-post-media {
     border-radius: 10px;
@@ -3521,7 +3539,7 @@ svg {
     gap: 7px;
   }
   .reddit-pill {
-    font-size: 9px;
+    font-size: 13px;
     padding: 8px 10px;
     gap: 5px;
   }
@@ -3544,11 +3562,11 @@ svg {
     padding: 17px 6px;
   }
   .reddit-comments .p-comment-form textarea {
-    font-size: 11px;
+    font-size: 16px;
     min-height: 45px;
   }
   .reddit-comments .p-comment-form .p-primary {
-    font-size: 10px;
+    font-size: 13px;
     padding: 8px 10px;
   }
   .reddit-comments .comment-replies {
@@ -3578,7 +3596,7 @@ svg {
     font-size: 10px;
   }
   .notifications-page h1 {
-    font-size: 21px;
+    font-size: 24px;
   }
 }
 
@@ -3588,11 +3606,348 @@ svg {
   justify-content: center;
   gap: 20px;
   font-size: 11px;
-  color: #999;
+  color: var(--text-secondary);
   margin: 16px 0;
 }
 .library-paging button {
   border: 1px solid #eee;
   border-radius: 16px;
   padding: 5px 13px;
+}
+
+/* Native chrome shares one scroll coordinate system with the operator bar. */
+body[data-platform="x"] {
+  --platform-accent: #1d9bf0;
+  --text-secondary: #536471;
+}
+body[data-platform="reddit"] {
+  --platform-accent: #d93900;
+  --text-secondary: #52646e;
+}
+::selection {
+  background: var(--platform-accent);
+  color: #fff;
+}
+input,
+textarea {
+  caret-color: var(--platform-accent);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--platform-accent);
+  outline-offset: 3px;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #b6bec4 transparent;
+}
+.p-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+button,
+a,
+summary {
+  touch-action: manipulation;
+}
+summary {
+  cursor: pointer;
+}
+summary:focus-visible {
+  outline: 2px solid var(--platform-accent);
+  outline-offset: 3px;
+}
+.p-post-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+.p-post-menu .p-icon {
+  width: 18px;
+  height: 18px;
+}
+.p-post-menu {
+  z-index: 2;
+}
+.p-post-menu[open] {
+  z-index: 15;
+}
+.x-timeline-header {
+  position: sticky;
+  top: var(--shell-height);
+  z-index: 8;
+  background: #ffffffef;
+  backdrop-filter: blur(12px);
+}
+.x-timeline-header .x-feed-tabs {
+  background: transparent;
+}
+.x-feed-tabs button:hover {
+  background: #0f141908;
+}
+.brand-x > svg {
+  width: 30px;
+  height: 30px;
+}
+.xhs-discovery {
+  position: sticky;
+  top: calc(var(--shell-height) + var(--xhs-header-height));
+  z-index: 8;
+  background: #fff;
+  padding-top: 12px;
+}
+.xhs-discovery .xhs-categories {
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+}
+.note-open {
+  overflow: hidden;
+}
+.note-open .sandbox-bar {
+  visibility: hidden;
+}
+.note-carousel .p-icon,
+.reddit-carousel .p-icon {
+  width: 18px;
+  height: 18px;
+}
+.note-carousel button,
+.reddit-carousel button {
+  min-width: 36px;
+  min-height: 36px;
+}
+.carousel-end {
+  opacity: 0.35 !important;
+  pointer-events: none;
+}
+.comment-replies {
+  border-left: 0;
+}
+.flat-reply > .p-avatar {
+  display: none;
+}
+.flat-reply .comment-replies {
+  padding-left: 0;
+}
+.comment-body {
+  white-space: normal;
+}
+.notification-tabs {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+}
+.notification-tabs button {
+  flex-shrink: 0;
+  min-height: 48px;
+  font-size: 14px;
+}
+.notification-tabs .active {
+  border-bottom: 3px solid var(--platform-accent);
+  font-weight: 650;
+}
+.character-count {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.character-count.over-limit {
+  color: #c52c36;
+}
+.x-inline-compose .character-count {
+  margin-left: auto;
+  margin-right: 16px;
+}
+.selected-asset {
+  position: relative;
+}
+.selected-asset .p-icon {
+  width: 16px;
+  height: 16px;
+}
+.selected-asset .remove-asset {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border-radius: 50%;
+  background: #fff;
+  width: 24px;
+  height: 24px;
+}
+.selected-asset button:disabled {
+  opacity: 0.3;
+}
+.reddit-comment-sort .active {
+  color: #0f1a1c;
+  font-weight: 700;
+}
+.reddit-menu-toggle,
+.reddit-nav-scrim,
+.x-mobile-post {
+  display: none;
+}
+@media (max-width: 480px) {
+  :root {
+    --xhs-header-height: 56px;
+    --reddit-header-height: 58px;
+  }
+  .note-author {
+    z-index: 43;
+  }
+  .note-bottom {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .xhs-sidebar,
+  .x-sidebar {
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    height: calc(56px + env(safe-area-inset-bottom));
+  }
+  .x-mobile-post {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    right: 18px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #1d9bf0;
+    color: #fff;
+    z-index: 11;
+    box-shadow: 0 4px 12px #0f141925;
+  }
+  .reddit-menu-toggle {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 40px;
+  }
+  .reddit-header {
+    gap: 6px;
+  }
+  .reddit-header > .brand-reddit {
+    display: none;
+  }
+  .reddit-header .p-search {
+    min-width: 0;
+  }
+  .reddit-header .p-search input {
+    font-size: 16px;
+  }
+  .nav-open .reddit-sidebar {
+    display: flex;
+    top: calc(var(--shell-height) + var(--reddit-header-height));
+    width: min(290px, 85vw);
+    z-index: 20;
+    box-shadow: 6px 0 18px #0001;
+  }
+  .nav-open .reddit-sidebar .p-nav > span:not(.community-avatar) {
+    display: block;
+  }
+  .nav-open .reddit-nav-section h3,
+  .nav-open .reddit-copyright {
+    display: block;
+  }
+  .nav-open .reddit-nav-scrim {
+    display: block;
+    position: fixed;
+    inset: calc(var(--shell-height) + var(--reddit-header-height)) 0 0;
+    background: #0005;
+    z-index: 19;
+  }
+  .x-post-layout > .p-avatar {
+    width: 38px;
+    height: 38px;
+  }
+  .x-author {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .x-author .p-author-link,
+  .x-author > span {
+    max-width: 80%;
+  }
+  .x-author .p-post-menu {
+    margin-left: auto;
+  }
+  .x-post-detail .x-author {
+    padding-left: 48px;
+  }
+  .x-reactions button {
+    min-height: 36px;
+  }
+  .x-reactions .p-icon,
+  .reddit-pill .p-icon,
+  .vote-pill .p-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .reddit-reactions {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .note-reactions {
+    gap: 20px;
+  }
+  .note-reactions .p-icon {
+    width: 24px;
+    height: 24px;
+  }
+  .xhs-card-meta .p-author-link {
+    max-width: 70%;
+  }
+  .composer-footer {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .composer-footer > span {
+    width: 100%;
+  }
+  .notification-tabs {
+    gap: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+  }
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+.reddit-sidebar .p-nav {
+  padding-inline: 10px;
+}
+
+.p-post-menu > summary {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
+}
+.xhs-card:focus-visible,
+.x-post:focus-visible,
+.reddit-post:focus-visible {
+  outline: 2px solid var(--platform-accent);
+  outline-offset: -2px;
+}
+@media (max-width: 480px) {
+  .native-composer input,
+  .native-composer textarea,
+  .native-composer select,
+  .p-search input,
+  .p-dialog input,
+  .p-dialog textarea {
+    font-size: 16px;
+  }
 }

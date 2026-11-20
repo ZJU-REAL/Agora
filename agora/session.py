@@ -272,6 +272,7 @@ class SocialSession(ProductSession):
                 "feed_sort": self.state.get("feed_sort", "best"),
                 "time_range": self.state.get("time_range", "all"),
                 "comment_offset": self.state.get("comment_offset", 0),
+                "comment_sort": self.state.get("comment_sort", "best"),
                 "cards": cards,
                 "post": current_post,
                 "draft": self.state["draft"],

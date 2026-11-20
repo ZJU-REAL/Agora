@@ -12,7 +12,9 @@ const urlParams = new URLSearchParams(location.search),
   runId = urlParams.get("run"),
   initialActor = urlParams.get("actor");
 const frameCache = new Map();
-let frameVersion = 0;
+let frameVersion = 0,
+  sessionVersion = 0,
+  userVersion = 0;
 let selectedPlatform = urlParams.get("platform") || "xiaohongshu",
   world = {},
   data = null,
@@ -24,6 +26,111 @@ let selectedPlatform = urlParams.get("platform") || "xiaohongshu",
   dialogAction = null;
 const embedded = urlParams.get("embed") === "1";
 if (embedded) document.body.classList.add("embedded");
+function setBusy(value) {
+  busy = value;
+  $("userSelect").disabled = value;
+  $("newSession").disabled = value || !!runId;
+  $("platformRoot").setAttribute("aria-busy", String(value));
+}
+// Bounded, tab-local presentation state. Historical observations remain untouched.
+const viewStates = new Map();
+let renderedView = null,
+  renderedSignature = null,
+  discardFormState = false;
+function viewKey(o) {
+  return JSON.stringify([
+    sessionId,
+    runId ? "run" : frame < 0 ? "live" : "history",
+    o.platform,
+    o.screen,
+    o.post?.post_id,
+    o.profile?.user_id,
+    o.profile?.tab,
+    o.community?.name,
+    o.feed_type,
+    o.query,
+    o.collection?.folder_id,
+  ]);
+}
+function rememberView() {
+  if (!renderedView) return;
+  const root = $("platformRoot"),
+    fields = {};
+  if (!runId && !discardFormState) {
+    root
+      .querySelectorAll("input:not([type=file]),textarea,select")
+      .forEach((el, i) => {
+        fields[el.name || el.getAttribute("aria-label") || `field-${i}`] =
+          el.value;
+      });
+  }
+  viewStates.delete(renderedView);
+  viewStates.set(renderedView, {
+    y: scrollY,
+    fields,
+    assets: discardFormState ? [] : [...draftAssets],
+    focus: root.contains(document.activeElement)
+      ? {
+          name: document.activeElement.name,
+          label: document.activeElement.getAttribute("aria-label"),
+          start: document.activeElement.selectionStart,
+          end: document.activeElement.selectionEnd,
+        }
+      : null,
+    scrolls: [
+      ...root.querySelectorAll(
+        ".note-scroll,.xhs-note,.xhs-categories,.reddit-sidebar",
+      ),
+    ].map((el) => [el.className, el.scrollTop, el.scrollLeft]),
+  });
+  while (viewStates.size > 8) viewStates.delete(viewStates.keys().next().value);
+  discardFormState = false;
+}
+function restoreView(o, key, previous) {
+  const state = viewStates.get(key),
+    root = $("platformRoot");
+  if (state && !runId && frame < 0) {
+    root
+      .querySelectorAll("input:not([type=file]),textarea,select")
+      .forEach((el, i) => {
+        const name = el.name || el.getAttribute("aria-label") || `field-${i}`;
+        if (name in state.fields) el.value = state.fields[name];
+      });
+    if (o.screen === "studio") draftAssets = [...state.assets];
+  }
+  if (state)
+    for (const [className, top, left] of state.scrolls) {
+      const el = root.getElementsByClassName(className)[0];
+      if (el) {
+        el.scrollTop = top;
+        el.scrollLeft = left;
+      }
+    }
+  // Opening a note overlays its feed; it must not move the page behind it.
+  const y =
+    state?.y ??
+    (o.platform === "xiaohongshu" && o.screen === "detail" ? scrollY : 0);
+  window.scrollTo({ top: y, behavior: "instant" });
+  if (o.screen === "studio") updateComposerSelection(o);
+  root.querySelectorAll("form").forEach(updateInputState);
+  if (key === previous && state?.focus) {
+    const el = [...root.querySelectorAll("input,textarea,select")].find((el) =>
+      state.focus.name
+        ? el.name === state.focus.name
+        : state.focus.label &&
+          el.getAttribute("aria-label") === state.focus.label,
+    );
+    if (el) {
+      el.focus({ preventScroll: true });
+      if (el.setSelectionRange && state.focus.start !== null)
+        try {
+          el.setSelectionRange(state.focus.start, state.focus.end);
+        } catch {}
+    }
+  }
+  if (key !== previous && o.screen === "detail" && o.platform === "xiaohongshu")
+    root.querySelector(".note-close")?.focus({ preventScroll: true });
+}
 function current() {
   return frame < 0
     ? data?.observation
@@ -34,7 +141,35 @@ function editable() {
 }
 function actionButton(name, args, text, extraClass = "") {
   const available = current()?.available_actions?.[name];
-  return `<button type="button" class="${extraClass}" data-action="${name}" data-args="${esc(JSON.stringify(args || {}))}" ${!editable() || !available ? "disabled" : ""}>${text}</button>`;
+  const zh = current()?.platform === "xiaohongshu";
+  const names = {
+    like_post: ["点赞", "Like"],
+    unlike_post: ["取消点赞", "Unlike"],
+    collect_post: ["收藏", "Save"],
+    uncollect_post: ["取消收藏", "Unsave"],
+    bookmark_post: ["收藏", "Bookmark"],
+    unbookmark_post: ["取消收藏", "Remove bookmark"],
+    open_post: ["打开内容与评论", "Open post and replies"],
+    back: ["返回", "Go back"],
+    view_media: ["切换图片", "View image"],
+    open_notifications: ["通知", "Notifications"],
+    add_to_collection: ["加入收藏专辑", "Add to collection"],
+    repost: ["转发", "Repost"],
+    undo_repost: ["取消转发", "Undo repost"],
+    quote_post: ["引用", "Quote"],
+    upvote_post: ["赞成", "Upvote"],
+    downvote_post: ["反对", "Downvote"],
+    clear_post_vote: ["取消投票", "Remove vote"],
+    upvote_comment: ["赞成", "Upvote comment"],
+    downvote_comment: ["反对", "Downvote comment"],
+    clear_comment_vote: ["取消投票", "Remove comment vote"],
+    like_comment: ["点赞评论", "Like comment"],
+    unlike_comment: ["取消点赞评论", "Unlike comment"],
+    view_profile: ["查看资料", "View profile"],
+    open_studio: ["创作", "Compose a post"],
+  };
+  const label = names[name]?.[zh ? 0 : 1];
+  return `<button type="button" class="${extraClass}" ${label ? `aria-label="${label}" title="${label}"` : ""} data-action="${name}" data-args="${esc(JSON.stringify(args || {}))}" ${!editable() || !available || extraClass.includes("carousel-end") ? "disabled" : ""}>${text}</button>`;
 }
 function toast(message) {
   $("toast").textContent = message;
@@ -100,17 +235,24 @@ function render() {
   $("newSession").disabled = !!runId || busy;
 }
 async function loadSession(id, incremental = false) {
+  const version = ++sessionVersion;
   const sid = Number(id),
     after =
       incremental && sessionId === sid ? data?.trajectory?.at(-1)?.step : 0;
   const next = await api(
     "/api/session?id=" + sid + "&compact=1" + (after ? "&after=" + after : ""),
   );
+  if (version !== sessionVersion || (incremental && sessionId !== sid)) return;
   if (after) next.trajectory = [...data.trajectory, ...next.trajectory];
+  if (sessionId !== sid) {
+    frameCache.clear();
+    ++frameVersion;
+  }
   sessionId = sid;
   data = next;
+  $("userSelect").value = next.observation.user_id;
   await applyFrame();
-  render();
+  if (!busy) render();
 }
 async function loadWorld() {
   world = await api("/api/world");
@@ -122,24 +264,28 @@ async function loadWorld() {
     .join("");
 }
 async function startUser(id) {
-  busy = true;
+  const version = ++userVersion;
+  setBusy(true);
   try {
     const existing = world.sessions
       ?.filter((s) => s.user_id === id && s.status === "active")
       .at(-1);
     const session = existing || (await api("/api/session", { user_id: id }));
+    if (version !== userVersion) return;
     frame = -1;
     await loadSession(session.session_id);
   } catch (e) {
     toast(e.message);
   } finally {
-    busy = false;
-    render();
+    if (version === userVersion) {
+      setBusy(false);
+      render();
+    }
   }
 }
 async function act(type, args = {}) {
   if (!editable()) return;
-  busy = true;
+  setBusy(true);
   try {
     const response = await api("/api/action", {
       session_id: sessionId,
@@ -148,12 +294,20 @@ async function act(type, args = {}) {
     });
     if (response.result?.success === false)
       toast(response.result.error || "这个操作未完成");
+    else if (
+      ["publish_draft", "create_post", "reply_post", "create_comment"].includes(
+        type,
+      )
+    ) {
+      discardFormState = true;
+      if (type === "publish_draft") viewStates.delete(renderedView);
+    }
     await loadSession(sessionId);
     return response;
   } catch (e) {
     toast(e.message);
   } finally {
-    busy = false;
+    setBusy(false);
     render();
   }
 }
@@ -174,14 +328,6 @@ async function nativeAction(type, args = {}) {
     );
     return;
   }
-  if (type === "share_post") {
-    const link =
-      location.origin +
-      agoraPath("/account?platform=" + o.platform + "&post=" + args.post_id);
-    if (navigator.clipboard) await navigator.clipboard.writeText(link);
-    toast(o.platform === "xiaohongshu" ? "笔记链接已复制" : "Link copied");
-    return;
-  }
   if (type === "create_collection") {
     dialog(
       "新建收藏专辑",
@@ -199,9 +345,10 @@ async function nativeAction(type, args = {}) {
     return;
   }
   if (type === "edit_profile") {
+    const zh = o.platform === "xiaohongshu";
     dialog(
-      o.platform === "x" ? "Edit profile" : "编辑资料",
-      `<label>名称<input name="display_name" value="${esc(o.account.name)}" maxlength="80"/></label><label>简介<textarea name="bio">${esc(o.account.bio)}</textarea></label>`,
+      zh ? "编辑资料" : "Edit profile",
+      `<label>${zh ? "名称" : "Name"}<input name="display_name" value="${esc(o.account.name)}" maxlength="80"/></label><label>${zh ? "简介" : "Bio"}<textarea name="bio">${esc(o.account.bio)}</textarea></label>`,
       (v) => act(type, v),
     );
     return;
@@ -226,14 +373,33 @@ async function nativeAction(type, args = {}) {
       type === "quote_post"
         ? "Quote this post"
         : type === "edit_post"
-          ? "编辑内容"
-          : "回复";
+          ? o.platform === "xiaohongshu"
+            ? "编辑笔记"
+            : "Edit post"
+          : type === "edit_comment"
+            ? o.platform === "xiaohongshu"
+              ? "编辑评论"
+              : "Edit comment"
+            : o.platform === "xiaohongshu"
+              ? "回复"
+              : "Reply";
+    const comments = [...(o.post?.comments || [])];
+    let comment;
+    while (comments.length) {
+      const next = comments.shift();
+      if (next.comment_id === args.comment_id) {
+        comment = next;
+        break;
+      }
+      comments.push(...(next.replies || []));
+    }
     dialog(
       label,
-      `<label>${esc(label)}<textarea name="text" required>${type === "edit_post" ? esc(o.post.body) : ""}</textarea></label>`,
+      `${type === "edit_post" ? `<label>${o.platform === "xiaohongshu" ? "标题" : "Title"}<input name="title" maxlength="${o.contract.title_limit}" value="${esc(o.post.title || "")}"/></label>` : ""}<label>${esc(label)}<textarea name="text" required>${type === "edit_post" ? esc(o.post.body) : type === "edit_comment" ? esc(comment?.content || "") : ""}</textarea></label>`,
       (v) =>
         act(type, {
           ...args,
+          ...(type === "edit_post" ? { title: v.title } : {}),
           [type === "edit_post"
             ? "body"
             : type === "quote_post"
@@ -273,15 +439,16 @@ async function nativeAction(type, args = {}) {
   return act(type, args);
 }
 async function nativeUpload(file) {
-  if (!file) return;
+  if (!file || !editable()) return;
   if (file.size > 8 * 1024 * 1024) return toast("上传素材最大 8 MiB");
-  const encoded = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  setBusy(true);
   try {
+    const encoded = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
     await api("/api/assets", {
       user_id: current().user_id,
       filename: file.name,
@@ -291,6 +458,9 @@ async function nativeUpload(file) {
     toast("素材已上传");
   } catch (e) {
     toast(e.message);
+  } finally {
+    setBusy(false);
+    render();
   }
 }
 function composerValues(form) {
@@ -329,9 +499,107 @@ function composerValues(form) {
   }
   return args;
 }
+function xTextLength(text) {
+  const emoji =
+    /(?:[0-9#*]\uFE0F?\u20E3|\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)/gu;
+  const weight = (s) =>
+    [...s].reduce((n, c) => {
+      const p = c.codePointAt(0);
+      return (
+        n +
+        (p <= 4351 ||
+        (p >= 8192 && p <= 8205) ||
+        (p >= 8208 && p <= 8223) ||
+        (p >= 8242 && p <= 8247)
+          ? 1
+          : 2)
+      );
+    }, 0);
+  return text
+    .normalize("NFC")
+    .split(/(https?:\/\/[^\s<>]+)/)
+    .reduce((sum, part) => {
+      if (/^https?:\/\//.test(part)) return sum + 23;
+      let cursor = 0,
+        total = 0;
+      for (const match of part.matchAll(emoji)) {
+        total += weight(part.slice(cursor, match.index)) + 2;
+        cursor = match.index + match[0].length;
+      }
+      return sum + total + weight(part.slice(cursor));
+    }, 0);
+}
+function updateInputState(form) {
+  const text = form.querySelector("textarea"),
+    o = current();
+  if (!text || !o) return;
+  const count =
+    o.platform === "x" ? xTextLength(text.value) : [...text.value].length;
+  const limit = o.contract.body_limit,
+    counter = form.querySelector("[data-character-count]");
+  text.setCustomValidity(
+    count > limit
+      ? o.platform === "xiaohongshu"
+        ? `正文不能超过 ${limit} 字`
+        : `Use ${limit} characters or fewer`
+      : "",
+  );
+  if (counter) {
+    counter.textContent = `${count} / ${limit}`;
+    counter.classList.toggle("over-limit", count > limit);
+  }
+  const empty =
+    !text.value.trim() && !(form.id === "composeForm" && draftAssets.length);
+  form
+    .querySelectorAll("button[type=submit],button:not([type])")
+    .forEach((button) => {
+      const needsBody =
+        form.matches("[data-inline-post],[data-comment]") || o.platform === "x";
+      button.disabled = !editable() || count > limit || (needsBody && empty);
+    });
+}
 function wireNative(o) {
   const root = $("platformRoot");
   root.onclick = (e) => {
+    const copy = e.target.closest("[data-copy-link]");
+    if (copy) {
+      const link =
+        location.origin +
+        agoraPath(
+          `/account?platform=${o.platform}&post=${copy.dataset.copyLink}`,
+        );
+      if (navigator.clipboard)
+        navigator.clipboard
+          .writeText(link)
+          .then(() =>
+            toast(o.platform === "xiaohongshu" ? "链接已复制" : "Link copied"),
+          )
+          .catch(() => toast(link));
+      else toast(link);
+      return;
+    }
+    const navToggle = e.target.closest("[data-toggle-nav]");
+    if (navToggle) {
+      const open = document.body.classList.toggle("nav-open");
+      root
+        .querySelector(".reddit-menu-toggle")
+        ?.setAttribute("aria-expanded", String(open));
+      return;
+    }
+    const filter = e.target.closest("[data-notification-filter]");
+    if (filter) {
+      root
+        .querySelectorAll("[data-notification-filter]")
+        .forEach((b) => b.classList.toggle("active", b === filter));
+      root.querySelectorAll("[data-notification-kind]").forEach((row) => {
+        row.hidden =
+          filter.dataset.notificationFilter !== "all" &&
+          !filter.dataset.notificationFilter
+            .split(",")
+            .includes(row.dataset.notificationKind);
+      });
+      return;
+    }
     const button = e.target.closest("[data-action]");
     if (button) {
       e.stopPropagation();
@@ -342,7 +610,10 @@ function wireNative(o) {
       return;
     }
     const card = e.target.closest("[data-post]");
-    if (card && !e.target.closest("a,input,textarea,summary,form"))
+    if (
+      card &&
+      !e.target.closest("a,input,textarea,summary,form,button,details,video")
+    )
       act("open_post", { post_id: Number(card.dataset.post) });
     const pick = e.target.closest("[data-pick]");
     if (pick && editable()) {
@@ -364,6 +635,37 @@ function wireNative(o) {
         ];
         updateComposerSelection(o);
       }
+    }
+  };
+  root.oninput = (e) => {
+    if (e.target.form) updateInputState(e.target.form);
+  };
+  root.onkeydown = (e) => {
+    const note = root.querySelector(".xhs-note-overlay");
+    if (note && e.key === "Tab") {
+      const controls = [
+        ...note.querySelectorAll(
+          "button:not(:disabled),input,textarea,select,summary,a[href],video[controls]",
+        ),
+      ].filter(
+        (el) =>
+          el.getClientRects().length &&
+          !el.closest("details:not([open]) > div"),
+      );
+      const first = controls[0],
+        last = controls.at(-1);
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    }
+    const card = e.target.closest("[data-post]");
+    if (card === e.target && ["Enter", " "].includes(e.key)) {
+      e.preventDefault();
+      act("open_post", { post_id: Number(card.dataset.post) });
     }
   };
   root.querySelectorAll("form[data-search]").forEach(
@@ -399,17 +701,18 @@ function wireNative(o) {
     inline.onsubmit = (e) => {
       e.preventDefault();
       const body = inline.querySelector("textarea").value;
-      if (body.trim()) act("create_post", { body });
+      if (body.trim() && inline.reportValidity()) act("create_post", { body });
     };
   const compose = root.querySelector("#composeForm");
   if (compose) {
     draftAssets = (o.draft?.assets || []).map((s) => s.asset_id);
     compose.onsubmit = async (e) => {
       e.preventDefault();
+      if (!editable()) return;
       const args = composerValues(compose);
       const published = e.submitter?.dataset.publish === "1";
       const saved = await act("save_draft", args);
-      if (published && saved?.result?.success !== false)
+      if (published && saved && saved.result?.success !== false)
         await act("publish_draft");
     };
     updateComposerSelection(o);
@@ -456,6 +759,13 @@ function wireNative(o) {
       );
     };
   });
+  root.querySelectorAll("form").forEach(updateInputState);
+  if (!editable()) {
+    root
+      .querySelectorAll("input,textarea")
+      .forEach((el) => (el.readOnly = true));
+    root.querySelectorAll("select").forEach((el) => (el.disabled = true));
+  }
 }
 function updateComposerSelection(o) {
   const selected = $("selectedAssets");
@@ -464,11 +774,36 @@ function updateComposerSelection(o) {
       .map((id, index) => {
         const asset = o.asset_library.find((a) => a.asset_id === id);
         return asset
-          ? `<div class="selected-asset">${nativeMedia(asset)}<span>${index + 1}</span><button type="button" data-move="-1" data-asset="${esc(id)}" ${!editable() ? "disabled" : ""}>←</button><button type="button" data-move="1" data-asset="${esc(id)}" ${!editable() ? "disabled" : ""}>→</button></div>`
+          ? `<div class="selected-asset">${nativeMedia(asset)}<span>${index + 1}</span><button type="button" aria-label="Move earlier" data-move="-1" data-asset="${esc(id)}" ${!editable() || index === 0 ? "disabled" : ""}>${pi("back")}</button><button type="button" aria-label="Move later" data-move="1" data-asset="${esc(id)}" ${!editable() || index === draftAssets.length - 1 ? "disabled" : ""}>${pi("forward")}</button><button type="button" class="remove-asset" aria-label="Remove media" data-pick="${esc(id)}" ${!editable() ? "disabled" : ""}>${pi("close")}</button></div>`
           : "";
       })
       .join("");
+  $("platformRoot")
+    .querySelectorAll(".library-asset")
+    .forEach((el) => {
+      const selected = draftAssets.includes(el.dataset.pick);
+      el.classList.toggle("selected", selected);
+      el.setAttribute("aria-pressed", String(selected));
+    });
+  const form = $("composeForm");
+  if (form) updateInputState(form);
 }
+document.addEventListener("click", (e) => {
+  document
+    .querySelectorAll(".p-post-menu[open],.x-repost-menu[open]")
+    .forEach((menu) => {
+      if (!menu.contains(e.target)) menu.open = false;
+    });
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || $("actionDialog").open) return;
+  document
+    .querySelectorAll("details[open]")
+    .forEach((menu) => (menu.open = false));
+  document.body.classList.remove("nav-open");
+  if (current()?.platform === "xiaohongshu" && current()?.screen === "detail")
+    act("back");
+});
 window.addEventListener("message", async (e) => {
   if (
     !embedded ||
@@ -486,20 +821,36 @@ window.addEventListener("message", async (e) => {
 });
 $("actionForm").onsubmit = async (e) => {
   e.preventDefault();
+  if (!editable() || $("dialogSubmit").disabled) return;
   const value = Object.fromEntries(new FormData(e.target));
-  $("actionDialog").close();
-  if (dialogAction) await dialogAction(value);
+  $("dialogSubmit").disabled = true;
+  try {
+    const result = dialogAction && (await dialogAction(value));
+    if (result && result.result?.success !== false) $("actionDialog").close();
+  } finally {
+    $("dialogSubmit").disabled = false;
+  }
 };
 document
   .querySelectorAll("[data-dialog-close]")
   .forEach((b) => (b.onclick = () => $("actionDialog").close()));
 $("newSession").onclick = async () => {
-  if (runId) return;
-  const next = await api("/api/session", {
-    user_id: Number($("userSelect").value),
-  });
-  await loadWorld();
-  await loadSession(next.session_id);
+  if (runId || busy) return;
+  setBusy(true);
+  try {
+    const next = await api("/api/session", {
+      user_id: Number($("userSelect").value),
+    });
+    frame = -1;
+    pendingViewerStep = null;
+    await loadWorld();
+    await loadSession(next.session_id);
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    setBusy(false);
+    render();
+  }
 };
 $("userSelect").onchange = () => startUser(Number($("userSelect").value));
 async function main() {

@@ -1,36 +1,7 @@
-/* The Viewer embeds the same native platform, without the operator switcher. */
+/* Viewer uses native chrome with the operator bar removed. */
+body.embedded {
+  --shell-height: 0px;
+}
 .embedded .sandbox-bar {
   display: none;
-}
-.embedded .xhs-sidebar,
-.embedded .x-sidebar {
-  top: 0;
-  height: 100vh;
-}
-.embedded .xhs-header,
-.embedded .reddit-header,
-.embedded .x-sticky-heading {
-  top: 0;
-}
-.embedded .x-feed-tabs {
-  top: 57px;
-}
-.embedded .reddit-sidebar {
-  top: 64px;
-}
-.embedded .reddit-right {
-  top: 80px;
-}
-.embedded .x-right .p-search {
-  top: 10px;
-}
-@media (max-width: 480px) {
-  .embedded .xhs-sidebar,
-  .embedded .x-sidebar {
-    top: auto;
-    height: 56px;
-  }
-  .embedded .x-feed-tabs {
-    top: 51px;
-  }
 }
