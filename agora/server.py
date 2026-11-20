@@ -135,6 +135,8 @@ def make_handler(
                     "/static/studio.css",
                     "/static/embed.css",
                     "/static/platform.js",
+                    "/static/console-display.woff2",
+                    "/static/console-body.woff2",
                 }:
                     self.reply(
                         200,
@@ -143,7 +145,9 @@ def make_handler(
                             / "web"
                             / parsed.path.rsplit("/", 1)[-1]
                         ).read_bytes(),
-                        "text/javascript; charset=utf-8"
+                        "font/woff2"
+                        if parsed.path.endswith(".woff2")
+                        else "text/javascript; charset=utf-8"
                         if parsed.path.endswith(".js")
                         else "text/css; charset=utf-8",
                     )

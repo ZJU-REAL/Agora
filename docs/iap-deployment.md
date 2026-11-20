@@ -107,3 +107,19 @@ CLI 限额。systemd 设置 MemoryHigh=192 MiB、MemoryMax=384 MiB，包含平�
 32-agent / 256-action 开发策略运行的本机 Python 进程峰值 RSS 约 49.95 MiB。这是小型
 测试数据下的观测，不是所有真实数据的内存保证；大数据依靠读取边界和 cgroup 限额
 保护。50 MiB 文件的 Range 检查也验证了不会为读取少量字节载入完整文件。
+
+## 0.6.2 工作台样式
+
+Developer 和 Viewer 采用用户指定的 Family 参考风格，平台 iframe 继续使用各自的原生
+页面。两个授权 WOFF2 字体在 `/agora/static/` 本地提供，总计约 122 KiB；服务不依赖
+外部字体 CDN。许可和来源见 `licenses/console-fonts.json` 与两个 OFL 文件。
+
+![Agora Developer 0.6.2](images/workspace-family/developer-desktop.png)
+
+![Agora Viewer 0.6.2](images/workspace-family/viewer-desktop.png)
+
+手机端配置与回放：
+
+![手机端 Developer](images/workspace-family/developer-mobile.png)
+
+![手机端 Viewer](images/workspace-family/viewer-mobile.png)

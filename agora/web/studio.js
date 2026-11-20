@@ -30,7 +30,7 @@ const platforms = {
     name: "Reddit",
     subtitle: "主题社区 · 深度讨论",
     description: "社区、投票与帖子讨论，<br>在不同规则下参与互动。",
-    caption: "Home / Popular / Latest",
+    caption: "For You / Following / Popular",
     short: "主题社区与讨论",
   },
 };
@@ -141,7 +141,11 @@ let world = null,
   replayIndex = -1,
   replayTimer = null,
   loadVersion = 0,
-  polling = false;
+  polling = false,
+  launching = false,
+  actorSignature = null,
+  frameSignature = null,
+  timelineSignature = null;
 const route = (path) => agoraPath(path);
 const viewerUrl = (id, platform = selectedPlatform) =>
   route(
@@ -151,7 +155,7 @@ const viewerUrl = (id, platform = selectedPlatform) =>
       encodeURIComponent(id),
   );
 function logo(platform) {
-  return `<span class="platform-logo ${esc(platform)}">${platform === "xiaohongshu" ? "小红书" : platform === "x" ? "𝕏" : '<svg viewBox="0 0 32 32"><path d="m17 10 2-6 6 1"/><circle cx="26" cy="5" r="2"/><ellipse cx="16" cy="20" rx="11" ry="8" fill="white" stroke="white"/><circle cx="4" cy="16" r="3"/><circle cx="28" cy="16" r="3"/><circle cx="12" cy="19" r="1.5" fill="#ff5b23" stroke="#ff5b23"/><circle cx="20" cy="19" r="1.5" fill="#ff5b23" stroke="#ff5b23"/><path d="M11 23q5 4 10 0" stroke="#ff5b23"/></svg>'}</span>`;
+  return `<span class="platform-logo ${esc(platform)}">${platform === "xiaohongshu" ? "小红书" : platform === "x" ? '<svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3l-5-7.6L5.2 22H2.1l8.3-9.6L1 2h6.5l4.6 7Zm-1.1 18h1.7L6.5 3.9H4.7Z" fill="currentColor" stroke="none"/></svg>' : '<svg viewBox="0 0 32 32"><path d="m17 10 2-6 6 1"/><circle cx="26" cy="5" r="2"/><ellipse cx="16" cy="20" rx="11" ry="8" fill="white" stroke="white"/><circle cx="4" cy="16" r="3"/><circle cx="28" cy="16" r="3"/><circle cx="12" cy="19" r="1.5" fill="#ff5b23" stroke="#ff5b23"/><circle cx="20" cy="19" r="1.5" fill="#ff5b23" stroke="#ff5b23"/><path d="M11 23q5 4 10 0" stroke="#ff5b23"/></svg>'}</span>`;
 }
 function avatar(user) {
   const name = user?.name || user?.handle || "A";
@@ -438,6 +442,8 @@ async function restoreConfiguration() {
 }
 async function launch(event) {
   event.preventDefault();
+  if (launching) return;
+  launching = true;
   const button = $("launchButton");
   button.disabled = true;
   button.innerHTML = icon("clock") + "正在准备沙盒…";
@@ -449,6 +455,7 @@ async function launch(event) {
     toast(e.message);
     button.disabled = false;
     button.innerHTML = icon("play") + "启动模拟" + icon("arrow");
+    launching = false;
   }
 }
 function duration(ms) {
@@ -489,19 +496,29 @@ function renderActors() {
   );
   const scrollTop = $("actorList").scrollTop;
   $("actorCount").textContent = users.length;
-  $("actorList").innerHTML = users
-    .map((u) => {
-      const count =
-        run.actor_action_counts?.[u.user_id] ??
-        run.events.filter(
-          (e) =>
-            e.user_id === u.user_id &&
-            !["start_session", "end_session"].includes(e.action.action_type),
-        ).length;
-      return `<button type="button" class="actor-card ${u.user_id === selectedActor ? "selected" : ""}" data-actor="${u.user_id}">${avatar(u)}<span><span class="actor-card-name">${esc(u.name)}</span><small>${u.user_id === run.config.focal_user_id ? '<span class="actor-role">主</span>' : "背景账号"} · ${count} 步</small></span></button>`;
-    })
-    .join("");
-  $("actorList").scrollTop = scrollTop;
+  const signature = JSON.stringify([
+    selectedRun,
+    selectedActor,
+    users,
+    run.actor_action_counts,
+    run.events?.length,
+  ]);
+  if (signature !== actorSignature) {
+    $("actorList").innerHTML = users
+      .map((u) => {
+        const count =
+          run.actor_action_counts?.[u.user_id] ??
+          run.events.filter(
+            (e) =>
+              e.user_id === u.user_id &&
+              !["start_session", "end_session"].includes(e.action.action_type),
+          ).length;
+        return `<button type="button" class="actor-card ${u.user_id === selectedActor ? "selected" : ""}" aria-pressed="${u.user_id === selectedActor}" data-actor="${u.user_id}">${avatar(u)}<span><span class="actor-card-name">${esc(u.name)}</span><small>${u.user_id === run.config.focal_user_id ? '<span class="actor-role">主</span>' : "背景账号"} · ${count} 步</small></span></button>`;
+      })
+      .join("");
+    $("actorList").scrollTop = scrollTop;
+    actorSignature = signature;
+  }
   $("runProgress").textContent =
     `${run.completed_ticks} / ${run.config.ticks} 轮 · ${run.config.user_ids.length} 个账号`;
 }
@@ -511,6 +528,7 @@ function renderRun() {
   $("viewerWorkspace").hidden = false;
   $("viewerControls").hidden = false;
   $("viewerTitle").textContent = run.name;
+  $("viewerTitle").title = run.name;
   $("viewerSubtitle").textContent =
     `${platforms[selectedPlatform].name} · ${run.config.user_ids.length} 个账号 · seed ${run.config.seed} · 独立实验 ${run.run_id}`;
   $("viewerStatus").className = `run-status ${run.status}`;
@@ -547,6 +565,20 @@ function renderFrame() {
   const observation =
     replayIndex < 0 ? actorData.observation : frameObservation;
   const user = run.users.find((u) => u.user_id === selectedActor);
+  const signature = JSON.stringify([
+    selectedRun,
+    selectedActor,
+    replayIndex,
+    observation,
+    event,
+    actorData.trajectory.length,
+  ]);
+  if (signature === frameSignature) {
+    sendFrame();
+    return;
+  }
+  frameSignature = signature;
+  const detailsOpen = $("decisionDetail").querySelector("details")?.open;
   $("stageActor").innerHTML =
     avatar(user) +
     `<div><strong>${esc(user?.name || "")}</strong><small>${selectedActor === run.config.focal_user_id ? "主 agent" : "背景账号"} · ${esc(platforms[selectedPlatform].name)}</small></div>`;
@@ -554,7 +586,7 @@ function renderFrame() {
     screens[observation?.screen] || observation?.screen || "等待行动";
   $("frameTime").textContent = duration(observation?.elapsed_ms);
   $("windowAddress").textContent =
-    selectedPlatform.toUpperCase() + " / AGENT " + selectedActor;
+    platforms[selectedPlatform].name + " · 账号 " + selectedActor;
   const trajectory = actorData.trajectory || [];
   const index =
     replayIndex < 0 ? Math.max(0, trajectory.length - 1) : replayIndex;
@@ -566,8 +598,7 @@ function renderFrame() {
   $("nextFrame").disabled =
     !trajectory.length || index >= trajectory.length - 1;
   $("playReplay").disabled = !trajectory.length;
-  $("decisionStep").textContent =
-    "STEP " + String(event?.step || 0).padStart(2, "0");
+  $("decisionStep").textContent = "第 " + (event?.step || 0) + " 步";
   const action = event?.action;
   const result = event?.result;
   const creation =
@@ -585,28 +616,55 @@ function renderFrame() {
       '<div class="empty-state compact">等待账号开始行动…</div>';
   }
   $("timelineCount").textContent = trajectory.length + " 步";
-  $("actionTimeline").innerHTML = trajectory
-    .map(
-      (e, i) =>
-        `<button type="button" class="timeline-event ${i === index ? "selected" : ""}" data-frame="${i}"><span><strong>${esc(actions[e.action.action_type] || e.action.action_type)}</strong><small>tick ${e.tick} · ${duration(e.elapsed_ms)}</small></span><span>${String(e.step).padStart(2, "0")}</span></button>`,
-    )
-    .join("");
+  const nextTimeline = JSON.stringify([
+    selectedRun,
+    selectedActor,
+    trajectory.length,
+    trajectory.at(-1)?.step,
+  ]);
   const timeline = $("actionTimeline");
-  if (replayIndex < 0) timeline.scrollTop = timeline.scrollHeight;
-  else {
-    const active = timeline.querySelector(".selected");
-    if (active)
-      timeline.scrollTop +=
-        active.getBoundingClientRect().top -
-        timeline.getBoundingClientRect().top -
-        timeline.clientHeight / 2;
+  const wasAtEnd =
+    timeline.scrollHeight - timeline.clientHeight - timeline.scrollTop < 24;
+  if (nextTimeline !== timelineSignature) {
+    $("actionTimeline").innerHTML = trajectory
+      .map(
+        (e, i) =>
+          `<button type="button" class="timeline-event ${i === index ? "selected" : ""}" data-frame="${i}"><span><strong>${esc(actions[e.action.action_type] || e.action.action_type)}</strong><small>tick ${e.tick} · ${duration(e.elapsed_ms)}</small></span><span>${String(e.step).padStart(2, "0")}</span></button>`,
+      )
+      .join("");
+    timelineSignature = nextTimeline;
   }
+  timeline.querySelectorAll(".selected").forEach((el) => {
+    el.classList.remove("selected");
+    el.removeAttribute("aria-current");
+  });
+  const active = timeline.querySelector(`[data-frame="${index}"]`);
+  if (active) {
+    active.classList.add("selected");
+    active.setAttribute("aria-current", "step");
+  }
+  if (replayIndex < 0 && wasAtEnd) timeline.scrollTop = timeline.scrollHeight;
+  else {
+    if (active) {
+      const rect = active.getBoundingClientRect(),
+        bounds = timeline.getBoundingClientRect();
+      if (
+        replayIndex >= 0 &&
+        (rect.top < bounds.top || rect.bottom > bounds.bottom)
+      )
+        timeline.scrollTop += rect.top - bounds.top - timeline.clientHeight / 2;
+    }
+  }
+  const details = $("decisionDetail").querySelector("details");
+  if (details) details.open = !!detailsOpen;
   sendFrame();
 }
 async function loadActor(userId, version = loadVersion) {
   stopReplay();
   frameFetchVersion++;
   selectedActor = userId;
+  frameSignature = null;
+  timelineSignature = null;
   replayIndex = -1;
   actorSession = runWorld.sessions.find(
     (s) => s.user_id === userId,
@@ -772,7 +830,7 @@ function playReplay() {
   const length = actorData?.trajectory?.length || 0;
   if (!length) return;
   if (replayIndex < 0 || replayIndex === length - 1) replayIndex = 0;
-  $("playReplay").textContent = "Ⅱ";
+  $("playReplay").innerHTML = icon("pause");
   $("playReplay").setAttribute("aria-label", "暂停回放");
   setFrame(replayIndex, false);
   replayTimer = setInterval(
@@ -842,12 +900,16 @@ function wireDeveloper() {
   $("experimentForm").onsubmit = launch;
   $("saveConfig").onclick = saveConfiguration;
   $("addModel").onclick = openModels;
+  $("mobileModels").onclick = openModels;
   $("modelsNav").onclick = openModels;
   $("configNav").onclick = () =>
     window.scrollTo({ top: 0, behavior: "smooth" });
   $("runsNav").onclick = () =>
     $("recentSection").scrollIntoView({ behavior: "smooth" });
-  $("closeModels").onclick = () => $("modelDialog").close();
+  $("closeModels").onclick = () => {
+    $("providerKey").value = "";
+    $("modelDialog").close();
+  };
   $("providerProtocol").onchange = protocolFields;
   $("modelForm").onsubmit = saveModel;
   $("newModel").onclick = () => {
@@ -883,9 +945,23 @@ function wireDeveloper() {
   $("modelDialog").addEventListener("close", () => {
     $("providerKey").value = "";
   });
+  $("modelDialog").addEventListener("cancel", () => {
+    $("providerKey").value = "";
+  });
   protocolFields();
 }
 function wireViewer() {
+  $("expandStage").onclick = () => {
+    const expanded = $("viewerWorkspace").classList.toggle("stage-expanded");
+    $("expandStage").setAttribute("aria-pressed", String(expanded));
+    $("expandStage").setAttribute(
+      "aria-label",
+      expanded ? "恢复平台画面大小" : "放大平台画面",
+    );
+    $("expandStage").innerHTML =
+      icon(expanded ? "compress" : "expand") +
+      `<span>${expanded ? "恢复布局" : "放大画面"}</span>`;
+  };
   $("viewerPlatform").innerHTML = Object.entries(platforms)
     .map(([key, p]) => `<option value="${key}">${p.name}</option>`)
     .join("");
@@ -940,6 +1016,7 @@ async function main() {
   setLinks();
   $("developerPage").hidden = mode !== "developer";
   $("viewerPage").hidden = mode !== "viewer";
+  $("mobileLaunchBar").hidden = mode !== "developer";
   try {
     if (mode === "developer") {
       wireDeveloper();
@@ -953,7 +1030,11 @@ async function main() {
       await loadViewerPlatform();
       setInterval(pollViewer, 1600);
     }
+    document.body.dataset.connection = "ready";
+    $("workspaceHealth").textContent = "工作区已连接";
   } catch (e) {
+    document.body.dataset.connection = "error";
+    $("workspaceHealth").textContent = "连接暂不可用";
     toast(e.message);
   }
 }

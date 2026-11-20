@@ -1,0 +1,610 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-20T08:25:10.026434+00:00",
+  "title": "Design System: Agora Studio",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(27% 0.00000 0.00)",
+          "oklch(39% 0.00000 0.00)",
+          "oklch(51% 0.00000 0.00)",
+          "oklch(63% 0.00000 0.00)",
+          "oklch(75% 0.00000 0.00)",
+          "oklch(87% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Body",
+        "tonalRamp": [
+          "oklch(15% 0.00054 67.76)",
+          "oklch(27% 0.00118 67.76)",
+          "oklch(39% 0.00171 67.76)",
+          "oklch(51% 0.00214 67.76)",
+          "oklch(63% 0.00214 67.76)",
+          "oklch(75% 0.00182 67.76)",
+          "oklch(87% 0.00107 67.76)",
+          "oklch(95% 0.00043 67.76)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15% 0.00183 75.36)",
+          "oklch(27% 0.00403 75.36)",
+          "oklch(39% 0.00586 75.36)",
+          "oklch(51% 0.00732 75.36)",
+          "oklch(63% 0.00732 75.36)",
+          "oklch(75% 0.00622 75.36)",
+          "oklch(87% 0.00366 75.36)",
+          "oklch(95% 0.00146 75.36)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Warm Line",
+        "tonalRamp": [
+          "oklch(15% 0.00273 76.59)",
+          "oklch(27% 0.00600 76.59)",
+          "oklch(39% 0.00873 76.59)",
+          "oklch(51% 0.01091 76.59)",
+          "oklch(63% 0.01091 76.59)",
+          "oklch(75% 0.00927 76.59)",
+          "oklch(87% 0.00545 76.59)",
+          "oklch(95% 0.00218 76.59)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(27% 0.00000 0.00)",
+          "oklch(39% 0.00000 0.00)",
+          "oklch(51% 0.00000 0.00)",
+          "oklch(63% 0.00000 0.00)",
+          "oklch(75% 0.00000 0.00)",
+          "oklch(87% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Warm Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.00043 67.80)",
+          "oklch(27% 0.00094 67.80)",
+          "oklch(39% 0.00136 67.80)",
+          "oklch(51% 0.00171 67.80)",
+          "oklch(63% 0.00171 67.80)",
+          "oklch(75% 0.00145 67.80)",
+          "oklch(87% 0.00085 67.80)",
+          "oklch(95% 0.00034 67.80)"
+        ]
+      },
+      "stone": {
+        "role": "neutral",
+        "displayName": "Stone",
+        "tonalRamp": [
+          "oklch(15% 0.00114 78.30)",
+          "oklch(27% 0.00250 78.30)",
+          "oklch(39% 0.00364 78.30)",
+          "oklch(51% 0.00455 78.30)",
+          "oklch(63% 0.00455 78.30)",
+          "oklch(75% 0.00387 78.30)",
+          "oklch(87% 0.00227 78.30)",
+          "oklch(95% 0.00091 78.30)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Ember",
+        "tonalRamp": [
+          "oklch(15% 0.04746 35.05)",
+          "oklch(27% 0.10442 35.05)",
+          "oklch(39% 0.15188 35.05)",
+          "oklch(51% 0.18985 35.05)",
+          "oklch(63% 0.18985 35.05)",
+          "oklch(75% 0.16137 35.05)",
+          "oklch(87% 0.09492 35.05)",
+          "oklch(95% 0.03797 35.05)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Soft Ember",
+        "tonalRamp": [
+          "oklch(15% 0.00487 50.16)",
+          "oklch(27% 0.01072 50.16)",
+          "oklch(39% 0.01559 50.16)",
+          "oklch(51% 0.01949 50.16)",
+          "oklch(63% 0.01949 50.16)",
+          "oklch(75% 0.01657 50.16)",
+          "oklch(87% 0.00975 50.16)",
+          "oklch(95% 0.00390 50.16)"
+        ]
+      },
+      "blue": {
+        "role": "primary",
+        "displayName": "Focus Blue",
+        "tonalRamp": [
+          "oklch(15% 0.04260 253.50)",
+          "oklch(27% 0.09372 253.50)",
+          "oklch(39% 0.13631 253.50)",
+          "oklch(51% 0.17039 253.50)",
+          "oklch(63% 0.17039 253.50)",
+          "oklch(75% 0.14483 253.50)",
+          "oklch(87% 0.08520 253.50)",
+          "oklch(95% 0.03408 253.50)"
+        ]
+      },
+      "green": {
+        "role": "primary",
+        "displayName": "Recorded Green",
+        "tonalRamp": [
+          "oklch(15% 0.02333 160.92)",
+          "oklch(27% 0.05132 160.92)",
+          "oklch(39% 0.07464 160.92)",
+          "oklch(51% 0.09330 160.92)",
+          "oklch(63% 0.09330 160.92)",
+          "oklch(75% 0.07931 160.92)",
+          "oklch(87% 0.04665 160.92)",
+          "oklch(95% 0.01866 160.92)"
+        ]
+      },
+      "brand-orange": {
+        "role": "primary",
+        "displayName": "Brand Orange",
+        "tonalRamp": [
+          "oklch(15% 0.05853 34.20)",
+          "oklch(27% 0.12878 34.20)",
+          "oklch(39% 0.18731 34.20)",
+          "oklch(51% 0.23414 34.20)",
+          "oklch(63% 0.23414 34.20)",
+          "oklch(75% 0.19902 34.20)",
+          "oklch(87% 0.11707 34.20)",
+          "oklch(95% 0.04683 34.20)"
+        ]
+      },
+      "selection-yellow": {
+        "role": "primary",
+        "displayName": "Selection Yellow",
+        "tonalRamp": [
+          "oklch(15% 0.03201 82.27)",
+          "oklch(27% 0.07041 82.27)",
+          "oklch(39% 0.10242 82.27)",
+          "oklch(51% 0.12803 82.27)",
+          "oklch(63% 0.12803 82.27)",
+          "oklch(75% 0.10882 82.27)",
+          "oklch(87% 0.06401 82.27)",
+          "oklch(95% 0.02561 82.27)"
+        ]
+      },
+      "button-hover": {
+        "role": "neutral",
+        "displayName": "Ink Hover",
+        "tonalRamp": [
+          "oklch(15% 0.00043 106.50)",
+          "oklch(27% 0.00096 106.50)",
+          "oklch(39% 0.00139 106.50)",
+          "oklch(51% 0.00174 106.50)",
+          "oklch(63% 0.00174 106.50)",
+          "oklch(75% 0.00148 106.50)",
+          "oklch(87% 0.00087 106.50)",
+          "oklch(95% 0.00035 106.50)"
+        ]
+      },
+      "secondary-hover": {
+        "role": "neutral",
+        "displayName": "Secondary Hover",
+        "tonalRamp": [
+          "oklch(15% 0.00259 81.79)",
+          "oklch(27% 0.00570 81.79)",
+          "oklch(39% 0.00829 81.79)",
+          "oklch(51% 0.01036 81.79)",
+          "oklch(63% 0.01036 81.79)",
+          "oklch(75% 0.00881 81.79)",
+          "oklch(87% 0.00518 81.79)",
+          "oklch(95% 0.00207 81.79)"
+        ]
+      },
+      "navigation-hover": {
+        "role": "neutral",
+        "displayName": "Navigation Hover",
+        "tonalRamp": [
+          "oklch(15% 0.00229 78.28)",
+          "oklch(27% 0.00504 78.28)",
+          "oklch(39% 0.00734 78.28)",
+          "oklch(51% 0.00917 78.28)",
+          "oklch(63% 0.00917 78.28)",
+          "oklch(75% 0.00779 78.28)",
+          "oklch(87% 0.00458 78.28)",
+          "oklch(95% 0.00183 78.28)"
+        ]
+      },
+      "navigation-selected": {
+        "role": "neutral",
+        "displayName": "Navigation Selected",
+        "tonalRamp": [
+          "oklch(15% 0.00259 81.79)",
+          "oklch(27% 0.00569 81.79)",
+          "oklch(39% 0.00828 81.79)",
+          "oklch(51% 0.01035 81.79)",
+          "oklch(63% 0.01035 81.79)",
+          "oklch(75% 0.00879 81.79)",
+          "oklch(87% 0.00517 81.79)",
+          "oklch(95% 0.00207 81.79)"
+        ]
+      },
+      "card-line": {
+        "role": "neutral",
+        "displayName": "Configuration Outline",
+        "tonalRamp": [
+          "oklch(15% 0.00157 75.41)",
+          "oklch(27% 0.00345 75.41)",
+          "oklch(39% 0.00501 75.41)",
+          "oklch(51% 0.00627 75.41)",
+          "oklch(63% 0.00627 75.41)",
+          "oklch(75% 0.00533 75.41)",
+          "oklch(87% 0.00313 75.41)",
+          "oklch(95% 0.00125 75.41)"
+        ]
+      },
+      "field-line": {
+        "role": "neutral",
+        "displayName": "Field Outline",
+        "tonalRamp": [
+          "oklch(15% 0.00304 79.78)",
+          "oklch(27% 0.00669 79.78)",
+          "oklch(39% 0.00973 79.78)",
+          "oklch(51% 0.01216 79.78)",
+          "oklch(63% 0.01216 79.78)",
+          "oklch(75% 0.01034 79.78)",
+          "oklch(87% 0.00608 79.78)",
+          "oklch(95% 0.00243 79.78)"
+        ]
+      },
+      "field-focus": {
+        "role": "neutral",
+        "displayName": "Field Focus Edge",
+        "tonalRamp": [
+          "oklch(15% 0.00489 72.95)",
+          "oklch(27% 0.01076 72.95)",
+          "oklch(39% 0.01565 72.95)",
+          "oklch(51% 0.01956 72.95)",
+          "oklch(63% 0.01956 72.95)",
+          "oklch(75% 0.01663 72.95)",
+          "oklch(87% 0.00978 72.95)",
+          "oklch(95% 0.00391 72.95)"
+        ]
+      },
+      "selected-supporting": {
+        "role": "neutral",
+        "displayName": "Selected Supporting",
+        "tonalRamp": [
+          "oklch(15% 0.00306 79.78)",
+          "oklch(27% 0.00674 79.78)",
+          "oklch(39% 0.00980 79.78)",
+          "oklch(51% 0.01225 79.78)",
+          "oklch(63% 0.01225 79.78)",
+          "oklch(75% 0.01041 79.78)",
+          "oklch(87% 0.00612 79.78)",
+          "oklch(95% 0.00245 79.78)"
+        ]
+      },
+      "success-surface": {
+        "role": "primary",
+        "displayName": "Success Surface",
+        "tonalRamp": [
+          "oklch(15% 0.00436 153.56)",
+          "oklch(27% 0.00959 153.56)",
+          "oklch(39% 0.01394 153.56)",
+          "oklch(51% 0.01743 153.56)",
+          "oklch(63% 0.01743 153.56)",
+          "oklch(75% 0.01481 153.56)",
+          "oklch(87% 0.00871 153.56)",
+          "oklch(95% 0.00349 153.56)"
+        ]
+      },
+      "success-text": {
+        "role": "primary",
+        "displayName": "Success Text",
+        "tonalRamp": [
+          "oklch(15% 0.02148 159.38)",
+          "oklch(27% 0.04726 159.38)",
+          "oklch(39% 0.06874 159.38)",
+          "oklch(51% 0.08592 159.38)",
+          "oklch(63% 0.08592 159.38)",
+          "oklch(75% 0.07304 159.38)",
+          "oklch(87% 0.04296 159.38)",
+          "oklch(95% 0.01718 159.38)"
+        ]
+      },
+      "error-surface": {
+        "role": "primary",
+        "displayName": "Error Surface",
+        "tonalRamp": [
+          "oklch(15% 0.00497 5.98)",
+          "oklch(27% 0.01094 5.98)",
+          "oklch(39% 0.01591 5.98)",
+          "oklch(51% 0.01989 5.98)",
+          "oklch(63% 0.01989 5.98)",
+          "oklch(75% 0.01690 5.98)",
+          "oklch(87% 0.00994 5.98)",
+          "oklch(95% 0.00398 5.98)"
+        ]
+      },
+      "error-text": {
+        "role": "primary",
+        "displayName": "Error Text",
+        "tonalRamp": [
+          "oklch(15% 0.03913 19.79)",
+          "oklch(27% 0.08608 19.79)",
+          "oklch(39% 0.12520 19.79)",
+          "oklch(51% 0.15650 19.79)",
+          "oklch(63% 0.15650 19.79)",
+          "oklch(75% 0.13303 19.79)",
+          "oklch(87% 0.07825 19.79)",
+          "oklch(95% 0.03130 19.79)"
+        ]
+      },
+      "paused-surface": {
+        "role": "primary",
+        "displayName": "Paused Surface",
+        "tonalRamp": [
+          "oklch(15% 0.00858 78.68)",
+          "oklch(27% 0.01887 78.68)",
+          "oklch(39% 0.02745 78.68)",
+          "oklch(51% 0.03432 78.68)",
+          "oklch(63% 0.03432 78.68)",
+          "oklch(75% 0.02917 78.68)",
+          "oklch(87% 0.01716 78.68)",
+          "oklch(95% 0.00686 78.68)"
+        ]
+      },
+      "paused-text": {
+        "role": "primary",
+        "displayName": "Paused Text",
+        "tonalRamp": [
+          "oklch(15% 0.02537 68.66)",
+          "oklch(27% 0.05582 68.66)",
+          "oklch(39% 0.08120 68.66)",
+          "oklch(51% 0.10150 68.66)",
+          "oklch(63% 0.10150 68.66)",
+          "oklch(75% 0.08627 68.66)",
+          "oklch(87% 0.05075 68.66)",
+          "oklch(95% 0.02030 68.66)"
+        ]
+      },
+      "role-surface": {
+        "role": "primary",
+        "displayName": "Main Account Role",
+        "tonalRamp": [
+          "oklch(15% 0.01003 72.13)",
+          "oklch(27% 0.02207 72.13)",
+          "oklch(39% 0.03211 72.13)",
+          "oklch(51% 0.04013 72.13)",
+          "oklch(63% 0.04013 72.13)",
+          "oklch(75% 0.03411 72.13)",
+          "oklch(87% 0.02007 72.13)",
+          "oklch(95% 0.00803 72.13)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Developer Display",
+        "purpose": "Developer page heading; 38px desktop, 32px at ≤1280px, 30px at ≤760px, 27px at ≤480px."
+      },
+      "headline": {
+        "displayName": "Viewer Headline",
+        "purpose": "Run heading; 30px desktop, 25px at ≤760px, final 20px at ≤480px."
+      },
+      "title": {
+        "displayName": "Configuration Title",
+        "purpose": "Section headings; 19px, reducing to 18px at ≤480px."
+      },
+      "summary-title": {
+        "displayName": "Summary Title",
+        "purpose": "Run summary heading; 22px with 1.45 leading."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "15px body baseline and Developer introduction."
+      },
+      "supporting": {
+        "displayName": "Supporting Copy",
+        "purpose": "13px configuration descriptions with 1.6 leading."
+      },
+      "rationale": {
+        "displayName": "Public Rationale",
+        "purpose": "13px public choice explanations with 1.8 leading and overflow wrapping."
+      },
+      "label": {
+        "displayName": "Controls and Labels",
+        "purpose": "14px, weight 500, action and field labels."
+      },
+      "metadata": {
+        "displayName": "Metadata",
+        "purpose": "12px contextual labels; dense Viewer details also use 11px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 16px 56px #12121230",
+        "purpose": "Native model configuration dialog only; backdrop is #24201966."
+      },
+      {
+        "name": "toast",
+        "value": "0 6px 24px #12121220",
+        "purpose": "Transient status toast above the workbench."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-feedback",
+        "value": "background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out",
+        "purpose": "Buttons, links and platform choices; disabled for reduced-motion preference."
+      },
+      {
+        "name": "toast-feedback",
+        "value": "opacity 160ms ease-out, transform 160ms ease-out",
+        "purpose": "Status toast opacity and 10px vertical entry; disabled for reduced-motion preference."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop-max",
+        "value": "1280px"
+      },
+      {
+        "name": "sidebar-collapse-max",
+        "value": "1100px"
+      },
+      {
+        "name": "stacked-workspace-max",
+        "value": "760px"
+      },
+      {
+        "name": "narrow-mobile-max",
+        "value": "480px"
+      },
+      {
+        "name": "large-stage-min",
+        "value": "1600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink capsule for launching a simulation or saving a model connection.",
+      "html": "<button type=\"button\" class=\"ds-primary\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m8 5 11 7-11 7Z\"/></svg>启动模拟<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-primary { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 11px 19px; border-radius: 28px; font-size: 14px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; cursor: pointer;  background: var(--ink, #121212); color: var(--paper, #fff); transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-primary:hover:not(:disabled) { background: #343433; } .ds-primary:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; } .ds-primary:disabled { opacity: .45; cursor: default; } .ds-primary svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }@media (prefers-reduced-motion: reduce) { [class^=\"ds-\"] { transition: none !important; } }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Stone capsule for supporting actions and configuration save.",
+      "html": "<button type=\"button\" class=\"ds-secondary\">保存配置</button>",
+      "css": ".ds-secondary { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 11px 19px; border-radius: 28px; font-size: 14px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; cursor: pointer;  background: var(--stone, #f2f0ed); color: var(--ink, #121212); border-color: var(--line, #e5e0d9); transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-secondary:hover:not(:disabled) { background: #e8e4dd; } .ds-secondary:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; } .ds-secondary:disabled { opacity: .45; cursor: default; } @media (prefers-reduced-motion: reduce) { [class^=\"ds-\"] { transition: none !important; } }"
+    },
+    {
+      "name": "Text Button",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Quiet supporting action; accent appears on hover.",
+      "html": "<button type=\"button\" class=\"ds-text-button\">添加模型<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-text-button { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: var(--body, #474645); font-size: 13px; font-weight: 500; background: transparent; border: 0; padding: 4px 0; white-space: nowrap; cursor: pointer; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-text-button:hover { color: var(--accent, #c93608); } .ds-text-button:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; } .ds-text-button:disabled { opacity: .45; cursor: default; } .ds-text-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }@media (prefers-reduced-motion: reduce) { [class^=\"ds-\"] { transition: none !important; } }"
+    },
+    {
+      "name": "Labeled Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Warm canvas input with a visible blue keyboard focus ring.",
+      "html": "<label class=\"ds-field\">配置名称<input class=\"ds-input\" type=\"text\" placeholder=\"例如：社区运营模型\" /></label>",
+      "css": ".ds-field { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: flex; flex-direction: column; gap: 9px; min-width: 0; font-size: 14px; color: var(--body, #474645); font-weight: 500; } .ds-input { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; width: 100%; min-width: 0; min-height: 44px; border: 1px solid #ddd8d0; background: var(--canvas, #fbfaf9); border-radius: 10px; padding: 11px 13px; font-size: 14px; font-weight: 400; color: inherit; caret-color: var(--ink, #121212); } .ds-input::placeholder { color: var(--muted, #66635f); opacity: 1; } .ds-input:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; outline-offset: 2px; border-color: #8c8378; } @media (max-width: 480px) { .ds-input { font-size: 16px; padding-inline: 11px; } }"
+    },
+    {
+      "name": "Mode Navigation",
+      "kind": "nav",
+      "refersTo": "mode-navigation",
+      "description": "Developer/Viewer mode switch; active mode is the black capsule.",
+      "html": "<nav class=\"ds-mode-nav\" aria-label=\"页面模式\"><a class=\"ds-mode-link ds-mode-active\" href=\"#developer\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7h16M4 17h16\"/><circle cx=\"9\" cy=\"7\" r=\"3\"/><circle cx=\"16\" cy=\"17\" r=\"3\"/></svg>开发者</a><a class=\"ds-mode-link\" href=\"#viewer\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>Viewer</a></nav>",
+      "css": ".ds-mode-nav { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: inline-flex; gap: 4px; padding: 4px; background: var(--stone, #f2f0ed); border-radius: 32px; } .ds-mode-link { display: flex; align-items: center; gap: 8px; padding: 10px 19px; border-radius: 26px; color: var(--muted, #66635f); font-size: 14px; font-weight: 500; text-decoration: none; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-mode-active { background: var(--ink, #121212); color: var(--paper, #fff); } .ds-mode-link:hover:not(.ds-mode-active) { color: var(--ink, #121212); background: #e8e4de; } .ds-mode-link:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; } .ds-mode-link svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }@media (max-width: 760px) { .ds-mode-link { padding: 9px 14px; font-size: 13px; } .ds-mode-link svg { width: 15px; } } @media (max-width: 480px) { .ds-mode-link { padding: 9px 12px; font-size: 12px; gap: 6px; } .ds-mode-link svg { display: none; } }@media (prefers-reduced-motion: reduce) { [class^=\"ds-\"] { transition: none !important; } }"
+    },
+    {
+      "name": "Run Status",
+      "kind": "chip",
+      "refersTo": "status",
+      "description": "Text and a dot communicate neutral, successful, paused and failed run states.",
+      "html": "<div class=\"ds-status-group\"><span class=\"ds-status\">准备中</span><span class=\"ds-status ds-success\">已完成</span><span class=\"ds-status ds-paused\">已暂停</span><span class=\"ds-status ds-failed\">运行失败</span></div>",
+      "css": ".ds-status-group { display: flex; flex-wrap: wrap; gap: 8px; } .ds-status { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: inline-flex; align-items: center; justify-content: center; width: fit-content; gap: 6px; font-size: 12px; border-radius: 7px; padding: 5px 8px; color: var(--body, #474645); background: var(--stone, #f2f0ed); white-space: nowrap; } .ds-status::before { content: \"\"; width: 5px; height: 5px; border-radius: 50%; background: currentColor; } .ds-success { background: #e6f2e9; color: #256848; } .ds-paused { background: #fff0d9; color: #825108; } .ds-failed { background: #ffedf0; color: #a72e3a; }"
+    },
+    {
+      "name": "Configuration Card",
+      "kind": "card",
+      "refersTo": "configuration-card",
+      "description": "Flat white grouping surface for a configuration section.",
+      "html": "<section class=\"ds-config-card\"><h2>选择社交场景</h2><p>每个平台保留自己的内容形式与互动规则。</p></section>",
+      "css": ".ds-config-card { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; background: var(--paper, #fff); color: var(--ink, #121212); border: 1px solid #eeebe7; border-radius: var(--radius, 16px); padding: 28px; } .ds-config-card h2 { font-family: \"Agora Display\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; font-size: 19px; font-weight: 600; line-height: 1.4; margin: 0 0 6px; } .ds-config-card p { color: var(--muted, #66635f); font-size: 13px; margin: 0; line-height: 1.6; } @media (max-width: 1280px) { .ds-config-card { padding: 22px; } } @media (max-width: 480px) { .ds-config-card { padding: 20px 16px; } .ds-config-card h2 { font-size: 18px; } .ds-config-card p { font-size: 12px; } }"
+    },
+    {
+      "name": "Platform Choice",
+      "kind": "card",
+      "refersTo": "platform-card",
+      "description": "Native identity mark inside a studio card; selected option has an ink fill and yellow check.",
+      "html": "<div class=\"ds-platform-group\"><button type=\"button\" class=\"ds-platform-card ds-platform-selected\" aria-pressed=\"true\"><span class=\"ds-selected-check\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"/></svg></span><span class=\"ds-platform-logo\">𝕏</span><strong>X / Twitter</strong><p>帖子、回复与引用转发，<br>观察信息如何进入讨论。</p><span class=\"ds-platform-caption\"><span></span>For You / Following</span></button><button type=\"button\" class=\"ds-platform-card\" aria-pressed=\"false\"><span class=\"ds-selected-check\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"/></svg></span><span class=\"ds-platform-logo\">𝕏</span><strong>X / Twitter</strong><p>帖子、回复与引用转发，<br>观察信息如何进入讨论。</p><span class=\"ds-platform-caption\"><span></span>For You / Following</span></button></div>",
+      "css": ".ds-platform-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .ds-platform-card { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; position: relative; border: 1px solid #eae6df; background: var(--canvas, #fbfaf9); color: var(--ink, #121212); border-radius: 14px; padding: 18px 15px 14px; min-width: 0; text-align: left; cursor: pointer; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-platform-card:hover { border-color: #a7a097; } .ds-platform-card.ds-platform-selected { background: var(--ink, #121212); color: var(--paper, #fff); border-color: var(--ink, #121212); } .ds-platform-card:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; } .ds-platform-card > strong { display: block; font-size: 15px; font-weight: 600; margin: 14px 0 8px; } .ds-platform-card p { font-size: 12px; color: var(--muted, #66635f); line-height: 1.7; margin: 0 0 16px; } .ds-platform-selected p, .ds-platform-selected .ds-platform-caption { color: #d5d0c8; } .ds-selected-check { position: absolute; top: 13px; right: 12px; width: 17px; height: 17px; border: 1px solid #bbb4ab; border-radius: 50%; display: grid; place-items: center; } .ds-selected-check svg { display: none; width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; } .ds-platform-selected .ds-selected-check { border-color: #ffcd6c; background: #ffcd6c; color: var(--ink, #121212); } .ds-platform-selected .ds-selected-check svg { display: block; } .ds-platform-logo { display: inline-flex; align-items: center; justify-content: center; height: 34px; width: 34px; border-radius: 11px; color: #fff; background: #121212; font-size: 25px; } .ds-platform-selected .ds-platform-logo { background: #333; } .ds-platform-caption { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted, #66635f); white-space: normal; line-height: 1.5; } .ds-platform-caption > span { width: 4px; height: 4px; border-radius: 50%; background: currentColor; margin-top: 6px; flex-shrink: 0; } @media (max-width: 480px) { .ds-platform-group { gap: 8px; } .ds-platform-card { padding: 14px 10px; } .ds-platform-card > strong { font-size: 12px; margin: 12px 0 0; } .ds-platform-card p, .ds-platform-caption { display: none; } .ds-platform-logo { width: 31px; height: 31px; } .ds-selected-check { width: 13px; height: 13px; right: 7px; top: 9px; } .ds-selected-check svg { width: 10px; } } @media (prefers-reduced-motion: reduce) { [class^=\"ds-\"] { transition: none !important; } }"
+    },
+    {
+      "name": "Account Selection",
+      "kind": "custom",
+      "refersTo": "actor-card",
+      "description": "Selected white account row inside the stone account panel.",
+      "html": "<div class=\"ds-actor-list\"><button type=\"button\" class=\"ds-actor-card ds-actor-selected\" aria-pressed=\"true\"><span class=\"ds-avatar\">慢慢</span><span><span class=\"ds-actor-name\">慢慢看世界</span><small><span class=\"ds-actor-role\">主</span> · 16 步</small></span></button><button type=\"button\" class=\"ds-actor-card\" aria-pressed=\"false\"><span class=\"ds-avatar\">小林</span><span><span class=\"ds-actor-name\">小林在散步</span><small>背景账号 · 16 步</small></span></button></div>",
+      "css": ".ds-actor-list { background: var(--stone, #f2f0ed); border-radius: var(--radius, 16px); padding: 8px; } .ds-actor-card { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: flex; align-items: center; gap: 9px; text-align: left; width: 100%; border: 0; padding: 12px 8px; border-radius: 11px; background: transparent; color: var(--ink, #121212); margin-bottom: 4px; cursor: pointer; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-actor-card:hover { background: #e8e4de; } .ds-actor-card.ds-actor-selected { background: var(--paper, #fff); } .ds-actor-card:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; } .ds-avatar { display: inline-flex; align-items: center; justify-content: center; width: 33px; height: 33px; border-radius: 50%; background: #e9dfcf; color: #5a4d3e; font-size: 11px; font-weight: 500; flex-shrink: 0; } .ds-actor-card > span:last-child { min-width: 0; flex: 1; } .ds-actor-name { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; } .ds-actor-card small { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted, #66635f); } .ds-actor-role { font-size: 10px; color: #925112; padding: 2px 4px; border-radius: 4px; background: #ffead1; } @media (max-width: 760px) { .ds-actor-list { display: flex; gap: 6px; overflow-x: auto; } .ds-actor-card { flex-shrink: 0; width: 156px; margin: 0; } } @media (max-width: 480px) { .ds-actor-list { padding: 6px; } .ds-actor-card { padding: 9px 8px; } } @media (prefers-reduced-motion: reduce) { [class^=\"ds-\"] { transition: none !important; } }"
+    },
+    {
+      "name": "Playback Strip",
+      "kind": "custom",
+      "refersTo": "playback",
+      "description": "Outer replay controls; the platform viewport retains its own design system.",
+      "html": "<div class=\"ds-playback\"><div class=\"ds-playback-buttons\"><button type=\"button\" aria-label=\"上一步\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m15 5-7 7 7 7\"/></svg></button><button type=\"button\" class=\"ds-play-replay\" aria-label=\"播放回放\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m8 5 11 7-11 7Z\"/></svg></button><button type=\"button\" aria-label=\"下一步\" disabled><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></button></div><input type=\"range\" min=\"1\" max=\"18\" value=\"18\" aria-label=\"操作回放进度\"/><span class=\"ds-step\">18 / 18</span><select aria-label=\"回放速度\"><option>0.5×</option><option selected>1×</option><option>2×</option></select><button type=\"button\" class=\"ds-live ds-live-active\"><span></span>最新</button></div>",
+      "css": ".ds-playback { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--stone, #f2f0ed); } .ds-playback-buttons { display: flex; align-items: center; gap: 5px; } .ds-playback-buttons button { display: grid; place-items: center; width: 34px; height: 34px; background: var(--canvas, #fbfaf9); border: 0; border-radius: 50%; color: var(--body, #474645); cursor: pointer; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-playback-buttons .ds-play-replay { background: var(--ink, #121212); color: var(--paper, #fff); width: 38px; height: 38px; } .ds-playback button:focus-visible, .ds-playback input:focus-visible, .ds-playback select:focus-visible { outline: 2px solid var(--blue, #006fcf); outline-offset: 4px; } .ds-playback button:disabled { opacity: .45; cursor: default; } .ds-playback > input { flex: 1; min-width: 24px; width: 0; height: 16px; accent-color: var(--ink, #121212); cursor: pointer; } .ds-step { font-size: 12px; color: var(--body, #474645); white-space: nowrap; font-variant-numeric: tabular-nums; } .ds-playback select { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; color: var(--ink, #121212); background: transparent; border: 0; font-size: 12px; width: 49px; padding: 4px; } .ds-live { font-family: \"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; line-height: 1.5; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 20px; padding: 8px 10px; background: #e5e0d9; color: var(--muted, #66635f); font-size: 11px; white-space: nowrap; cursor: pointer; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; } .ds-live span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; } .ds-live-active { background: #e0eee3; color: #28664a; } .ds-playback-buttons svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }@media (max-width: 480px) { .ds-playback { padding: 10px; gap: 6px; flex-wrap: wrap; } .ds-playback-buttons { gap: 4px; } .ds-playback-buttons button { width: 28px; height: 28px; } .ds-playback-buttons .ds-play-replay { width: 32px; height: 32px; } .ds-playback > input { min-width: 56px; } .ds-step { font-size: 11px; } .ds-playback select { font-size: 16px; width: 52px; margin-left: auto; } .ds-live { padding: 7px 8px; gap: 4px; } }@media (prefers-reduced-motion: reduce) { [class^=\"ds-\"] { transition: none !important; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Warm Social Workbench",
+    "overview": "Agora Studio is a warm, clear workbench for configuring social simulations and observing an account's actions. The user's chosen [Refero Family reference](https://styles.refero.design/style/1bcae895-2245-4d33-aa43-1c1e80719554) informs its warm canvas, stone surfaces, rounded display lettering and confident black actions. Friendly details sit around precise controls; typography and tonal grouping keep configuration and replay easy to scan.\n\nThis system applies exclusively to the Developer and Viewer outer framework in `agora/web/studio.html`, `studio.css` and `studio.js`. Xiaohongshu, X/Twitter and Reddit iframe documents retain their own platform typography, color, layout and interaction. The platform identity marks within the studio are identifiers, not alternate studio themes. Keep the existing configuration, model connection, run history and account replay workflows intact when extending this framework.",
+    "keyCharacteristics": [
+      "Warm canvas and stone grouping surfaces, with white configuration and selected account surfaces.",
+      "Rounded display lettering and clear bilingual controls with system Chinese fallbacks.",
+      "Black capsule actions and mode selection; small bright cues communicate selection and status.",
+      "Flat working surfaces, restrained borders and elevated transient overlays.",
+      "A strict visual boundary around each native platform iframe."
+    ],
+    "rules": [
+      {
+        "name": "The Native Boundary Rule",
+        "body": "Apply studio tokens to the outer framework only. Never inject its palette or typography into Xiaohongshu, X/Twitter or Reddit documents.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Control Rule",
+        "body": "Preserve the source's (16px) mobile field and select text at widths up to (480px), including the Viewer platform/run selectors and replay speed selector.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Workbench Rule",
+        "body": "Keep persistent configuration and observation surfaces flat; use elevation for transient overlays.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** apply these tokens only to the Developer and Viewer outer framework.",
+      "**Do** use warm canvas for the workbench, stone for grouped controls and paper for configuration or selected rows.",
+      "**Do** keep primary actions and active mode selection in ink capsules with paper text.",
+      "**Do** preserve visible keyboard focus, textual status labels and the source's readable mobile form text.",
+      "**Do** preserve account, step and iframe identity when changing the outer Viewer layout.",
+      "**Do** retain the local font files, provenance manifest and SIL OFL notices when shipping the typography."
+    ],
+    "donts": [
+      "**Don't** restyle Xiaohongshu, X/Twitter or Reddit iframe documents with the studio system.",
+      "**Don't** add shadows to persistent configuration or observation cards.",
+      "**Don't** replace configuration or replay actions with decorative surfaces or motion.",
+      "**Don't** treat synthetic demonstration data as evidence of actual user behavior or model capability.",
+      "**Don't** interpret the sidecar's synthesized tonal ramps as new production color tokens."
+    ]
+  }
+}

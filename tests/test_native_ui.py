@@ -212,3 +212,89 @@ def test_historical_frame_is_read_only_and_unchanged_poll_keeps_dom(
         }""")
     finally:
         page.close()
+
+
+def test_mobile_workspace_primary_action_and_models_are_reachable(
+    browser, mounted_server
+):
+    root, _, _ = mounted_server
+    page = browser.new_page(viewport={"width": 390, "height": 844})
+    try:
+        page.goto(root + "/developer")
+        page.wait_for_function("world?.users?.length > 0", polling=100)
+        bounds = page.locator("#launchButton").bounding_box()
+        assert bounds and bounds["y"] + bounds["height"] <= 844
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        assert page.get_by_role("spinbutton", name="参与 agent 总数").count() == 1
+        page.locator("#mobileModels").evaluate("el => el.click()")
+        assert page.get_by_role("dialog", name="连接你的模型").is_visible()
+        assert page.locator("#providerProxy").is_visible()
+        page.locator("#providerKey").fill("not-a-real-key")
+        page.locator("#closeModels").evaluate("el => el.click()")
+        assert page.locator("#providerKey").input_value() == ""
+        assert page.locator("#goal").input_value() == ""
+        assert page.locator("#agentCount").get_attribute("max") == "32"
+    finally:
+        page.close()
+
+
+def test_workspace_launch_and_expand_preserve_readonly_native_frame(
+    browser, mounted_server
+):
+    root, _, _ = mounted_server
+    page = browser.new_page(viewport={"width": 1440, "height": 1000})
+    try:
+        page.goto(root + "/developer")
+        page.wait_for_function("world?.users?.length > 0", polling=100)
+        page.locator("#agentCount").fill("2")
+        page.locator("#ticks").fill("1")
+        page.locator("#steps").fill("2")
+        page.locator(".advanced-settings summary").evaluate("el => el.click()")
+        page.locator("#pace").select_option("0")
+        page.locator("#runName").fill("Workspace browser regression")
+        page.locator("#launchButton").evaluate("el => el.click()")
+        page.wait_for_url("**/viewer?**")
+        page.wait_for_function("actorData?.trajectory?.length >= 2", polling=100)
+        page.evaluate("chooseFrame(0)")
+        child = next(frame for frame in page.frames if "/account?" in frame.url)
+        child.wait_for_function("current()?.screen && frame >= 0", polling=100)
+        assert page.locator('.actor-card[aria-pressed="true"]').count() == 1
+        step = page.evaluate("currentEvent().step")
+        assert child.evaluate("!editable()")
+        assert page.evaluate("""() => {
+            window.agoraTestFrame = document.querySelector('#accountFrame');
+            const before = agoraTestFrame.clientWidth;
+            document.querySelector('#expandStage').click();
+            return agoraTestFrame === document.querySelector('#accountFrame') && agoraTestFrame.clientWidth > before;
+        }""")
+        assert page.evaluate("currentEvent().step") == step
+        assert child.evaluate("data.trajectory[frame].step") == step
+        page.locator("#expandStage").evaluate("el => el.click()")
+        assert page.evaluate(
+            "agoraTestFrame === document.querySelector('#accountFrame')"
+        )
+        assert not page.locator("#viewerWorkspace").evaluate(
+            "el => el.classList.contains('stage-expanded')"
+        )
+        assert child.locator('link[href$="native.css"]').count() == 1
+        assert child.locator('link[href$="studio.css"]').count() == 0
+        target = page.locator('.actor-card[aria-pressed="false"]').first.get_attribute(
+            "data-actor"
+        )
+        page.locator(f'[data-actor="{target}"]').evaluate("el => el.click()")
+        page.wait_for_function(
+            "actorData?.observation?.user_id === selectedActor", polling=100
+        )
+        assert (
+            page.locator(f'[data-actor="{target}"]').get_attribute("aria-pressed")
+            == "true"
+        )
+        assert page.locator('.actor-card[aria-pressed="true"]').count() == 1
+        # Moving the playhead changes selection without rebuilding the timeline list.
+        assert page.evaluate("""async () => {
+            const before = document.querySelector('#actionTimeline').firstElementChild;
+            await chooseFrame(1);
+            return before === document.querySelector('#actionTimeline').firstElementChild;
+        }""")
+    finally:
+        page.close()

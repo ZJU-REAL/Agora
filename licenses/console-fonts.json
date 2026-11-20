@@ -1,0 +1,18 @@
+[
+  {
+    "file": "agora/web/console-display.woff2",
+    "source": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9K6as8bTXq_nANBjzKo3IeZx8z6up5BeSl9D4dj_x9PpZBMlGIInE.woff2",
+    "license": "SIL OFL 1.1",
+    "license_file": "licenses/bricolagegrotesque-OFL.txt",
+    "sha256": "a79fdb52d4a5c76552452f69202add96e287401fff03d3e8c0e38b4dcb5a99cd",
+    "modified": false
+  },
+  {
+    "file": "agora/web/console-body.woff2",
+    "source": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+    "license": "SIL OFL 1.1",
+    "license_file": "licenses/inter-OFL.txt",
+    "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "modified": false
+  }
+]

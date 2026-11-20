@@ -89,6 +89,11 @@ def test_developer_viewer_and_embedded_account_are_mounted(mounted_server):
         assert 'window.AGORA_BASE_PATH="/agora"' in response.text
     for asset in ("studio.css", "studio.js", "native.css", "native.js", "embed.css"):
         assert requests.get(console + "/static/" + asset).ok
+    for font in ("console-display.woff2", "console-body.woff2"):
+        response = requests.get(console + "/static/" + font)
+        assert response.ok
+        assert response.headers["Content-Type"] == "font/woff2"
+        assert response.content.startswith(b"wOF2")
     account = requests.get(console + "/account?embed=1").text
     assert 'href="/agora/static/embed.css"' in account
     assert "agora:frame" in account
