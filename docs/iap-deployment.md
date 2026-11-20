@@ -137,3 +137,22 @@ Developer 和 Viewer 采用用户指定的 Family 参考风格，平台 iframe �
 ![手机端 Developer](images/workspace-illustrated/developer-mobile.png)
 
 ![手机端 Viewer](images/workspace-illustrated/viewer-mobile.png)
+
+## 0.7 工作台体验
+
+保留正式插画品牌，缩小标题区域与装饰，移除重复导航。平台选择旁直接探索，受测与
+背景账号分别配置，启动前显示总动作预算；已有实验可复用配置创建新副本。
+Viewer 以原生画面为中心，保存各账号的独立回放位置，并提供真实操作统计与筛选。
+流程与边界见 [工作台使用流程](workbench-experience.md)。服务端口、IAP 代理和限额不变。
+
+![Developer 工作台](images/workspace-workbench/developer-desktop.png)
+
+![Viewer 工作台](images/workspace-workbench/viewer-desktop.png)
+
+![手机配置](images/workspace-workbench/developer-mobile.png)
+
+![手机回放](images/workspace-workbench/viewer-mobile.png)
+
+![X 回放](images/workspace-workbench/viewer-x.png)
+
+![Reddit 回放](images/workspace-workbench/viewer-reddit.png)

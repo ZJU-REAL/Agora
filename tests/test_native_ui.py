@@ -236,6 +236,9 @@ def test_mobile_workspace_primary_action_and_models_are_reachable(
         assert bounds and bounds["y"] + bounds["height"] <= 844
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         assert page.get_by_role("spinbutton", name="参与 agent 总数").count() == 1
+        assert page.locator(".field input,.field select,.field textarea").evaluate_all(
+            "fields => fields.every(field => parseFloat(getComputedStyle(field).fontSize) >= 16)"
+        )
         page.locator("#mobileModels").evaluate("el => el.click()")
         assert page.get_by_role("dialog", name="连接你的模型").is_visible()
         assert page.locator("#providerProxy").is_visible()

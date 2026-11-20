@@ -20,6 +20,8 @@ web
 
 Developer 设置模型和独立模拟；Viewer 查看实时状态或精确历史快照。部署到公司的
 IAP `/agora` 路径，三种社媒页面在独立 iframe 中保持原生平台的视觉和交互。
+0.7 按配置、启动、观察与复用组织产品流程，Viewer 以实际画面为中心；各平台配置和
+账号回放位置独立保存。
 
 ## Capabilities and Constraints
 

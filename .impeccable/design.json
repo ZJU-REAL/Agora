@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-20T09:14:05.655645+00:00",
+  "generatedAt": "2026-11-20T10:20:35.944363+00:00",
   "title": "Design System: Agora Studio",
   "extensions": {
     "colorMeta": {
@@ -89,7 +89,7 @@
         ]
       },
       "stone": {
-        "role": "neutral",
+        "role": "secondary",
         "displayName": "Cool Grouping Surface",
         "tonalRamp": [
           "oklch(15% 0.00311 271.29)",
@@ -132,7 +132,7 @@
       },
       "green": {
         "role": "tertiary",
-        "displayName": "Recorded Green",
+        "displayName": "Functional Green",
         "tonalRamp": [
           "oklch(15% 0.02031 173.75)",
           "oklch(27% 0.04468 173.75)",
@@ -159,7 +159,7 @@
         ]
       },
       "secondary-hover": {
-        "role": "neutral",
+        "role": "secondary",
         "displayName": "Secondary Hover",
         "tonalRamp": [
           "oklch(15% 0.00458 269.09)",
@@ -173,7 +173,7 @@
         ]
       },
       "navigation-hover": {
-        "role": "neutral",
+        "role": "secondary",
         "displayName": "Navigation Hover",
         "tonalRamp": [
           "oklch(15% 0.00394 266.28)",
@@ -184,20 +184,6 @@
           "oklch(75% 0.01339 266.28)",
           "oklch(87% 0.00788 266.28)",
           "oklch(95% 0.00315 266.28)"
-        ]
-      },
-      "mode-surface": {
-        "role": "neutral",
-        "displayName": "Mode Surface",
-        "tonalRamp": [
-          "oklch(15% 0.00338 277.06)",
-          "oklch(27% 0.00744 277.06)",
-          "oklch(39% 0.01082 277.06)",
-          "oklch(51% 0.01353 277.06)",
-          "oklch(63% 0.01353 277.06)",
-          "oklch(75% 0.01150 277.06)",
-          "oklch(87% 0.00676 277.06)",
-          "oklch(95% 0.00271 277.06)"
         ]
       },
       "mode-selected": {
@@ -242,20 +228,6 @@
           "oklch(95% 0.02480 267.73)"
         ]
       },
-      "card-line": {
-        "role": "neutral",
-        "displayName": "Card Line",
-        "tonalRamp": [
-          "oklch(15% 0.00395 266.28)",
-          "oklch(27% 0.00870 266.28)",
-          "oklch(39% 0.01265 266.28)",
-          "oklch(51% 0.01581 266.28)",
-          "oklch(63% 0.01581 266.28)",
-          "oklch(75% 0.01344 266.28)",
-          "oklch(87% 0.00790 266.28)",
-          "oklch(95% 0.00316 266.28)"
-        ]
-      },
       "field-line": {
         "role": "neutral",
         "displayName": "Field Line",
@@ -268,76 +240,6 @@
           "oklch(75% 0.01602 265.98)",
           "oklch(87% 0.00942 265.98)",
           "oklch(95% 0.00377 265.98)"
-        ]
-      },
-      "field-focus": {
-        "role": "neutral",
-        "displayName": "Field Focus",
-        "tonalRamp": [
-          "oklch(15% 0.01657 267.88)",
-          "oklch(27% 0.03646 267.88)",
-          "oklch(39% 0.05303 267.88)",
-          "oklch(51% 0.06629 267.88)",
-          "oklch(63% 0.06629 267.88)",
-          "oklch(75% 0.05634 267.88)",
-          "oklch(87% 0.03314 267.88)",
-          "oklch(95% 0.01326 267.88)"
-        ]
-      },
-      "heading-surface": {
-        "role": "secondary",
-        "displayName": "Heading Surface",
-        "tonalRamp": [
-          "oklch(15% 0.00442 275.64)",
-          "oklch(27% 0.00973 275.64)",
-          "oklch(39% 0.01415 275.64)",
-          "oklch(51% 0.01769 275.64)",
-          "oklch(63% 0.01769 275.64)",
-          "oklch(75% 0.01503 275.64)",
-          "oklch(87% 0.00884 275.64)",
-          "oklch(95% 0.00354 275.64)"
-        ]
-      },
-      "heading-accent": {
-        "role": "primary",
-        "displayName": "Heading Accent",
-        "tonalRamp": [
-          "oklch(15% 0.02883 271.38)",
-          "oklch(27% 0.06342 271.38)",
-          "oklch(39% 0.09225 271.38)",
-          "oklch(51% 0.11532 271.38)",
-          "oklch(63% 0.11532 271.38)",
-          "oklch(75% 0.09802 271.38)",
-          "oklch(87% 0.05766 271.38)",
-          "oklch(95% 0.02306 271.38)"
-        ]
-      },
-      "heading-copy": {
-        "role": "neutral",
-        "displayName": "Heading Copy",
-        "tonalRamp": [
-          "oklch(15% 0.01522 270.28)",
-          "oklch(27% 0.03349 270.28)",
-          "oklch(39% 0.04872 270.28)",
-          "oklch(51% 0.06090 270.28)",
-          "oklch(63% 0.06090 270.28)",
-          "oklch(75% 0.05176 270.28)",
-          "oklch(87% 0.03045 270.28)",
-          "oklch(95% 0.01218 270.28)"
-        ]
-      },
-      "summary-surface": {
-        "role": "secondary",
-        "displayName": "Summary Surface",
-        "tonalRamp": [
-          "oklch(15% 0.00400 289.93)",
-          "oklch(27% 0.00881 289.93)",
-          "oklch(39% 0.01281 289.93)",
-          "oklch(51% 0.01602 289.93)",
-          "oklch(63% 0.01602 289.93)",
-          "oklch(75% 0.01361 289.93)",
-          "oklch(87% 0.00801 289.93)",
-          "oklch(95% 0.00320 289.93)"
         ]
       },
       "summary-divider": {
@@ -354,48 +256,6 @@
           "oklch(95% 0.00436 265.76)"
         ]
       },
-      "summary-ready": {
-        "role": "secondary",
-        "displayName": "Summary Ready",
-        "tonalRamp": [
-          "oklch(15% 0.00579 277.95)",
-          "oklch(27% 0.01273 277.95)",
-          "oklch(39% 0.01852 277.95)",
-          "oklch(51% 0.02315 277.95)",
-          "oklch(63% 0.02315 277.95)",
-          "oklch(75% 0.01967 277.95)",
-          "oklch(87% 0.01157 277.95)",
-          "oklch(95% 0.00463 277.95)"
-        ]
-      },
-      "actor-surface": {
-        "role": "secondary",
-        "displayName": "Actor Surface",
-        "tonalRamp": [
-          "oklch(15% 0.00344 272.69)",
-          "oklch(27% 0.00756 272.69)",
-          "oklch(39% 0.01100 272.69)",
-          "oklch(51% 0.01375 272.69)",
-          "oklch(63% 0.01375 272.69)",
-          "oklch(75% 0.01169 272.69)",
-          "oklch(87% 0.00687 272.69)",
-          "oklch(95% 0.00275 272.69)"
-        ]
-      },
-      "decision-surface": {
-        "role": "secondary",
-        "displayName": "Decision Surface",
-        "tonalRamp": [
-          "oklch(15% 0.00300 281.09)",
-          "oklch(27% 0.00661 281.09)",
-          "oklch(39% 0.00961 281.09)",
-          "oklch(51% 0.01201 281.09)",
-          "oklch(63% 0.01201 281.09)",
-          "oklch(75% 0.01021 281.09)",
-          "oklch(87% 0.00601 281.09)",
-          "oklch(95% 0.00240 281.09)"
-        ]
-      },
       "row-selected": {
         "role": "secondary",
         "displayName": "Row Selected",
@@ -408,34 +268,6 @@
           "oklch(75% 0.02273 269.67)",
           "oklch(87% 0.01337 269.67)",
           "oklch(95% 0.00535 269.67)"
-        ]
-      },
-      "viewer-heading-surface": {
-        "role": "secondary",
-        "displayName": "Viewer Heading Surface",
-        "tonalRamp": [
-          "oklch(15% 0.00409 274.82)",
-          "oklch(27% 0.00900 274.82)",
-          "oklch(39% 0.01309 274.82)",
-          "oklch(51% 0.01636 274.82)",
-          "oklch(63% 0.01636 274.82)",
-          "oklch(75% 0.01391 274.82)",
-          "oklch(87% 0.00818 274.82)",
-          "oklch(95% 0.00327 274.82)"
-        ]
-      },
-      "toolbar-surface": {
-        "role": "secondary",
-        "displayName": "Toolbar Surface",
-        "tonalRamp": [
-          "oklch(15% 0.00272 274.90)",
-          "oklch(27% 0.00598 274.90)",
-          "oklch(39% 0.00870 274.90)",
-          "oklch(51% 0.01088 274.90)",
-          "oklch(63% 0.01088 274.90)",
-          "oklch(75% 0.00925 274.90)",
-          "oklch(87% 0.00544 274.90)",
-          "oklch(95% 0.00218 274.90)"
         ]
       },
       "playback-surface": {
@@ -478,216 +310,6 @@
           "oklch(75% 0.00243 264.54)",
           "oklch(87% 0.00143 264.54)",
           "oklch(95% 0.00057 264.54)"
-        ]
-      },
-      "platform-pink": {
-        "role": "tertiary",
-        "displayName": "Platform Rose",
-        "tonalRamp": [
-          "oklch(15% 0.00322 353.13)",
-          "oklch(27% 0.00708 353.13)",
-          "oklch(39% 0.01030 353.13)",
-          "oklch(51% 0.01288 353.13)",
-          "oklch(63% 0.01288 353.13)",
-          "oklch(75% 0.01094 353.13)",
-          "oklch(87% 0.00644 353.13)",
-          "oklch(95% 0.00258 353.13)"
-        ]
-      },
-      "platform-pink-selected": {
-        "role": "tertiary",
-        "displayName": "Platform Pink Selected",
-        "tonalRamp": [
-          "oklch(15% 0.00690 351.93)",
-          "oklch(27% 0.01518 351.93)",
-          "oklch(39% 0.02207 351.93)",
-          "oklch(51% 0.02759 351.93)",
-          "oklch(63% 0.02759 351.93)",
-          "oklch(75% 0.02345 351.93)",
-          "oklch(87% 0.01380 351.93)",
-          "oklch(95% 0.00552 351.93)"
-        ]
-      },
-      "platform-pink-line": {
-        "role": "tertiary",
-        "displayName": "Platform Pink Line",
-        "tonalRamp": [
-          "oklch(15% 0.00663 347.16)",
-          "oklch(27% 0.01458 347.16)",
-          "oklch(39% 0.02121 347.16)",
-          "oklch(51% 0.02651 347.16)",
-          "oklch(63% 0.02651 347.16)",
-          "oklch(75% 0.02253 347.16)",
-          "oklch(87% 0.01325 347.16)",
-          "oklch(95% 0.00530 347.16)"
-        ]
-      },
-      "platform-pink-selected-line": {
-        "role": "tertiary",
-        "displayName": "Platform Pink Selected Line",
-        "tonalRamp": [
-          "oklch(15% 0.03331 357.53)",
-          "oklch(27% 0.07328 357.53)",
-          "oklch(39% 0.10659 357.53)",
-          "oklch(51% 0.13324 357.53)",
-          "oklch(63% 0.13324 357.53)",
-          "oklch(75% 0.11326 357.53)",
-          "oklch(87% 0.06662 357.53)",
-          "oklch(95% 0.02665 357.53)"
-        ]
-      },
-      "platform-blue": {
-        "role": "tertiary",
-        "displayName": "Platform Sky",
-        "tonalRamp": [
-          "oklch(15% 0.00360 264.50)",
-          "oklch(27% 0.00792 264.50)",
-          "oklch(39% 0.01153 264.50)",
-          "oklch(51% 0.01441 264.50)",
-          "oklch(63% 0.01441 264.50)",
-          "oklch(75% 0.01225 264.50)",
-          "oklch(87% 0.00720 264.50)",
-          "oklch(95% 0.00288 264.50)"
-        ]
-      },
-      "platform-blue-selected": {
-        "role": "tertiary",
-        "displayName": "Platform Blue Selected",
-        "tonalRamp": [
-          "oklch(15% 0.00665 262.34)",
-          "oklch(27% 0.01463 262.34)",
-          "oklch(39% 0.02128 262.34)",
-          "oklch(51% 0.02660 262.34)",
-          "oklch(63% 0.02660 262.34)",
-          "oklch(75% 0.02261 262.34)",
-          "oklch(87% 0.01330 262.34)",
-          "oklch(95% 0.00532 262.34)"
-        ]
-      },
-      "platform-blue-line": {
-        "role": "tertiary",
-        "displayName": "Platform Blue Line",
-        "tonalRamp": [
-          "oklch(15% 0.00626 263.33)",
-          "oklch(27% 0.01378 263.33)",
-          "oklch(39% 0.02004 263.33)",
-          "oklch(51% 0.02505 263.33)",
-          "oklch(63% 0.02505 263.33)",
-          "oklch(75% 0.02129 263.33)",
-          "oklch(87% 0.01252 263.33)",
-          "oklch(95% 0.00501 263.33)"
-        ]
-      },
-      "platform-blue-selected-line": {
-        "role": "tertiary",
-        "displayName": "Platform Blue Selected Line",
-        "tonalRamp": [
-          "oklch(15% 0.02315 262.72)",
-          "oklch(27% 0.05093 262.72)",
-          "oklch(39% 0.07407 262.72)",
-          "oklch(51% 0.09259 262.72)",
-          "oklch(63% 0.09259 262.72)",
-          "oklch(75% 0.07870 262.72)",
-          "oklch(87% 0.04630 262.72)",
-          "oklch(95% 0.01852 262.72)"
-        ]
-      },
-      "platform-peach": {
-        "role": "tertiary",
-        "displayName": "Platform Peach",
-        "tonalRamp": [
-          "oklch(15% 0.00402 64.68)",
-          "oklch(27% 0.00885 64.68)",
-          "oklch(39% 0.01287 64.68)",
-          "oklch(51% 0.01609 64.68)",
-          "oklch(63% 0.01609 64.68)",
-          "oklch(75% 0.01368 64.68)",
-          "oklch(87% 0.00805 64.68)",
-          "oklch(95% 0.00322 64.68)"
-        ]
-      },
-      "platform-peach-selected": {
-        "role": "tertiary",
-        "displayName": "Platform Peach Selected",
-        "tonalRamp": [
-          "oklch(15% 0.00815 67.42)",
-          "oklch(27% 0.01792 67.42)",
-          "oklch(39% 0.02607 67.42)",
-          "oklch(51% 0.03258 67.42)",
-          "oklch(63% 0.03258 67.42)",
-          "oklch(75% 0.02770 67.42)",
-          "oklch(87% 0.01629 67.42)",
-          "oklch(95% 0.00652 67.42)"
-        ]
-      },
-      "platform-peach-line": {
-        "role": "tertiary",
-        "displayName": "Platform Peach Line",
-        "tonalRamp": [
-          "oklch(15% 0.00538 65.31)",
-          "oklch(27% 0.01183 65.31)",
-          "oklch(39% 0.01720 65.31)",
-          "oklch(51% 0.02150 65.31)",
-          "oklch(63% 0.02150 65.31)",
-          "oklch(75% 0.01828 65.31)",
-          "oklch(87% 0.01075 65.31)",
-          "oklch(95% 0.00430 65.31)"
-        ]
-      },
-      "platform-peach-selected-line": {
-        "role": "tertiary",
-        "displayName": "Platform Peach Selected Line",
-        "tonalRamp": [
-          "oklch(15% 0.02558 59.75)",
-          "oklch(27% 0.05628 59.75)",
-          "oklch(39% 0.08186 59.75)",
-          "oklch(51% 0.10232 59.75)",
-          "oklch(63% 0.10232 59.75)",
-          "oklch(75% 0.08697 59.75)",
-          "oklch(87% 0.05116 59.75)",
-          "oklch(95% 0.02046 59.75)"
-        ]
-      },
-      "platform-selected-ink": {
-        "role": "tertiary",
-        "displayName": "Platform Selected Ink",
-        "tonalRamp": [
-          "oklch(15% 0.01265 267.93)",
-          "oklch(27% 0.02784 267.93)",
-          "oklch(39% 0.04049 267.93)",
-          "oklch(51% 0.05061 267.93)",
-          "oklch(63% 0.05061 267.93)",
-          "oklch(75% 0.04302 267.93)",
-          "oklch(87% 0.02531 267.93)",
-          "oklch(95% 0.01012 267.93)"
-        ]
-      },
-      "platform-selected-copy": {
-        "role": "tertiary",
-        "displayName": "Platform Selected Copy",
-        "tonalRamp": [
-          "oklch(15% 0.01047 276.29)",
-          "oklch(27% 0.02303 276.29)",
-          "oklch(39% 0.03349 276.29)",
-          "oklch(51% 0.04187 276.29)",
-          "oklch(63% 0.04187 276.29)",
-          "oklch(75% 0.03559 276.29)",
-          "oklch(87% 0.02093 276.29)",
-          "oklch(95% 0.00837 276.29)"
-        ]
-      },
-      "selected-check": {
-        "role": "primary",
-        "displayName": "Selected Check",
-        "tonalRamp": [
-          "oklch(15% 0.02509 271.52)",
-          "oklch(27% 0.05521 271.52)",
-          "oklch(39% 0.08030 271.52)",
-          "oklch(51% 0.10038 271.52)",
-          "oklch(63% 0.10038 271.52)",
-          "oklch(75% 0.08532 271.52)",
-          "oklch(87% 0.05019 271.52)",
-          "oklch(95% 0.02008 271.52)"
         ]
       },
       "success-surface": {
@@ -788,112 +410,171 @@
           "oklch(95% 0.00803 72.13)"
         ]
       },
-      "selection-yellow": {
-        "role": "tertiary",
-        "displayName": "Text Selection Gold",
+      "platform-selected": {
+        "role": "secondary",
+        "displayName": "Selected Platform Periwinkle",
         "tonalRamp": [
-          "oklch(15% 0.03201 82.27)",
-          "oklch(27% 0.07041 82.27)",
-          "oklch(39% 0.10242 82.27)",
-          "oklch(51% 0.12803 82.27)",
-          "oklch(63% 0.12803 82.27)",
-          "oklch(75% 0.10882 82.27)",
-          "oklch(87% 0.06401 82.27)",
-          "oklch(95% 0.02561 82.27)"
+          "oklch(15% 0.00337 277.07)",
+          "oklch(27% 0.00742 277.07)",
+          "oklch(39% 0.01080 277.07)",
+          "oklch(51% 0.01350 277.07)",
+          "oklch(63% 0.01350 277.07)",
+          "oklch(75% 0.01147 277.07)",
+          "oklch(87% 0.00675 277.07)",
+          "oklch(95% 0.00270 277.07)"
+        ]
+      },
+      "platform-hover-line": {
+        "role": "neutral",
+        "displayName": "Platform Hover Line",
+        "tonalRamp": [
+          "oklch(15% 0.01382 270.93)",
+          "oklch(27% 0.03041 270.93)",
+          "oklch(39% 0.04424 270.93)",
+          "oklch(51% 0.05530 270.93)",
+          "oklch(63% 0.05530 270.93)",
+          "oklch(75% 0.04700 270.93)",
+          "oklch(87% 0.02765 270.93)",
+          "oklch(95% 0.01106 270.93)"
+        ]
+      },
+      "field-hover-line": {
+        "role": "neutral",
+        "displayName": "Field Hover Line",
+        "tonalRamp": [
+          "oklch(15% 0.01126 268.10)",
+          "oklch(27% 0.02477 268.10)",
+          "oklch(39% 0.03603 268.10)",
+          "oklch(51% 0.04504 268.10)",
+          "oklch(63% 0.04504 268.10)",
+          "oklch(75% 0.03829 268.10)",
+          "oklch(87% 0.02252 268.10)",
+          "oklch(95% 0.00901 268.10)"
+        ]
+      },
+      "avatar-surface": {
+        "role": "neutral",
+        "displayName": "Initial Avatar Fill",
+        "tonalRamp": [
+          "oklch(15% 0.00557 272.05)",
+          "oklch(27% 0.01224 272.05)",
+          "oklch(39% 0.01781 272.05)",
+          "oklch(51% 0.02226 272.05)",
+          "oklch(63% 0.02226 272.05)",
+          "oklch(75% 0.01892 272.05)",
+          "oklch(87% 0.01113 272.05)",
+          "oklch(95% 0.00445 272.05)"
+        ]
+      },
+      "selection-lavender": {
+        "role": "neutral",
+        "displayName": "Text Selection Lavender",
+        "tonalRamp": [
+          "oklch(15% 0.01204 297.21)",
+          "oklch(27% 0.02650 297.21)",
+          "oklch(39% 0.03854 297.21)",
+          "oklch(51% 0.04817 297.21)",
+          "oklch(63% 0.04817 297.21)",
+          "oklch(75% 0.04095 297.21)",
+          "oklch(87% 0.02409 297.21)",
+          "oklch(95% 0.00963 297.21)"
         ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Illustrated Developer title; final size varies across the recorded responsive cascade."
+        "purpose": "Compact Developer page title."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Viewer run title; clamps at narrow widths."
+        "purpose": "One-line Viewer run title."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Configuration section headings."
+        "purpose": "Source title role in the outer workbench."
       },
       "summary-title": {
         "displayName": "Summary Title",
-        "purpose": "Launch summary heading, with compact tablet sizing."
+        "purpose": "Source summary title role in the outer workbench."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Framework baseline and introductory copy."
+        "purpose": "Outer framework baseline."
       },
       "supporting": {
         "displayName": "Supporting",
-        "purpose": "Secondary explanations beneath section headings."
+        "purpose": "Source supporting role in the outer workbench."
       },
       "rationale": {
         "displayName": "Rationale",
-        "purpose": "Readable public rationale in a white inset."
+        "purpose": "Source rationale role in the outer workbench."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Field labels and primary/secondary actions."
+        "purpose": "Source label role in the outer workbench."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "Source action role in the outer workbench."
+      },
+      "navigation": {
+        "displayName": "Navigation",
+        "purpose": "Distinct Developer and Viewer mode links."
       },
       "metadata": {
         "displayName": "Metadata",
-        "purpose": "Counts, timestamps and compact supporting UI."
+        "purpose": "Source metadata role in the outer workbench."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Recorded parameter and result JSON with the exact source system monospace fallbacks."
+      },
+      "mobile-control": {
+        "displayName": "Mobile Control",
+        "purpose": "16px inputs, textareas and selectors prevent iPhone Safari focus zoom."
       }
     },
     "shadows": [
       {
-        "name": "dialog",
-        "value": "0 16px 56px #12121230",
-        "purpose": "Lifts the transient model configuration dialog; backdrop is #24201966."
-      },
-      {
-        "name": "toast",
-        "value": "0 6px 24px #12121220",
-        "purpose": "Temporary status feedback above the working framework."
+        "name": "model-dialog",
+        "value": "0 12px 48px #2c335229",
+        "purpose": "Transient connection dialog; source backdrop is #2c33524d."
       }
     ],
     "motion": [
       {
         "name": "state-transition",
-        "value": "background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out",
-        "purpose": "Source button, link and platform-choice feedback."
+        "value": "background-color 180ms ease-out, color 180ms ease-out, border-color 180ms ease-out",
+        "purpose": "Source button/link state feedback."
       },
       {
         "name": "toast-transition",
-        "value": "opacity 160ms ease-out, transform 160ms ease-out",
+        "value": "opacity 180ms ease-out, transform 180ms ease-out",
         "purpose": "Toast fades while moving 10px into position."
       },
       {
         "name": "reduced-motion",
-        "value": "transition: none !important; animation: none !important; scroll-behavior: auto !important;",
-        "purpose": "The source reduced-motion query disables transitions and animation."
+        "value": "transition: none !important; scroll-behavior: auto !important;",
+        "purpose": "Source reduced-motion preference cancels transitions and restores automatic scrolling."
       }
     ],
     "breakpoints": [
       {
-        "name": "wide-stage",
-        "value": "1600px"
+        "name": "wide-viewer-min",
+        "value": "1500px"
       },
       {
-        "name": "compact-desktop",
-        "value": "1280px"
+        "name": "compact-workbench-max",
+        "value": "1199px"
       },
       {
-        "name": "sidebar-collapse",
-        "value": "1100px"
+        "name": "horizontal-accounts-max",
+        "value": "979px"
       },
       {
-        "name": "compact-branding",
-        "value": "800px"
-      },
-      {
-        "name": "stack-workspace",
-        "value": "760px"
-      },
-      {
-        "name": "narrow-controls",
-        "value": "480px"
+        "name": "mobile-workbench-max",
+        "value": "699px"
       }
     ]
   },
@@ -902,92 +583,93 @@
       "name": "Primary action",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Launch and save actions use the source indigo capsule.",
-      "html": "<button class=\"ds-primary\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m8 5 11 7-11 7Z\"/></svg>启动模拟<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button>",
-      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:11px 19px;border-radius:28px;font-weight:500;border:1px solid transparent;white-space:nowrap;cursor:pointer;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;background:var(--ink,#2c3352);color:#fff;}.ds-primary:hover:not(:disabled){background:#424b75;}.ds-primary:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-primary:disabled{opacity:.45;cursor:default;}.ds-primary svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}"
+      "description": "Source compact indigo action for launch and model save.",
+      "html": "<button type=\"button\" class=\"ds-primary\">保存模型连接<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 15px;border:0;border-radius:10px;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;background:var(--ink,#2c3352);color:#fff;}.ds-primary:hover:not(:disabled){background:#424b75;}.ds-primary:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}.ds-primary:disabled{opacity:.5;cursor:not-allowed;}.ds-primary svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none;scroll-behavior:auto;}}"
     },
     {
       "name": "Secondary action",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Low-emphasis actions use a cool outlined capsule.",
-      "html": "<button class=\"ds-secondary\" type=\"button\">保存配置</button>",
-      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:11px 19px;border-radius:28px;font-weight:500;border:1px solid transparent;white-space:nowrap;cursor:pointer;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;background:var(--stone,#f0f3fc);color:var(--ink,#2c3352);border-color:#e2e7f2;}.ds-secondary:hover:not(:disabled){background:#e8edfa;}.ds-secondary:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-secondary:disabled{opacity:.45;cursor:default;}"
+      "description": "Source cool action for saving configuration and run controls.",
+      "html": "<button type=\"button\" class=\"ds-secondary\">保存配置</button>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 15px;border:0;border-radius:10px;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;background:var(--stone,#f0f3fc);color:var(--ink,#2c3352);}.ds-secondary:hover:not(:disabled){background:#e8edfa;}.ds-secondary:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}.ds-secondary:disabled{opacity:.5;cursor:not-allowed;}.ds-secondary svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none;scroll-behavior:auto;}}"
     },
     {
       "name": "Text action",
       "kind": "button",
       "refersTo": "button-text",
-      "description": "Quiet add and navigation actions use periwinkle hover.",
-      "html": "<button class=\"ds-text\" type=\"button\">进入 Viewer <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button>",
-      "css": ".ds-text{display:inline-flex;align-items:center;gap:7px;padding:4px 0;border:0;background:transparent;color:var(--body,#4a536f);font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;font-size:13px;font-weight:500;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-text:hover{color:var(--accent,#5264b6);}.ds-text:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-text svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;width:16px;height:16px;}"
+      "description": "Contextual platform exploration action from the section heading.",
+      "html": "<a class=\"ds-text\" href=\"#platform\">探索当前平台<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M14 3h7v7m0-7L10 14m0-10H4v16h16v-6\"/></svg></a>",
+      "css": ".ds-text{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:6px 0;border:0;background:transparent;color:var(--accent,#5264b6);font-size:12px;font-weight:500;text-decoration:none;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;}.ds-text:hover{color:var(--ink,#2c3352);text-decoration:underline;text-underline-offset:4px;}.ds-text:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}.ds-text svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}@media(prefers-reduced-motion:reduce){.ds-text{transition:none;scroll-behavior:auto;}}"
     },
     {
       "name": "Experiment name field",
       "kind": "input",
       "refersTo": "input",
-      "description": "Associated labels and white controls keep form entry legible.",
-      "html": "<label class=\"ds-field\">实验名称<input class=\"ds-input\" type=\"text\" placeholder=\"例如：摄影创作者的社区运营\" /></label>",
-      "css": ".ds-field{display:flex;flex-direction:column;gap:9px;color:var(--body,#4a536f);font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;font-weight:500;}.ds-input{min-width:0;min-height:44px;width:100%;padding:11px 13px;border:1px solid #dce2ef;border-radius:10px;background:#fff;color:var(--body,#4a536f);font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;font-weight:400;caret-color:var(--ink,#2c3352);}.ds-input::placeholder{color:var(--muted,#5b6680);opacity:1;}.ds-input:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;outline-offset:2px;border-color:#8c9dc8;}@media(max-width:480px){.ds-input{font-size:16px;padding-inline:11px;}}"
+      "description": "Actual labelled summary field, with source hover, focus and mobile sizing.",
+      "html": "<label class=\"ds-field\">实验名称<input class=\"ds-input\" placeholder=\"例如：摄影创作者的社区运营\" maxlength=\"200\"/></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:12px;font-weight:500;color:var(--ink,#2c3352);font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;}.ds-input{box-sizing:border-box;min-width:0;min-height:40px;width:100%;padding:9px 11px;border:1px solid #dce2ef;border-radius:9px;background:#fff;color:var(--ink,#2c3352);font-size:13px;font-weight:400;caret-color:var(--accent,#5264b6);font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;}.ds-input::placeholder{color:var(--muted,#5b6680);opacity:1;}.ds-input:hover{border-color:#a7b3d1;}.ds-input:focus{border-color:var(--accent,#5264b6);}.ds-input:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}@media(max-width:699px){.ds-field{font-size:11px;gap:6px;}.ds-input{font-size:16px;padding:8px;min-height:38px;}}@media(prefers-reduced-motion:reduce){.ds-field,.ds-input{transition:none;scroll-behavior:auto;}}"
     },
     {
       "name": "Mode navigation",
       "kind": "nav",
       "refersTo": "mode-navigation",
-      "description": "Two links preserve the current page and a keyboard focus cue.",
-      "html": "<nav class=\"ds-nav\" aria-label=\"页面模式\"><a class=\"ds-nav-link ds-nav-active\" href=\"#developer\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7h16M4 17h16\"/><circle cx=\"9\" cy=\"7\" r=\"3\"/><circle cx=\"16\" cy=\"17\" r=\"3\"/></svg>开发者</a><a class=\"ds-nav-link\" href=\"#viewer\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>Viewer</a></nav>",
-      "css": ".ds-nav{display:inline-flex;gap:4px;padding:4px;border-radius:32px;background:#f0f2fc;}.ds-nav-link{display:flex;align-items:center;gap:8px;padding:10px 19px;border-radius:26px;color:var(--muted,#5b6680);text-decoration:none;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;font-weight:500;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-nav-active{background:#3d486f;color:#fff;}.ds-nav-link:hover:not(.ds-nav-active){color:var(--ink,#2c3352);background:#e8edf8;}.ds-nav-link:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-nav svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}@media(max-width:480px){.ds-nav-link{padding:9px 10px;font-size:12px;gap:6px;}.ds-nav svg{display:none;}}"
+      "description": "Distinct Developer and Viewer links from the top masthead.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"工作模式\"><a class=\"ds-nav-link ds-nav-active\" aria-current=\"page\" href=\"#developer\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7h16M4 17h16\"/><circle cx=\"9\" cy=\"7\" r=\"3\"/><circle cx=\"16\" cy=\"17\" r=\"3\"/></svg>开发者</a><a class=\"ds-nav-link\" href=\"#viewer\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>Viewer</a></nav>",
+      "css": ".ds-nav{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--stone,#f0f3fc);}.ds-nav-link{display:flex;align-items:center;gap:7px;min-height:36px;padding:7px 14px;font-size:13px;font-weight:400;border-radius:9px;color:var(--body,#4a536f);text-decoration:none;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;}.ds-nav-active{background:#3d486f;color:#fff;}.ds-nav-link:hover:not(.ds-nav-active){background:#e8edf8;}.ds-nav-link:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}.ds-nav svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;width:16px;height:16px;}@media(max-width:699px){.ds-nav{padding:3px;gap:3px;}.ds-nav-link{font-size:11px;padding:7px 10px;min-height:34px;}.ds-nav svg{display:none;}}@media(prefers-reduced-motion:reduce){.ds-nav,.ds-nav-active,.ds-nav-link{transition:none;scroll-behavior:auto;}}"
     },
     {
       "name": "Run status",
       "kind": "chip",
       "refersTo": "status",
-      "description": "Text and a current-color dot communicate real run states.",
-      "html": "<div class=\"ds-status-group\"><span class=\"ds-status ds-success\">已完成</span><span class=\"ds-status ds-paused\">已暂停</span><span class=\"ds-status ds-error\">进程中断</span></div>",
-      "css": ".ds-status-group{display:flex;gap:8px;flex-wrap:wrap;}.ds-status{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:fit-content;padding:5px 8px;border-radius:7px;color:var(--body,#4a536f);background:var(--stone,#f0f3fc);font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;font-size:12px;white-space:nowrap;}.ds-status::before{content:\"\";width:5px;height:5px;border-radius:50%;background:currentColor;}.ds-success{background:#e6f2e9;color:#256848;}.ds-paused{background:#fff0d9;color:#825108;}.ds-error{background:#ffedf0;color:#a72e3a;}"
+      "description": "Written state and a dot use the actual neutral, success, paused and error variants.",
+      "html": "<div class=\"ds-status-group\"><span class=\"ds-status\">已停止</span><span class=\"ds-status ds-success\">已完成</span><span class=\"ds-status ds-paused\">已暂停</span><span class=\"ds-status ds-error\">执行失败</span></div>",
+      "css": ".ds-status-group{display:flex;gap:8px;flex-wrap:wrap;}.ds-status{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:fit-content;font-size:11px;font-weight:400;border-radius:6px;padding:5px 7px;background:var(--stone,#f0f3fc);color:var(--body,#4a536f);white-space:nowrap;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;}.ds-status::before{content:\"\";width:5px;height:5px;border-radius:50%;background:currentColor;}.ds-success{background:#e6f2e9;color:#256848;}.ds-paused{background:#fff0d9;color:#825108;}.ds-error{background:#ffedf0;color:#a72e3a;}@media(prefers-reduced-motion:reduce){.ds-error,.ds-paused,.ds-status,.ds-status-group,.ds-success{transition:none;scroll-behavior:auto;}}"
     },
     {
-      "name": "Platform choice",
+      "name": "Divided configuration surface",
       "kind": "card",
-      "refersTo": "platform-pink-selected",
-      "description": "The selected Xiaohongshu source card keeps its rose plane, strong edge, tick and pressed state.",
-      "html": "<button class=\"ds-platform\" type=\"button\" aria-pressed=\"true\"><span class=\"ds-platform-check\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"/></svg></span><span class=\"ds-platform-logo\">小红书</span><strong class=\"ds-platform-name\">小红书</strong><p class=\"ds-platform-copy\">图文笔记、视频与收藏，围绕生活经验展开互动。</p><span class=\"ds-platform-caption\"><span></span>发现 / 关注 / 同城</span></button>",
-      "css": ".ds-platform{position:relative;min-width:0;text-align:left;padding:17px 14px 13px;border:2px solid #c9658b;border-radius:14px;background:#ffe8f1;color:#26304b;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-platform:hover{border-color:#c9658b;}.ds-platform:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-platform-check{position:absolute;top:13px;right:12px;display:grid;place-items:center;width:17px;height:17px;border:1px solid #5262a0;border-radius:50%;background:#5262a0;color:#fff;}.ds-platform-check svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;width:12px;height:12px;stroke-width:2.4;}.ds-platform-logo{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:#ff2442;color:#fff;font-size:9px;font-weight:600;}.ds-platform-name{display:block;margin:14px 0 8px;font-size:15px;font-weight:600;}.ds-platform-copy{margin:0 0 16px;color:#5d627c;font-size:12px;line-height:1.7;}.ds-platform-caption{display:flex;gap:6px;align-items:center;color:#5d627c;font-size:11px;line-height:1.5;}.ds-platform-caption>span{width:4px;height:4px;border-radius:50%;background:currentColor;flex-shrink:0;}@media(max-width:480px){.ds-platform{padding:13px 9px;}.ds-platform-name{font-size:12px;margin:12px 0 0;}.ds-platform-copy,.ds-platform-caption{display:none;}.ds-platform-check{top:9px;right:7px;width:13px;height:13px;}}"
+      "refersTo": "configuration-form",
+      "description": "The source white form and section divider, with actual model-role headings.",
+      "html": "<section class=\"ds-form\"><div class=\"ds-section\"><h2>参与模拟的 AI 账号</h2><p>受测账号是主要观察对象，背景账号构成它的社交环境。</p><div class=\"ds-roles\"><h3>受测账号</h3><h3>背景账号</h3></div></div><div class=\"ds-section\"><h2>模拟设置</h2><p>运行意图可以留空，让账号按兴趣自然浏览和互动。</p></div></section>",
+      "css": ".ds-form{min-width:0;background:var(--paper,#fff);color:var(--ink,#2c3352);border:1px solid var(--line,#e2e7f2);border-radius:var(--radius,12px);overflow:hidden;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;}.ds-section{padding:22px 24px;border-bottom:1px solid var(--line,#e2e7f2);}.ds-section:last-child{border-bottom:0;}.ds-section h2{margin:0;font-family:\"Agora Display\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:18px;font-weight:600;line-height:1.4;}.ds-section p{margin:5px 0 18px;font-size:12px;line-height:1.7;color:var(--muted,#5b6680);}.ds-roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}.ds-roles h3{margin:0;font-size:14px;font-weight:600;}.ds-roles h3+h3{padding-left:16px;border-left:1px solid var(--line,#e2e7f2);}@media(max-width:1199px){.ds-section{padding:20px 18px;}}@media(max-width:699px){.ds-section{padding:18px 15px;}.ds-section h2{font-size:16px;}.ds-section p{font-size:10px;}.ds-roles{gap:12px;}.ds-roles h3{font-size:12px;}.ds-roles h3+h3{padding-left:12px;}}@media(prefers-reduced-motion:reduce){.ds-form,.ds-roles,.ds-section{transition:none;scroll-behavior:auto;}}"
+    },
+    {
+      "name": "Selected platform choice",
+      "kind": "button",
+      "refersTo": "platform-choice-selected",
+      "description": "Source shared periwinkle choice, native Xiaohongshu mark and pressed selection.",
+      "html": "<button class=\"ds-platform ds-platform-selected\" type=\"button\" aria-pressed=\"true\"><span class=\"ds-check\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"/></svg></span><span class=\"ds-platform-logo\">小红书</span><strong>小红书</strong><p>图文笔记 · 视频 · 收藏</p><span class=\"ds-platform-caption\">发现 / 关注 / 同城</span></button>",
+      "css": ".ds-platform{position:relative;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:5px;min-width:0;padding:15px 12px;border:1px solid var(--line,#e2e7f2);border-radius:11px;background:#fff;color:var(--body,#4a536f);cursor:pointer;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;}.ds-platform:hover{background:var(--canvas,#fafbff);border-color:#9da9ce;}.ds-platform-selected,.ds-platform-selected:hover{border:2px solid var(--accent,#5264b6);padding:14px 11px;background:#f3f5ff;color:var(--ink,#2c3352);}.ds-platform:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}.ds-check{position:absolute;right:9px;top:9px;width:15px;height:15px;border:1px solid var(--accent,#5264b6);border-radius:50%;display:grid;place-items:center;background:var(--accent,#5264b6);color:#fff;}.ds-check svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;width:12px;height:12px;}.ds-platform-logo{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#ff2442;color:white;font-size:9px;font-weight:600;margin-bottom:4px;}.ds-platform strong{font-size:13px;font-weight:600;}.ds-platform p{margin:0;font-size:11px;line-height:1.65;color:var(--muted,#5b6680);}.ds-platform-caption{font-size:10px;line-height:1.6;color:var(--muted,#5b6680);}@media(max-width:1199px){.ds-platform p{display:none;}}@media(max-width:699px){.ds-platform{padding:12px 8px;gap:6px;}.ds-platform-selected,.ds-platform-selected:hover{padding:11px 7px;}.ds-platform-logo{width:28px;height:28px;border-radius:8px;}.ds-platform strong{font-size:11px;}.ds-platform-caption{font-size:9px;}.ds-check{right:6px;top:6px;width:13px;height:13px;}}@media(prefers-reduced-motion:reduce){.ds-check,.ds-platform,.ds-platform-caption,.ds-platform-logo,.ds-platform-selected{transition:none;scroll-behavior:auto;}}"
     },
     {
       "name": "Selected account",
-      "kind": "card",
+      "kind": "button",
       "refersTo": "actor-card-selected",
-      "description": "The source account selector combines avatar, role, action count and pressed state.",
-      "html": "<button class=\"ds-actor\" type=\"button\" aria-pressed=\"true\"><span class=\"ds-avatar\">慢慢</span><span class=\"ds-actor-copy\"><span class=\"ds-actor-name\">慢慢看世界</span><small class=\"ds-actor-meta\"><span class=\"ds-role\">主</span> · 16 步</small></span></button>",
-      "css": ".ds-actor{display:flex;align-items:center;gap:9px;width:100%;padding:12px 8px;border:0;border-radius:11px;background:#e5ecff;color:var(--ink,#2c3352);text-align:left;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-actor:hover{background:#e5ecff;}.ds-actor:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-avatar{display:inline-flex;align-items:center;justify-content:center;width:33px;height:33px;flex-shrink:0;border-radius:50%;background:#e8edf9;color:#48557c;font-size:11px;font-weight:500;}.ds-actor-copy{min-width:0;flex:1;}.ds-actor-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;margin-bottom:4px;}.ds-actor-meta{display:flex;align-items:center;gap:4px;color:var(--muted,#5b6680);font-size:11px;}.ds-role{font-size:10px;color:#925112;background:#ffead1;border-radius:4px;padding:2px 4px;}"
+      "description": "The source selected actor row; this static sample shows its actual role/count structure.",
+      "html": "<button class=\"ds-actor ds-actor-selected\" type=\"button\" aria-pressed=\"true\"><span class=\"ds-avatar\">慢慢</span><span class=\"ds-actor-copy\"><span class=\"ds-actor-name\">慢慢看世界</span><small><span class=\"ds-role\">受测</span> · 16 次</small></span></button>",
+      "css": ".ds-actor{display:flex;align-items:center;gap:8px;width:100%;padding:11px 9px;margin-bottom:3px;border:0;border-radius:9px;text-align:left;background:transparent;color:var(--ink,#2c3352);cursor:pointer;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;}.ds-actor:hover{background:var(--stone,#f0f3fc);}.ds-actor-selected,.ds-actor-selected:hover{background:#e5ecff;color:var(--ink,#2c3352);}.ds-actor:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}.ds-avatar{width:30px;height:30px;border-radius:50%;background:#e5eafa;display:grid;place-items:center;font-size:10px;color:var(--body,#4a536f);flex-shrink:0;}.ds-actor-copy{min-width:0;flex:1;}.ds-actor-name{display:block;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;}.ds-actor small{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted,#5b6680);}.ds-role{background:#ffead1;color:#825108;font-size:9px;padding:1px 4px;border-radius:4px;white-space:nowrap;}@media(max-width:1199px){.ds-actor{padding:10px 7px;}.ds-avatar{width:26px;height:26px;}}@media(max-width:979px){.ds-actor{width:155px;padding:10px;}}@media(max-width:699px){.ds-actor{width:146px;padding:9px 8px;}}@media(prefers-reduced-motion:reduce){.ds-actor,.ds-actor-copy,.ds-actor-name,.ds-actor-selected,.ds-avatar,.ds-role{transition:none;scroll-behavior:auto;}}"
     },
     {
       "name": "Exact replay bar",
       "kind": "custom",
       "refersTo": "playback",
-      "description": "Circular controls and the native range retain the source playback hierarchy.",
-      "html": "<div class=\"ds-replay\"><div class=\"ds-replay-buttons\"><button class=\"ds-replay-step\" type=\"button\" aria-label=\"上一步\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m15 5-7 7 7 7\"/></svg></button><button class=\"ds-replay-step ds-replay-play\" type=\"button\" aria-label=\"播放回放\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m8 5 11 7-11 7Z\"/></svg></button><button class=\"ds-replay-step\" type=\"button\" aria-label=\"下一步\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></button></div><input class=\"ds-range\" type=\"range\" min=\"0\" max=\"18\" value=\"12\" aria-label=\"回放步骤\" /><span class=\"ds-replay-count\">12 / 18</span><select class=\"ds-speed\" aria-label=\"回放速度\"><option>1×</option><option>2×</option></select></div>",
-      "css": ".ds-replay{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:#eef2ff;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;color:var(--body,#4a536f);}.ds-replay-buttons{display:flex;align-items:center;gap:5px;}.ds-replay-step{display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:50%;background:var(--canvas,#fafbff);color:var(--body,#4a536f);cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-replay-play{width:38px;height:38px;background:#42507d;color:#fff;}.ds-replay-step:hover{background:var(--canvas,#fafbff);}.ds-replay-play:hover{background:#42507d;}.ds-replay-step:focus-visible,.ds-range:focus-visible,.ds-speed:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-replay svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}.ds-range{flex:1;width:0;min-width:24px;height:16px;accent-color:var(--ink,#2c3352);cursor:pointer;}.ds-replay-count{font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums;}.ds-speed{width:49px;padding:4px;border:0;background:transparent;color:inherit;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size:14px;line-height:1.5;font-size:12px;}@media(max-width:480px){.ds-replay{flex-wrap:wrap;gap:6px;padding:10px;}.ds-replay-buttons{gap:4px;}.ds-replay-step{width:28px;height:28px;}.ds-replay-play{width:32px;height:32px;}.ds-range{min-width:56px;}.ds-speed{font-size:16px;width:52px;margin-left:auto;}}@media(prefers-reduced-motion:reduce){.ds-replay-step{transition:none;}}"
-    },
-    {
-      "name": "Official illustrated wordmark",
-      "kind": "custom",
-      "refersTo": "brand-wordmark",
-      "description": "The actual header image preserves the supplied Agora identity; preview uses the repository-local derivative.",
-      "html": "<a class=\"ds-brand\" href=\"#developer\" aria-label=\"Agora 首页\"><img class=\"ds-wordmark\" src=\"agora/web/agora-wordmark.webp\" alt=\"Agora\" width=\"184\" height=\"72\" /></a>",
-      "css": ".ds-brand{display:inline-flex;align-items:center;text-decoration:none;}.ds-brand:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:4px;}.ds-wordmark{display:block;width:184px;height:72px;object-fit:contain;}@media(max-width:800px){.ds-wordmark{width:170px;height:66px;}}@media(max-width:480px){.ds-wordmark{width:158px;height:62px;}}"
+      "description": "Compact rounded-square controls, range, speed and explicit latest/history state.",
+      "html": "<div class=\"ds-replay\"><div class=\"ds-replay-buttons\"><button class=\"ds-replay-step\" type=\"button\" aria-label=\"上一步\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m15 5-7 7 7 7\"/></svg></button><button class=\"ds-replay-step ds-replay-play\" type=\"button\" aria-label=\"播放回放\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m8 5 11 7-11 7Z\"/></svg></button><button class=\"ds-replay-step\" type=\"button\" aria-label=\"下一步\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></button></div><input class=\"ds-range\" type=\"range\" min=\"0\" max=\"17\" value=\"17\" aria-label=\"操作回放进度\"/><span class=\"ds-count\">18 / 18</span><select class=\"ds-speed\" aria-label=\"回放速度\"><option>1×</option><option>2×</option></select><span class=\"ds-replay-mode\">历史回放</span><button class=\"ds-live ds-live-active\" type=\"button\" aria-label=\"显示最新步骤\">最新步骤</button></div>",
+      "css": ".ds-replay{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#eef2ff;border-radius:10px;color:var(--body,#4a536f);font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;}.ds-replay-buttons{display:flex;align-items:center;gap:4px;}.ds-replay-step{display:grid;place-items:center;width:29px;height:29px;border:0;border-radius:7px;color:var(--body,#4a536f);background:#fff;cursor:pointer;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;}.ds-replay-play{background:#42507d;color:#fff;}.ds-replay-step:hover{background:#fff;}.ds-replay-play:hover{background:#42507d;}.ds-replay-step:focus-visible,.ds-range:focus-visible,.ds-speed:focus-visible,.ds-live:focus-visible{outline:2px solid var(--blue,#4058b7);outline-offset:3px;}.ds-replay svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}.ds-range{flex:1;width:0;min-width:24px;accent-color:var(--ink,#2c3352);cursor:pointer;}.ds-count{font-size:10px;white-space:nowrap;color:var(--body,#4a536f);font-variant-numeric:tabular-nums;}.ds-speed{font-size:11px;width:46px;border:0;background:transparent;padding:4px 2px;color:inherit;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;}.ds-replay-mode{font-size:10px;color:var(--muted,#5b6680);white-space:nowrap;}.ds-live{font-size:10px;white-space:nowrap;border:0;border-radius:6px;padding:6px 7px;background:#fff;color:var(--body,#4a536f);cursor:pointer;font-family:\"Agora Text\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;line-height:1.5;transition:background-color .18s ease-out,color .18s ease-out,border-color .18s ease-out;}.ds-live-active,.ds-live-active:hover{background:#e6f2e9;color:#256848;}@media(max-width:1199px){.ds-replay{gap:6px;padding:8px;}.ds-replay-mode{display:none;}}@media(max-width:699px){.ds-replay-buttons{gap:3px;}.ds-replay-step{width:28px;height:28px;}.ds-count{font-size:9px;}.ds-speed{font-size:16px;width:56px;flex-shrink:0;}.ds-live{font-size:9px;padding:6px;}}@media(prefers-reduced-motion:reduce){.ds-count,.ds-live,.ds-live-active,.ds-range,.ds-replay,.ds-replay-buttons,.ds-replay-mode,.ds-replay-play,.ds-replay-step,.ds-speed{transition:none;scroll-behavior:auto;}}"
     }
   ],
   "narrative": {
     "northStar": "The Illustrated Social Workbench",
-    "overview": "Agora Studio is a clear social-world workbench with an illustrated, anime-influenced identity. The user-supplied Agora wordmark and world illustration establish the personality: cool indigo drawing, blue and lavender planes, and small pink, peach and golden details. A near-white working canvas and readable controls give the artwork room without making configuration or replay visually busy.\n\nThis design system applies exclusively to the Developer and Viewer outer framework in `agora/web/studio.html`, `studio.css` and `studio.js`. Xiaohongshu, X/Twitter and Reddit iframe documents retain their native typography, color, layout and interaction. The illustrated identity belongs to branding and orientation; account actions, observations, counts and public rationales remain actual interface content.",
+    "overview": "Agora Studio is a compact social-world workbench with the approved illustrated, anime-influenced identity. The user-supplied Agora wordmark and world illustration establish the personality: cool indigo drawing, blue and lavender planes, and small pink, peach and golden details. Near-white working surfaces, modest headings and tightly grouped controls give configuration and observation the main share of the screen.\n\nThis design system applies to the Developer and Viewer outer framework in `agora/web/studio.html`, `studio.css` and `studio.js`. Xiaohongshu, X/Twitter and Reddit iframe documents retain their native typography, color, layout and interaction. Branding provides orientation; account actions, observations, counts and public rationales remain actual recorded interface content.",
     "keyCharacteristics": [
-      "Official illustrated image branding, reused at appropriate sizes rather than redrawn as a CSS logo.",
-      "Near-white canvas, indigo ink, blue and lavender grouping surfaces, and restrained pastel platform choices.",
-      "Rounded Latin headings and legible bilingual controls with self-hosted fonts and system Chinese fallbacks.",
-      "Flat working surfaces, fine outlines, capsule actions and brief state transitions.",
-      "A strict visual boundary around each native social-platform iframe."
+      "Official illustrated wordmark and world artwork, reused proportionally without repainting.",
+      "Near-white canvas, indigo ink, fine cool dividers and periwinkle selection states.",
+      "Compact, divided work surfaces with self-hosted Latin fonts and system Chinese fallbacks.",
+      "Platform-first configuration and a Viewer stage that receives the largest working column.",
+      "Explicit status, keyboard focus, independently remembered account positions and short state transitions.",
+      "Independent native social-platform styling inside each iframe."
     ],
     "rules": [
       {
@@ -997,30 +679,31 @@
       },
       {
         "name": "The Readable Control Rule",
-        "body": "Preserve the implemented mobile field and select text size (16px), including platform, experiment and replay-speed selectors.",
+        "body": "Preserve the mobile control text size (16px) so focusing a field does not trigger iPhone Safari zoom. Keep the replay-speed selector (56px) wide and prevent it from shrinking.",
         "section": "typography"
       },
       {
-        "name": "The Honest Illustration Rule",
-        "body": "Use the approved Agora artwork for branding and orientation. Never present illustration as account data, a simulation outcome or evidence of model capability.",
-        "section": "components"
+        "name": "The Flat Working Surface Rule",
+        "body": "Use outlines, dividers and tonal grouping for working surfaces. Reserve the implemented shadow for the model dialog.",
+        "section": "elevation"
       }
     ],
     "dos": [
-      "Do reuse the supplied Agora wordmark and icon/world derivatives, preserving proportions, illustration detail and transparent edges.",
-      "Do keep the near-white canvas and indigo text as the framework baseline; use blue and lavender planes to group work.",
-      "Do keep the three platform choices distinct with their implemented pink, blue and peach surfaces, borders and pressed states.",
-      "Do retain keyboard focus outlines, associated field labels, the dialog title, actor pressed states and readable mobile controls.",
-      "Do preserve the selected historical step and the same iframe when expanding or restoring the platform stage.",
+      "Do reuse the supplied Agora wordmark and world derivatives, preserving proportions, illustration detail and transparent edges.",
+      "Do keep the near-white canvas, indigo text and cool selection surfaces as the framework baseline.",
+      "Do preserve the compact configuration sections, distinct model roles, total action budget and visible launch validation.",
+      "Do retain field labels, keyboard focus outlines, dialog naming, actor pressed states and written status.",
+      "Do restore each account’s independent historical position and keep the same iframe when expanding the stage.",
+      "Do synchronize the displayed action, outcome and observed platform frame before presenting a historical step.",
       "Do use short state transitions and respect reduced-motion preferences."
     ],
     "donts": [
-      "Don't return to the rejected single warm-yellow form treatment or the earlier terracotta-and-stone framework palette.",
-      "Don't replace the illustrated wordmark with the obsolete CSS brand-mark or a text-only approximation.",
-      "Don't generate replacement mascot art or copy third-party cartoon characters; extend the approved artwork vocabulary with restrained color and simple accents.",
-      "Don't apply studio typography, palette or decorative artwork to the native social-platform documents.",
-      "Don't add ambient shadows to every working card or continuous floating, particle or looping animation.",
-      "Don't let artwork overlap labels, choices, launch actions or replay controls at narrow widths."
+      "Don't return to the rejected single warm-yellow treatment or earlier terracotta framework palette.",
+      "Don't replace the official illustrated wordmark with a CSS logo, text-only approximation or generated mascot.",
+      "Don't apply studio typography, palette or decorative artwork to native social-platform documents.",
+      "Don't use illustration, sample-world fixtures or missing record fields as evidence of model capability or observed behavior.",
+      "Don't add ambient shadows to every working surface or continuous floating, particle or looping animation.",
+      "Don't let artwork overlap labels, platform choices, launch actions or replay controls at narrow widths."
     ]
   }
 }

@@ -87,6 +87,7 @@
         </symbol>
       </defs>
     </svg>
+
     <header class="masthead">
       <a class="brand" data-route="/developer" aria-label="Agora 首页"
         ><img
@@ -96,7 +97,7 @@
           width="184"
           height="72"
       /></a>
-      <span class="brand-description">社交模拟工作台</span>
+      <span class="brand-description">AI 社交模拟工作台</span>
       <nav class="mode-nav" aria-label="页面模式">
         <a data-route="/developer" data-mode="developer"
           ><svg><use href="#i-sliders" /></svg>开发者</a
@@ -106,59 +107,33 @@
       </nav>
       <div class="masthead-end">
         <span class="connection-dot"></span
-        ><span id="workspaceHealth" role="status">连接中</span
-        ><span class="workspace-avatar">L</span>
+        ><span id="workspaceHealth" role="status">连接中</span>
       </div>
     </header>
     <div class="developer-layout" id="developerPage" hidden>
-      <aside class="app-sidebar">
+      <aside class="app-sidebar" aria-label="开发者导航">
         <div class="sidebar-label">工作区</div>
         <button class="sidebar-item active" id="configNav">
           <svg><use href="#i-grid" /></svg>模拟配置
+        </button>
+        <button class="sidebar-item" id="runsNav">
+          <svg><use href="#i-clock" /></svg>实验记录
         </button>
         <button class="sidebar-item" id="modelsNav">
           <svg><use href="#i-link" /></svg>模型连接<span id="modelCount"
             >0</span
           >
         </button>
-        <button class="sidebar-item" id="runsNav">
-          <svg><use href="#i-clock" /></svg>运行记录
-        </button>
-        <a class="sidebar-item" data-route="/viewer"
-          ><svg><use href="#i-eye" /></svg>观察与回放</a
-        >
         <div class="sidebar-bottom">
-          <span class="sidebar-label">Agora sandbox</span>
-          <div class="lab-card">
-            <img
-              class="lab-art"
-              src="/static/agora-mark.png"
-              width="52"
-              height="52"
-              alt=""
-            />
-            <strong>一个世界，多种视角</strong>
-            <p>让 AI 在社交场景中浏览、创作、互动。</p>
-            <span class="small-badge">3 个独立平台</span>
-          </div>
-          <a
-            class="quiet-link"
-            data-route="/account"
-            id="exploreLink"
-            target="_blank"
-            rel="noopener"
-            >手动探索平台 <svg><use href="#i-external" /></svg
-          ></a>
+          <span id="capacityNote">独立沙盒 · 运行限额加载中</span>
         </div>
       </aside>
       <main class="developer-main">
-        <div class="breadcrumb">工作区 <span>/</span> 模拟配置</div>
-        <div class="page-heading playful-heading">
+        <div class="page-heading">
           <div>
-            <h1>
-              让 AI 走进<span class="headline-highlight">社交世界</span>。
-            </h1>
-            <p>选择平台、账号和模型，看看 AI 如何浏览、创作和互动。</p>
+            <h1>创建社交模拟</h1>
+            <p>选择平台 → 配置 AI 账号 → 启动并观察</p>
+            <div id="configOrigin" class="config-origin" hidden></div>
           </div>
           <div class="world-art" aria-hidden="true">
             <img
@@ -166,15 +141,7 @@
               width="228"
               height="206"
               alt=""
-            /><svg class="art-star star-one" viewBox="0 0 24 24">
-              <path
-                d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"
-              /></svg
-            ><svg class="art-star star-two" viewBox="0 0 24 24">
-              <path
-                d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"
-              /></svg
-            ><span class="art-dot"></span>
+            />
           </div>
         </div>
         <div class="config-layout">
@@ -182,85 +149,101 @@
             <section class="config-section">
               <div class="section-title">
                 <div>
-                  <h2>选择社交场景</h2>
-                  <p>每个平台保留自己的内容形式与互动规则。</p>
+                  <h2>社交平台</h2>
+                  <p>三个独立世界，保留各自的内容和互动规则。</p>
                 </div>
+                <a
+                  class="text-button"
+                  id="exploreLink"
+                  target="_blank"
+                  rel="noopener"
+                  >探索当前平台<svg><use href="#i-external" /></svg
+                ></a>
               </div>
               <div
                 id="platformCards"
                 class="platform-cards"
+                role="group"
                 aria-label="选择模拟平台"
               ></div>
             </section>
             <section class="config-section">
               <div class="section-title">
                 <div>
-                  <h2>设置参与者</h2>
-                  <p>主 agent 使用选定模型，背景账号共同构成社交环境。</p>
+                  <h2>参与模拟的 AI 账号</h2>
+                  <p>受测账号是主要观察对象，背景账号构成它的社交环境。</p>
                 </div>
+                <button type="button" class="text-button" id="addModel">
+                  <svg><use href="#i-plus" /></svg>连接模型
+                </button>
               </div>
-              <div class="field-grid">
-                <label class="field"
-                  >主账号<select id="focalUser" required></select
-                ></label>
-                <div class="field">
-                  <label for="agentCount">参与 agent 总数</label
-                  ><span class="field-hint" id="agentCountHint"
-                    >包含主账号</span
-                  >
-                  <div class="number-control">
-                    <button
-                      type="button"
-                      id="lessAgents"
-                      aria-label="减少 agent"
-                    >
-                      <svg><use href="#i-minus" /></svg></button
-                    ><input
-                      id="agentCount"
-                      aria-describedby="agentCountHint"
-                      type="number"
-                      min="1"
-                      max="32"
-                      value="4"
-                      required
-                    /><button
-                      type="button"
-                      id="moreAgents"
-                      aria-label="增加 agent"
-                    >
-                      <svg><use href="#i-plus" /></svg>
-                    </button>
+              <div class="agent-setup-grid">
+                <div class="agent-setup">
+                  <h3>
+                    <svg><use href="#i-eye" /></svg>受测账号
+                  </h3>
+                  <label class="field"
+                    >平台账号<select id="focalUser" required></select></label
+                  ><label class="field"
+                    >受测账号模型<select id="focalModel" required></select
+                  ></label>
+                  <div id="focalIdentity" class="agent-identity"></div>
+                </div>
+                <div class="agent-setup">
+                  <h3>
+                    <svg><use href="#i-grid" /></svg>背景账号
+                  </h3>
+                  <div class="field">
+                    <label for="agentCount">参与 agent 总数</label
+                    ><small id="agentCountHint">包含 1 个受测账号</small>
+                    <div class="number-stepper">
+                      <button
+                        type="button"
+                        id="lessAgents"
+                        aria-label="减少参与账号"
+                      >
+                        <svg><use href="#i-minus" /></svg></button
+                      ><input
+                        id="agentCount"
+                        type="number"
+                        min="1"
+                        max="32"
+                        value="4"
+                        required
+                        aria-describedby="agentCountHint"
+                      /><button
+                        type="button"
+                        id="moreAgents"
+                        aria-label="增加参与账号"
+                      >
+                        <svg><use href="#i-plus" /></svg>
+                      </button>
+                    </div>
                   </div>
+                  <label class="field"
+                    >背景账号策略<select id="backgroundModel" required></select
+                  ></label>
+                  <div id="backgroundIdentity" class="agent-identity"></div>
                 </div>
               </div>
-              <div class="participant-note">
-                <svg><use href="#i-users" /></svg
-                ><span id="populationNote">1 个主 agent + 3 个背景账号</span
+              <div class="population-note">
+                <svg><use href="#i-eye" /></svg
+                ><span id="populationNote">1 个受测账号 + 3 个背景账号</span
                 ><span class="small-badge">独立沙盒</span>
               </div>
+              <div id="modelNote" class="inline-note"></div>
             </section>
             <section class="config-section">
               <div class="section-title">
                 <div>
-                  <h2>连接模型与设置运行方式</h2>
-                  <p>主模型与背景模型可以独立配置。</p>
+                  <h2>模拟设置</h2>
+                  <p>运行意图可以留空，让账号按兴趣自然浏览和互动。</p>
                 </div>
-                <button type="button" class="text-button" id="addModel">
-                  <svg><use href="#i-plus" /></svg>添加模型
-                </button>
               </div>
-              <div class="field-grid">
-                <label class="field"
-                  >主 agent 模型<select id="focalModel"></select></label
-                ><label class="field"
-                  >背景账号策略<select id="backgroundModel"></select
-                ></label>
-              </div>
-              <div id="modelNote" class="inline-note"></div>
               <label class="field goal-field"
                 >运行意图（可选）<textarea
                   id="goal"
-                  rows="3"
+                  rows="2"
                   maxlength="4000"
                   placeholder="留空时，账号根据自己的兴趣和风格自然浏览与互动。"
                 ></textarea>
@@ -292,7 +275,7 @@
                     >展开</span
                   >
                 </summary>
-                <div class="field-grid three">
+                <div class="field-grid">
                   <label class="field"
                     >动作展示间隔<select id="pace">
                       <option value="0">最快执行</option>
@@ -306,7 +289,16 @@
                       type="number"
                       value="6"
                       min="1"
-                      max="30" /></label
+                      max="30"
+                      required /></label
+                  ><label class="field"
+                    >每页展示数量<input
+                      id="pageSize"
+                      type="number"
+                      value="6"
+                      min="1"
+                      max="12"
+                      required /></label
                   ><label class="field"
                     >探索比例<input
                       id="exploration"
@@ -315,54 +307,65 @@
                       min="0"
                       max="0.5"
                       step="0.05"
+                      required
                   /></label>
                 </div>
               </details>
             </section>
             <div class="form-footer">
               <span
-                ><svg><use href="#i-check" /></svg
-                >每次运行使用独立世界，保留完整操作记录</span
+                ><svg><use href="#i-check" /></svg>独立世界 · 保留完整记录</span
               ><button type="button" class="secondary-button" id="saveConfig">
                 保存配置
               </button>
             </div>
           </form>
-          <aside class="run-summary">
+          <aside class="run-summary" aria-label="模拟配置摘要">
             <div class="summary-top">
-              <h2>准备好，开始模拟</h2>
-              <span class="summary-ready" aria-hidden="true"
-                ><svg><use href="#i-play" /></svg
-              ></span>
+              <h2>本次模拟</h2>
+              <span class="small-badge">启动后进入 Viewer</span>
             </div>
             <div id="summaryPlatform" class="summary-platform"></div>
             <div class="summary-agent" id="summaryAgent"></div>
             <dl class="summary-values">
               <div>
                 <dt>背景账号</dt>
-                <dd id="summaryPopulation">3 agents</dd>
+                <dd id="summaryPopulation">3 个</dd>
               </div>
               <div>
                 <dt>模拟轮数</dt>
-                <dd id="summaryTicks">6 rounds</dd>
+                <dd id="summaryTicks">6 轮</dd>
               </div>
               <div>
-                <dt>主动作上限</dt>
-                <dd id="summaryActions">48 actions</dd>
+                <dt>每账号动作上限</dt>
+                <dd id="summaryActions">48 次</dd>
               </div>
               <div>
-                <dt>主模型</dt>
+                <dt>受测模型</dt>
                 <dd id="summaryModel">开发策略</dd>
               </div>
+              <div>
+                <dt>背景策略</dt>
+                <dd id="summaryBackground">开发策略</dd>
+              </div>
+              <div>
+                <dt>总动作上限</dt>
+                <dd id="summaryTotal">192 次</dd>
+              </div>
             </dl>
-            <div class="summary-divider"></div>
             <label class="field"
               >实验名称<input
                 id="runName"
                 form="experimentForm"
                 maxlength="200"
-                placeholder="例如：摄影创作者的社区运营" /></label
-            ><button
+                placeholder="例如：摄影创作者的社区运营"
+            /></label>
+            <div
+              id="launchReadiness"
+              class="launch-readiness"
+              role="status"
+            ></div>
+            <button
               type="submit"
               form="experimentForm"
               class="primary-button launch-button"
@@ -373,7 +376,7 @@
               </svg>
             </button>
             <p class="summary-footnote">
-              启动后进入 Viewer，可查看主账号的实时画面与每一步操作。
+              观察受测账号实际看到的画面、创作与每一步操作。
             </p>
             <div class="preview-seed">
               <svg><use href="#i-code" /></svg
@@ -385,35 +388,29 @@
         <section class="recent-section" id="recentSection">
           <div class="recent-heading">
             <div>
-              <h2>最近运行</h2>
+              <h2>实验记录</h2>
+              <p>打开回放，或复用配置创建新的独立实验。</p>
             </div>
-            <a class="text-button" data-route="/viewer"
-              >进入 Viewer<svg><use href="#i-arrow" /></svg
-            ></a>
           </div>
           <div id="recentRuns" class="recent-runs">
-            <div class="empty-state compact">正在读取运行记录…</div>
+            <div class="empty-state compact">正在读取实验记录…</div>
           </div>
         </section>
         <footer class="page-footer">
-          <span>Agora · AI 社媒模拟基础设施</span
-          ><span>小红书 / X / Reddit</span>
+          <span>Agora · AI 社交模拟</span><span>小红书 / X / Reddit</span>
         </footer>
       </main>
     </div>
     <main class="viewer-page" id="viewerPage" hidden>
-      <div class="viewer-heading playful-viewer-heading">
+      <div class="viewer-heading">
         <div>
-          <div class="breadcrumb">工作区 <span>/</span> Viewer</div>
-          <h1 id="viewerTitle">观察 AI 的每一步<span>.</span></h1>
+          <h1 id="viewerTitle">观察与回放</h1>
           <p id="viewerSubtitle">
-            浏览、选择、创作与回应，都有对应的平台画面。
+            选择实验，查看 AI 账号实际看到的内容与操作。
           </p>
         </div>
         <div class="viewer-heading-actions">
-          <span class="outline-badge"
-            ><svg><use href="#i-eye" /></svg>账号画面只读</span
-          ><button class="secondary-button" id="exportRun" disabled>
+          <button class="secondary-button" id="exportRun" disabled>
             <svg><use href="#i-external" /></svg>导出记录
           </button>
         </div>
@@ -425,6 +422,8 @@
             <option value="">选择一个实验</option>
           </select></label
         ><span id="viewerStatus" class="run-status">待选择</span
+        ><a class="text-button" id="reuseRun" hidden
+          ><svg><use href="#i-sliders" /></svg>复用配置</a
         ><a class="text-button" data-route="/developer"
           ><svg><use href="#i-plus" /></svg>新建实验</a
         >
@@ -433,14 +432,13 @@
         <div class="empty-symbol" aria-hidden="true">
           <img src="/static/agora-world.webp" width="244" height="220" alt="" />
         </div>
-
-        <h2>选择一场实验，开始观察</h2>
-        <p>
-          配置好平台和模型后，这里会呈现主 agent<br />看到的内容、制作过程，以及每次操作的公开理由。
+        <h2 id="viewerEmptyTitle">选择一场实验，开始观察</h2>
+        <p id="viewerEmptyText">
+          在开发者页面配置平台、账号和模型。启动后可以在这里查看实际画面、操作记录和已记录的公开理由。
         </p>
         <a class="primary-button" data-route="/developer"
-          >配置一场模拟<svg><use href="#i-arrow" /></svg
-        ></a>
+          >配置一场模拟<svg><use href="#i-arrow" /></svg></a
+        ><button class="text-button" id="retryViewer" hidden>重新加载</button>
       </div>
       <div id="viewerWorkspace" class="viewer-workspace" hidden>
         <aside class="actor-panel">
@@ -455,11 +453,15 @@
             aria-label="选择观察账号"
           ></div>
           <div class="actor-panel-bottom">
-            <span class="online-dot"></span
-            ><span id="runProgress">等待运行</span>
+            <span id="runProgress">等待运行</span>
+          </div>
+          <div class="actor-summary">
+            <h3>账号行为概览</h3>
+            <div id="actorStats"></div>
+            <p>当前账号的已记录操作</p>
           </div>
         </aside>
-        <section class="agent-stage">
+        <section class="agent-stage" aria-label="账号观察画面">
           <div class="stage-heading">
             <div id="stageActor" class="stage-actor"></div>
             <span id="screenBadge" class="screen-badge">信息流</span
@@ -476,11 +478,11 @@
           </div>
           <div class="playback">
             <div class="playback-buttons">
-              <button id="previousFrame" aria-label="上一步">
+              <button id="previousFrame" aria-label="上一步" disabled>
                 <svg><use href="#i-chevron-left" /></svg></button
-              ><button id="playReplay" aria-label="播放回放">
+              ><button id="playReplay" aria-label="播放回放" disabled>
                 <svg><use href="#i-play" /></svg></button
-              ><button id="nextFrame" aria-label="下一步">
+              ><button id="nextFrame" aria-label="下一步" disabled>
                 <svg><use href="#i-chevron-right" /></svg>
               </button>
             </div>
@@ -491,49 +493,66 @@
               max="0"
               value="0"
               aria-label="操作回放进度"
+              disabled
             /><span id="stepCounter" class="mono">0 / 0</span
             ><select id="replaySpeed" aria-label="回放速度">
               <option value="0.5">0.5×</option>
               <option value="1" selected>1×</option>
               <option value="2">2×</option></select
+            ><span id="replayMode" class="replay-mode">历史回放</span
             ><button
               id="liveButton"
               class="live-button active"
               aria-label="显示最新步骤"
             >
-              <span></span>最新
+              <span id="liveLabel">最新步骤</span>
             </button>
           </div>
           <div class="platform-window">
             <div class="window-chrome">
-              <span></span><span></span><span></span
+              <svg><use href="#i-eye" /></svg
               ><span id="windowAddress">平台账号画面</span
-              ><span class="window-lock">只读</span>
+              ><span class="window-lock">观察模式 · 只读</span>
             </div>
             <iframe
               id="accountFrame"
-              title="主 agent 的社交平台画面"
+              title="AI 账号的社交平台观察画面"
               hidden
             ></iframe>
-            <div id="frameEmpty" class="empty-state">等待这个账号开始行动…</div>
+            <div id="frameEmpty" class="empty-state" role="status">
+              等待这个账号开始行动…
+            </div>
           </div>
           <div class="stage-note">
             <svg><use href="#i-eye" /></svg
-            >画面来自该账号实际收到的观察；拖动进度条可查看历史步骤。
+            ><span id="frameContext"
+              >实际记录的画面；切换账号时恢复该账号上次查看的位置。</span
+            >
           </div>
         </section>
         <aside class="decision-panel">
           <div class="panel-heading">
-            <h2>动作与选择</h2>
+            <h2>当前动作</h2>
             <span class="mono" id="decisionStep">第 0 步</span>
           </div>
           <div id="decisionDetail" class="decision-detail">
             <div class="empty-state compact">等待第一步操作…</div>
           </div>
           <div class="timeline-heading">
-            <h3>操作时间线</h3>
+            <h3>操作记录</h3>
             <span id="timelineCount">0 步</span>
           </div>
+          <label class="timeline-filter"
+            >筛选操作<select id="timelineFilter" aria-label="筛选操作类型">
+              <option value="all">全部类型</option>
+              <option value="browse">浏览</option>
+              <option value="create">创作</option>
+              <option value="interact">互动</option>
+              <option value="social">关系与社区</option>
+              <option value="system">会话与其他</option>
+              <option value="failed">执行失败</option>
+            </select></label
+          >
           <div id="actionTimeline" class="action-timeline"></div>
         </aside>
       </div>
