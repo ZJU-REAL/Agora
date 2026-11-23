@@ -182,6 +182,16 @@ def test_content_addressed_imports_are_stable_and_deduplicate(source, tmp_path):
 
 def test_experiment_clones_source_and_replays_same_semantic_trace(source):
     world, creator, reader = source
+    # Make creation explicit now that the rule policy respects activity values.
+    world.db.execute(
+        "UPDATE persona SET persona_json=json_set(persona_json,'$.posting_probability',1.0) WHERE user_id=?",
+        (creator,),
+    )
+    world.db.execute(
+        "UPDATE persona SET persona_json=json_set(persona_json,'$.posting_probability',0.0) WHERE user_id=?",
+        (reader,),
+    )
+    world.db.commit()
     before = (
         world.current_tick,
         world.db.execute("SELECT COUNT(*) FROM post").fetchone()[0],

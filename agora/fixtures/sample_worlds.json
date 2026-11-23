@@ -8,18 +8,18 @@
   },
   "xiaohongshu": {
     "users": [
-      {"handle":"city_diary","name":"小林在散步","bio":"走路、拍照，偶尔迷路。📷","interests":{"城市漫游":1,"摄影":0.8},"tone":["随意","记录感"],"examples":["不用特意赶路。换个方向走，街角也有新的风景。📷"]},
-      {"handle":"coffee_after_work","name":"下班喝一杯","bio":"咖啡不是工作，是下班以后的快乐 ☕","interests":{"咖啡":1,"美食":0.4},"tone":["口语","轻松"],"examples":["今天这杯有一点坚果香！磨细半格以后，终于没有之前那么酸了 ☕"]},
-      {"handle":"desk_notes","name":"阿周的桌面","bio":"记录真实使用体验，喜欢简单的桌面。","interests":{"数码":1,"摄影":0.3},"tone":["具体","克制"],"examples":["先把桌面收干净，再看看哪些东西真的每天都在用。少一条线，舒服一点。"]},
-      {"handle":"reader","name":"慢慢看世界","bio":"喜欢摄影、城市和好喝的咖啡。看到有意思的内容会收藏。","interests":{"摄影":1,"城市漫游":0.7,"咖啡":0.5},"tone":["好奇","简短"],"examples":["周末想找一个可以慢慢坐一下午的地方。你们有什么推荐吗？☕"]}
+      {"handle":"city_diary","name":"小林在散步","bio":"走路、拍照，偶尔迷路。📷","interests":{"城市漫游":1,"摄影":0.8},"tone":["随意","记录感"],"examples":["不用特意赶路。换个方向走，街角也有新的风景。📷"],"culture":{"location":"杭州市"}},
+      {"handle":"coffee_after_work","name":"下班喝一杯","bio":"咖啡不是工作，是下班以后的快乐 ☕","interests":{"咖啡":1,"美食":0.4},"tone":["口语","轻松"],"examples":["今天这杯有一点坚果香！磨细半格以后，终于没有之前那么酸了 ☕"],"culture":{"location":"杭州市"}},
+      {"handle":"desk_notes","name":"阿周的桌面","bio":"记录真实使用体验，喜欢简单的桌面。","interests":{"数码":1,"摄影":0.3},"tone":["具体","克制"],"examples":["先把桌面收干净，再看看哪些东西真的每天都在用。少一条线，舒服一点。"],"culture":{"location":"上海市"}},
+      {"handle":"reader","name":"慢慢看世界","bio":"喜欢摄影、城市和好喝的咖啡。看到有意思的内容会收藏。","interests":{"摄影":1,"城市漫游":0.7,"咖啡":0.5},"tone":["好奇","简短"],"examples":["周末想找一个可以慢慢坐一下午的地方。你们有什么推荐吗？☕"],"culture":{"location":"杭州市"}}
     ],
     "posts": [
-      {"author":0,"title":"傍晚散步，抬头有惊喜","body":"没做攻略，就沿着街区慢慢走。\n最喜欢的是亮灯以前那几分钟，天还没完全黑，楼里的光已经暖起来了。\n\n周末可以试试把导航关掉📷","topics":["城市漫游","摄影"],"assets":["city.jpg"],"age":32},
-      {"author":1,"title":"今天这杯，终于不酸了☕","body":"同一包豆子试了三次，这次把研磨调细了一点。\n没有什么玄学，记录一下参数，下次照着做就好。\n\n你们平时喜欢偏酸还是偏苦？","topics":["咖啡"],"assets":["coffee.jpg"],"age":17},
-      {"author":2,"title":"桌面少一点，舒服一点","body":"整理了一下工作区。\n经常用的东西放在手边，其他的先收起来。\n\n不是晒装备，只是想给自己的注意力留一点空间。","topics":["数码"],"assets":["desk.jpg"],"age":45},
-      {"author":0,"title":"城市里的一点慢节奏","body":"白天忙的时候总觉得没空看周围。\n下班走了另一条路，喝了一杯咖啡。普通的一天也可以有一点不一样。","topics":["城市漫游","咖啡"],"assets":["city.jpg","coffee.jpg"],"age":6},
-      {"author":1,"title":"留给自己的一杯咖啡","body":"今天不赶时间，慢慢喝完再走。\n其实比起评价这杯好不好喝，我更想记住坐在这里的这一会儿。","topics":["咖啡","美食"],"assets":["coffee.jpg"],"age":24},
-      {"author":2,"title":"真实体验，比参数重要","body":"一件工具好不好用，先用几天再说。\n最近最有用的改变不是升级设备，是把桌面上的线整理好了。","topics":["数码"],"assets":["desk.jpg"],"age":3}
+      {"author":0,"title":"傍晚散步，抬头有惊喜","body":"没做攻略，就沿着街区慢慢走。\n最喜欢的是亮灯以前那几分钟，天还没完全黑，楼里的光已经暖起来了。\n\n周末可以试试把导航关掉📷","topics":["城市漫游","摄影"],"assets":["city.jpg"],"age":32,"location":"杭州市/西湖区"},
+      {"author":1,"title":"今天这杯，终于不酸了☕","body":"同一包豆子试了三次，这次把研磨调细了一点。\n没有什么玄学，记录一下参数，下次照着做就好。\n\n你们平时喜欢偏酸还是偏苦？","topics":["咖啡"],"assets":["coffee.jpg"],"age":17,"location":"杭州市/拱墅区"},
+      {"author":2,"title":"桌面少一点，舒服一点","body":"整理了一下工作区。\n经常用的东西放在手边，其他的先收起来。\n\n不是晒装备，只是想给自己的注意力留一点空间。","topics":["数码"],"assets":["desk.jpg"],"age":45,"location":"上海市/徐汇区"},
+      {"author":0,"title":"城市里的一点慢节奏","body":"白天忙的时候总觉得没空看周围。\n下班走了另一条路，喝了一杯咖啡。普通的一天也可以有一点不一样。","topics":["城市漫游","咖啡"],"assets":["city.jpg","coffee.jpg"],"age":6,"location":"成都市/锦江区"},
+      {"author":1,"title":"留给自己的一杯咖啡","body":"今天不赶时间，慢慢喝完再走。\n其实比起评价这杯好不好喝，我更想记住坐在这里的这一会儿。","topics":["咖啡","美食"],"assets":["coffee.jpg"],"age":24,"location":"上海市/浦东新区"},
+      {"author":2,"title":"真实体验，比参数重要","body":"一件工具好不好用，先用几天再说。\n最近最有用的改变不是升级设备，是把桌面上的线整理好了。","topics":["数码"],"assets":["desk.jpg"],"age":3,"location":"杭州市/西湖区"}
     ],
     "comments":[{"post":0,"author":3,"content":"这个时候的光线好好看，喜欢这种慢慢走的感觉📷"},{"post":1,"author":3,"content":"求一个大概的粉水比☕"},{"post":1,"author":1,"content":"我这次用的 1:15，按自己喜欢的浓度再调一点就好。","parent":1},{"post":2,"author":0,"content":"桌面干净一点，真的会更想坐下来。"}]
   },
@@ -47,7 +47,7 @@
       {"handle":"practical_setup","name":"practical_setup","bio":"Interested in practical technology and actual use cases.","interests":{"technology":1,"design":0.6},"tone":["evidence-seeking","measured"],"examples":["Before buying something new, I want to understand what problem the current setup isn't solving."]},
       {"handle":"reader","name":"curious_weekend","bio":"Learning photography and comparing everyday experiences.","interests":{"photography":1,"coffee":0.5},"tone":["curious","respectful"],"examples":["Could you share the settings and what you were aiming for? It would help me give a more useful suggestion."]}
     ],
-    "communities":[{"name":"r/photography","title":"Photography","description":"A place to discuss photography, share techniques and ask thoughtful questions.","rules":["Be constructive when giving feedback","Explain your photographic intent","Keep posts related to photography"]},{"name":"r/lifestyle","title":"Everyday experiences","description":"Share everyday experiences, small routines and what you learned.","rules":["Be respectful","Share your own experience"]},{"name":"r/technology","title":"Technology discussions","description":"Discuss technology through practical experiences and clear reasoning.","rules":["Stay on topic","Explain the use case","Avoid personal attacks"]}],
+    "communities":[{"name":"r/photography","title":"Photography","description":"A place to discuss photography, share techniques and ask thoughtful questions.","rules":["Be constructive when giving feedback","Explain your photographic intent","Keep posts related to photography"]},{"name":"r/lifestyle","title":"Everyday experiences","description":"Share everyday experiences, coffee routines and practical lifestyle questions.","rules":["Be respectful","Share your own experience"]},{"name":"r/technology","title":"Technology discussions","description":"Discuss technology through practical experiences and clear reasoning.","rules":["Stay on topic","Explain the use case","Avoid personal attacks"]}],
     "posts":[
       {"author":0,"title":"Evening city photo: how would you improve the framing?","body":"I took this on a walk just after sunset. I wanted the windows to lead the eye through the frame, but I'm not sure the balance is working. Constructive feedback is welcome.","community":"r/photography","topics":["photography"],"assets":["city.jpg"],"age":25},
       {"author":1,"title":"Comparing coffee by changing one variable at a time","body":"I kept the beans and water ratio the same and adjusted the grind. The difference was easier to notice than I expected. Do you keep a brew log, or go mostly by taste?","community":"r/lifestyle","topics":["coffee","lifestyle"],"assets":["coffee.jpg"],"age":14},

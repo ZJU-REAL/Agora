@@ -13,6 +13,12 @@ import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 
+from agora.content_features import (
+    LocalityMatcher,
+    profile_text_interests,
+    text_affinity,
+    text_terms,
+)
 from agora.distribution import PROFILES, feedback_weight, platform_quality
 from agora.storage import ensure_schema
 
@@ -37,6 +43,8 @@ class RecommendationConfig:
     graph_weight: float = 0.8
     community_weight: float = 0.8
     community_diversity_penalty: float = 0.75
+    text_weight: float = 0.45
+    relationship_half_life_ticks: float = 48.0
 
     def __post_init__(self):
         if self.policy_version not in {
@@ -61,7 +69,14 @@ class RecommendationConfig:
                 or value < 0
             ):
                 raise ValueError(f"{name} must be finite and nonnegative")
-        if min(self.feedback_half_life_ticks, self.freshness_half_life_ticks) <= 0:
+        if (
+            min(
+                self.feedback_half_life_ticks,
+                self.freshness_half_life_ticks,
+                self.relationship_half_life_ticks,
+            )
+            <= 0
+        ):
             raise ValueError("half lives must be positive")
         if not 0 <= self.exploration_fraction <= 0.5:
             raise ValueError("exploration_fraction must be between 0 and 0.5")
@@ -84,15 +99,53 @@ class RecommendationEngine:
         db: sqlite3.Connection,
         config: RecommendationConfig | None = None,
         platform="generic",
+        location_aliases=None,
     ):
         self.db = db
         self.config = config or RecommendationConfig()
         self.platform = platform
+        self.localities = LocalityMatcher(location_aliases)
+        self.db.create_function(
+            "agora_locality_matches", 2, self.localities.matches, deterministic=True
+        )
         ensure_schema(db)
 
     @property
     def native(self):
         return self.config.policy_version == "agora-hybrid-v4"
+
+    def text_interests(self, user_id, tick):
+        row = self.db.execute(
+            "SELECT persona_json FROM persona WHERE user_id=?", (user_id,)
+        ).fetchone()
+        weights = defaultdict(
+            float, profile_text_interests(json.loads(row[0]) if row else {})
+        )
+        for value, at_tick, title, body in self.db.execute(
+            "SELECT f.value,f.tick,substr(p.title,1,160),substr(COALESCE(NULLIF(p.quote_content,''),p.content),1,512) "
+            "FROM agora_feedback f JOIN post p ON p.post_id=f.post_id "
+            "WHERE f.user_id=? ORDER BY f.feedback_id DESC LIMIT 96",
+            (user_id,),
+        ):
+            decay = 0.5 ** (
+                max(0, tick - at_tick) / self.config.feedback_half_life_ticks
+            )
+            tokens = text_terms((title or "") + " " + (body or ""), limit=24)
+            for term in tokens:
+                weights[term] += value * decay / math.sqrt(max(1, len(tokens)))
+        return {term: max(-3.0, min(3.0, weight)) for term, weight in weights.items()}
+
+    def author_interests(self, user_id, tick):
+        weights = defaultdict(float)
+        for author, value, at_tick in self.db.execute(
+            "SELECT p.user_id,f.value,f.tick FROM agora_feedback f JOIN post p ON p.post_id=f.post_id "
+            "WHERE f.user_id=? ORDER BY f.feedback_id DESC LIMIT 256",
+            (user_id,),
+        ):
+            weights[author] += value * 0.5 ** (
+                max(0, tick - at_tick) / self.config.relationship_half_life_ticks
+            )
+        return {author: max(-1.0, min(1.0, value)) for author, value in weights.items()}
 
     def community_interests(self, user_id, tick):
         """Learn community affinity even when communities have the same topics."""
@@ -173,6 +226,16 @@ class RecommendationEngine:
         if feed_type == "search" and (not query or not query.strip()):
             raise ValueError("Search query cannot be empty")
         interests = self.interests(user_id, tick)
+        words = (
+            self.text_interests(user_id, tick)
+            if self.native and self.config.text_weight
+            else {}
+        )
+        author_affinity = (
+            self.author_interests(user_id, tick)
+            if self.native and self.platform == "x"
+            else {}
+        )
         params = {"viewer": user_id, "cap": self.config.channel_limit}
         gate = (
             VISIBILITY
@@ -186,7 +249,11 @@ class RecommendationEngine:
                 gate += " AND (p.post_type != 'repost' OR EXISTS (SELECT 1 FROM post original WHERE original.post_id=p.original_post_id AND original.deleted=0 AND original.removed_by IS NULL AND (original.visibility='public' OR original.user_id=:viewer OR (original.visibility='followers' AND EXISTS (SELECT 1 FROM follow vf WHERE vf.follower_id=:viewer AND vf.followee_id=original.user_id)))))"
                 gate += " AND NOT EXISTS (SELECT 1 FROM agora_feedback nf WHERE nf.user_id=:viewer AND nf.post_id=p.original_post_id AND p.post_type='repost' AND nf.kind='not_interested')"
         if location is not None:
-            gate += " AND instr(lower(COALESCE(p.location,'')), :location)>0"
+            gate += (
+                " AND agora_locality_matches(p.location,:location)"
+                if self.native
+                else " AND instr(lower(COALESCE(p.location,'')), :location)>0"
+            )
             params["location"] = location.strip().lower()
         if subscribed_only:
             gate += " AND EXISTS (SELECT 1 FROM community_member m WHERE m.community=p.community AND m.user_id=:viewer)"
@@ -266,6 +333,25 @@ class RecommendationEngine:
                     "JOIN topic t ON t.topic_id = pt.topic_id WHERE "
                     f"pt.post_id = p.post_id AND t.name IN ({names}))",
                 )
+            lexical = [
+                term
+                for term, weight in sorted(
+                    words.items(), key=lambda item: (-item[1], item[0])
+                )
+                if weight > 0
+            ][:8]
+            if lexical:
+                for index, term in enumerate(lexical):
+                    params[f"text{index}"] = term
+                text = "lower(COALESCE(p.title,'') || ' ' || COALESCE(NULLIF(p.quote_content,''),p.content,''))"
+                retrieve(
+                    "text_interest",
+                    "AND ("
+                    + " OR ".join(
+                        f"instr({text},:text{i})>0" for i in range(len(lexical))
+                    )
+                    + ")",
+                )
             popular_order = "(p.num_likes + 2 * p.num_shares) DESC, p.post_id DESC"
             if self.native:
                 if self.platform == "reddit":
@@ -278,6 +364,23 @@ class RecommendationEngine:
                     "social_graph",
                     "AND (EXISTS (SELECT 1 FROM follow first JOIN follow second ON second.follower_id=first.followee_id WHERE first.follower_id=:viewer AND second.followee_id=p.user_id) OR EXISTS (SELECT 1 FROM follow f JOIN \"like\" l ON l.user_id=f.followee_id WHERE f.follower_id=:viewer AND l.post_id=COALESCE(CASE WHEN p.post_type='repost' THEN p.original_post_id END,p.post_id)))",
                 )
+            if self.native and self.platform == "x":
+                retrieve(
+                    "conversations",
+                    "AND EXISTS (SELECT 1 FROM post parent WHERE parent.post_id=p.reply_to_post_id AND parent.user_id=:viewer AND parent.deleted=0)",
+                )
+                if author_affinity:
+                    params["familiar_authors"] = json.dumps(
+                        sorted(
+                            author
+                            for author, value in author_affinity.items()
+                            if value > 0
+                        )
+                    )
+                    retrieve(
+                        "familiar_authors",
+                        "AND p.user_id IN (SELECT value FROM json_each(:familiar_authors))",
+                    )
             if community_affinity:
                 params["liked_communities"] = json.dumps(
                     sorted(
@@ -329,13 +432,22 @@ class RecommendationEngine:
         }
         graph = defaultdict(float)
         if self.native and self.platform == "x" and following:
-            for post, count in self.db.execute(
-                'SELECT l.post_id, COUNT(DISTINCT l.user_id) FROM "like" l '
+            actor_likes = {}
+            for post, actor, created in self.db.execute(
+                'SELECT l.post_id,l.user_id,l.created_at FROM "like" l '
                 "JOIN follow f ON f.followee_id=l.user_id WHERE f.follower_id=? "
-                "AND l.post_id IN (SELECT value FROM json_each(?)) GROUP BY l.post_id",
+                "AND l.post_id IN (SELECT value FROM json_each(?))",
                 (user_id, json.dumps(candidates)),
             ):
-                graph[post] = count / len(following)
+                at_tick = int(created) if str(created).lstrip("-").isdigit() else 0
+                strength = 0.5 ** (
+                    max(0, tick - at_tick) / self.config.relationship_half_life_ticks
+                )
+                actor_likes[(post, actor)] = max(
+                    actor_likes.get((post, actor), 0), strength
+                )
+            for (post, _), strength in actor_likes.items():
+                graph[post] += strength / len(following)
             for (author,) in self.db.execute(
                 "SELECT DISTINCT second.followee_id FROM follow first JOIN follow second "
                 "ON second.follower_id=first.followee_id WHERE first.follower_id=? "
@@ -424,10 +536,12 @@ class RecommendationEngine:
                 f"(SELECT COUNT(*) FROM comment c WHERE c.post_id = {metric}.post_id AND c.deleted=0) + (SELECT COUNT(*) FROM post reply WHERE reply.reply_to_post_id={metric}.post_id AND reply.deleted=0), "
                 "(SELECT COUNT(*) FROM agora_feedback fb WHERE fb.post_id = p.post_id "
                 "AND fb.kind = 'open_post' AND fb.user_id != p.user_id), "
-                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id AND e.user_id != p.user_id), p.community, p.original_post_id, p.post_type "
+                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id AND e.user_id != p.user_id), p.community, p.original_post_id, p.post_type, "
+                f"substr({metric}.title,1,160),substr(COALESCE(NULLIF({metric}.quote_content,''),{metric}.content),1,1024), "
+                "EXISTS (SELECT 1 FROM post parent WHERE parent.post_id=p.reply_to_post_id AND parent.user_id=? AND parent.deleted=0) "
                 "FROM post p LEFT JOIN post m ON m.post_id=CASE WHEN p.post_type='repost' THEN p.original_post_id ELSE p.post_id END "
                 "WHERE p.post_id IN (" + ",".join("?" for _ in chunk) + ")",
-                chunk,
+                [user_id, *chunk],
             ).fetchall()
             for (
                 post,
@@ -443,6 +557,9 @@ class RecommendationEngine:
                 post_community,
                 original_id,
                 post_type,
+                title,
+                body,
+                related_conversation,
             ) in rows:
                 age = (
                     max(0, tick - int(created))
@@ -532,7 +649,14 @@ class RecommendationEngine:
                 if self.native and self.platform == "x":
                     target = original_id if post_type == "repost" else post
                     components["social_graph"] = self.config.graph_weight * (
-                        graph[target] + graph[("author", author)]
+                        graph[target]
+                        + graph[("author", author)]
+                        + 0.2 * author_affinity.get(author, 0)
+                        + 0.3 * related_conversation
+                    )
+                if self.native and words:
+                    components["text"] = self.config.text_weight * text_affinity(
+                        words, (title or "") + " " + (body or "")
                     )
                 if self.native and self.platform == "reddit":
                     components["community"] = (
@@ -630,6 +754,8 @@ class RecommendationEngine:
             "policy_version": self.config.policy_version,
             "platform": self.platform,
             "community_interests": community_affinity,
+            "text_interests": words,
+            "author_interests": author_affinity,
             "seed": seed,
             "tick": tick,
             "refresh": refresh,

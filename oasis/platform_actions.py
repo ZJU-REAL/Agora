@@ -257,8 +257,8 @@ class PlatformActions:
 
     def list_communities(self, user_id):
         rows = self.db.execute(
-            "SELECT c.name, c.title, c.description, c.rules_json, c.visibility, (SELECT role FROM community_member m WHERE m.community = c.name AND m.user_id = ?), (SELECT COUNT(*) FROM community_member m WHERE m.community = c.name) FROM community c WHERE c.visibility != 'private' OR EXISTS (SELECT 1 FROM community_member m WHERE m.community = c.name AND m.user_id = ?) ORDER BY c.name",
-            (user_id, user_id),
+            "SELECT c.name, c.title, c.description, c.rules_json, c.visibility, (SELECT role FROM community_member m WHERE m.community = c.name AND m.user_id = ?), (SELECT COUNT(*) FROM community_member m WHERE m.community = c.name), COALESCE((SELECT approved FROM community_member m WHERE m.community=c.name AND m.user_id=?),0) FROM community c WHERE c.visibility != 'private' OR EXISTS (SELECT 1 FROM community_member m WHERE m.community = c.name AND m.user_id = ?) ORDER BY c.name",
+            (user_id, user_id, user_id),
         ).fetchall()
         return [
             {
@@ -270,6 +270,8 @@ class PlatformActions:
                 "role": r[5],
                 "joined": r[5] is not None,
                 "members": r[6],
+                "posting_allowed": r[4] == "public"
+                or bool(r[5] and (r[4] == "private" or r[5] == "moderator" or r[7])),
             }
             for r in rows
         ]
