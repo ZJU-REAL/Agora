@@ -13,7 +13,7 @@
 # =========== Copyright 2023 @ CAMEL-AI.org. All Rights Reserved. ===========
 """Agora's native world infrastructure; historical directory name retained."""
 
-__version__ = "0.6.0"
+__version__ = "0.8.0"
 from oasis.agora_types import (
     AssetInput,
     Observation,

@@ -718,6 +718,22 @@ class AgoraWorld(PlatformActions):
             "UPDATE post SET num_shares = num_shares + 1 WHERE post_id = ?", (post_id,)
         )
         repost_id = int(cursor.lastrowid)
+        # Reposts retain the source subject; quotes also add their own tags.
+        topics = self.get_post_topics(post_id)
+        if self.preset.name == "x" and quote_body:
+            import re
+
+            topics = list(
+                dict.fromkeys(
+                    topics + re.findall(r"#([^\s#.,!?，。！？]+)", quote_body)
+                )
+            )[:20]
+        for topic in topics:
+            self.db.execute("INSERT OR IGNORE INTO topic(name) VALUES (?)", (topic,))
+            self.db.execute(
+                "INSERT OR IGNORE INTO post_topic(post_id,topic_id) SELECT ?,topic_id FROM topic WHERE name=?",
+                (repost_id, topic),
+            )
         self._record_event(
             "post_quoted" if quote_body else "post_reposted",
             user_id,

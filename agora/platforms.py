@@ -7,6 +7,24 @@ from dataclasses import asdict, dataclass, replace
 
 import regex
 
+PLATFORM_CONTEXT = {
+    "xiaohongshu": {
+        "format": "Lifestyle and interest notes; titles, ordered image galleries, video, topics and locations.",
+        "participation": "Share concrete experiences and useful details in the account's own voice. Saving a note is distinct from liking it; collection folders organize saved notes.",
+        "surfaces": "Discover explores interests; Following shows followed accounts; Nearby requires a supplied location.",
+    },
+    "x": {
+        "format": "Short posts and public reply threads; quotes add a separate viewpoint, reposts redistribute the original.",
+        "participation": "Use the account's own language and tone. Read conversation context before replying. Bookmarks are private; reactions on a repost belong to the original post.",
+        "surfaces": "For You mixes interests and social relationships; Following is chronological and limits unrelated replies.",
+    },
+    "reddit": {
+        "format": "Community discussions with required titles, local rules, nested comments and separate post/comment votes.",
+        "participation": "Read the target community's rules before posting. Vote on contribution quality; voting is distinct from saving. A crosspost has its own discussion and votes.",
+        "surfaces": "For You includes community discovery; Following contains joined communities. Best is personalized, Hot is time-sensitive, New is chronological, Top ranks net votes within the selected time window.",
+    },
+}
+
 
 @dataclass(frozen=True)
 class ProductContract:

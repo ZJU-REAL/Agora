@@ -2,6 +2,75 @@
 
 import math
 
+# Inspectable simulation hypotheses, not fitted vendor parameters.
+FEEDBACK_PROFILES = {
+    "xiaohongshu": {
+        "open_post": 0.15,
+        "dwell": 0.5,
+        "like_post": 0.6,
+        "collect_post": 1.2,
+        "create_comment": 0.3,
+        "view_media": 0.2,
+    },
+    "x": {
+        "open_post": 0.1,
+        "dwell": 0.2,
+        "like_post": 0.7,
+        "collect_post": 0.35,
+        "create_comment": 0.4,
+        "reply_post": 0.4,
+        "repost": 1.0,
+        "quote_post": 0.6,
+    },
+    "reddit": {
+        "open_post": 0.15,
+        "dwell": 0.4,
+        "like_post": 0.7,
+        "collect_post": 0.5,
+        "create_comment": 0.3,
+    },
+}
+
+
+def feedback_weight(platform, kind, fallback):
+    undo = {
+        "unlike_post": "like_post",
+        "uncollect_post": "collect_post",
+        "undo_repost": "repost",
+    }
+    target = undo.get(kind, kind)
+    weight = FEEDBACK_PROFILES.get(platform, {}).get(target, abs(fallback))
+    return -weight if kind in undo else weight if fallback >= 0 else -weight
+
+
+def platform_quality(
+    platform, likes, dislikes, saves, comments, shares, ctr, reading_rate=0
+):
+    """Different bounded objectives for notes, conversations and communities."""
+    if platform == "reddit":
+        approval = (likes + 1) / (likes + dislikes + 2)
+        return (
+            wilson_lower(likes, dislikes)
+            + min(1.0, math.log1p(max(0, likes - dislikes)) / 10)
+            + 0.1 * approval * min(1.0, math.log1p(comments) / 5)
+            + 0.1 * reading_rate
+        )
+    profile = PROFILES.get(platform, PROFILES["generic"])
+    volume = max(
+        0,
+        likes * profile["likes"]
+        + saves * profile["saves"]
+        + comments * profile["comments"]
+        + shares * profile["shares"]
+        - dislikes,
+    )
+    return (
+        ctr
+        + min(1.0, math.log1p(volume) / 10)
+        + ({"xiaohongshu": 0.6, "x": 0.4}.get(platform, 0) * reading_rate)
+    )
+
+
 PROFILES = {
     "xiaohongshu": {
         "likes": 1.0,

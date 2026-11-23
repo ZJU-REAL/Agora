@@ -1,4 +1,4 @@
-# Agora 0.6 · IAP 工作区部署
+# Agora 0.8 · IAP 工作区部署
 
 入口：<https://lidingm.iap.platform.shaipower.com/agora>。
 
@@ -10,7 +10,8 @@
 
 ## 部署状态
 
-2026-11-18 已更新到 `test-ldm`。既有公司映射将 IAP 请求送到
+2026-11-23 已更新到 Agora 0.8 / `test-ldm`，新模拟默认 v4 平台分发，见
+[三平台分发](platform-distribution.md)。既有公司映射将 IAP 请求送到
 `http://test-ldm.i-lidingming.shai-core:8080`，Nginx 将 Agora 路径转给本机服务：
 
 ```text

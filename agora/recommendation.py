@@ -13,13 +13,13 @@ import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 
-from agora.distribution import PROFILES
+from agora.distribution import PROFILES, feedback_weight, platform_quality
 from agora.storage import ensure_schema
 
 
 @dataclass(frozen=True)
 class RecommendationConfig:
-    policy_version: str = "agora-hybrid-v3"
+    policy_version: str = "agora-hybrid-v4"
     channel_limit: int = 100
     slate_size: int = 30
     page_size: int = 6
@@ -34,12 +34,16 @@ class RecommendationConfig:
     author_diversity_penalty: float = 0.9
     topic_diversity_penalty: float = 0.3
     collaborative_weight: float = 0.6
+    graph_weight: float = 0.8
+    community_weight: float = 0.8
+    community_diversity_penalty: float = 0.75
 
     def __post_init__(self):
         if self.policy_version not in {
             "agora-hybrid-v1",
             "agora-hybrid-v2",
             "agora-hybrid-v3",
+            "agora-hybrid-v4",
         }:
             raise ValueError("Unsupported recommendation policy version")
         for name in ("channel_limit", "slate_size", "page_size"):
@@ -85,6 +89,24 @@ class RecommendationEngine:
         self.config = config or RecommendationConfig()
         self.platform = platform
         ensure_schema(db)
+
+    @property
+    def native(self):
+        return self.config.policy_version == "agora-hybrid-v4"
+
+    def community_interests(self, user_id, tick):
+        """Learn community affinity even when communities have the same topics."""
+        weights = defaultdict(float)
+        for community, value, at_tick in self.db.execute(
+            "SELECT p.community, f.value, f.tick FROM agora_feedback f "
+            "JOIN post p ON p.post_id=f.post_id WHERE f.user_id=? "
+            "AND p.community IS NOT NULL ORDER BY f.feedback_id DESC LIMIT 1000",
+            (user_id,),
+        ):
+            weights[community] += value * 0.5 ** (
+                max(0, tick - at_tick) / self.config.feedback_half_life_ticks
+            )
+        return {key: max(-3.0, min(3.0, value)) for key, value in weights.items()}
 
     def interests(self, user_id: int, tick: int) -> dict[str, float]:
         row = self.db.execute(
@@ -142,6 +164,9 @@ class RecommendationEngine:
         query: str | None = None,
         community: str | None = None,
         eligible_post_ids=None,
+        location: str | None = None,
+        subscribed_only: bool = False,
+        min_created_tick=None,
     ) -> tuple[list[int], dict]:
         if feed_type not in {"discover", "following", "search"}:
             raise ValueError("Unknown feed type")
@@ -154,6 +179,20 @@ class RecommendationEngine:
             + " AND p.user_id != :viewer AND p.deleted = 0 AND p.removed_by IS NULL"
         )
         gate += " AND NOT EXISTS (SELECT 1 FROM community nc WHERE nc.name = p.community AND nc.visibility = 'private' AND NOT EXISTS (SELECT 1 FROM community_member nm WHERE nm.community = nc.name AND nm.user_id = :viewer))"
+        if self.native:
+            params["tick"] = tick
+            gate += " AND CAST(p.created_at AS INTEGER) <= :tick"
+            if self.platform == "x":
+                gate += " AND (p.post_type != 'repost' OR EXISTS (SELECT 1 FROM post original WHERE original.post_id=p.original_post_id AND original.deleted=0 AND original.removed_by IS NULL AND (original.visibility='public' OR original.user_id=:viewer OR (original.visibility='followers' AND EXISTS (SELECT 1 FROM follow vf WHERE vf.follower_id=:viewer AND vf.followee_id=original.user_id)))))"
+                gate += " AND NOT EXISTS (SELECT 1 FROM agora_feedback nf WHERE nf.user_id=:viewer AND nf.post_id=p.original_post_id AND p.post_type='repost' AND nf.kind='not_interested')"
+        if location is not None:
+            gate += " AND instr(lower(COALESCE(p.location,'')), :location)>0"
+            params["location"] = location.strip().lower()
+        if subscribed_only:
+            gate += " AND EXISTS (SELECT 1 FROM community_member m WHERE m.community=p.community AND m.user_id=:viewer)"
+        if min_created_tick is not None:
+            gate += " AND CAST(p.created_at AS INTEGER)>=:min_created"
+            params["min_created"] = min_created_tick
         if eligible_post_ids is not None:
             gate += " AND p.post_id IN (SELECT value FROM json_each(:eligible))"
             params["eligible"] = json.dumps(list(eligible_post_ids))
@@ -184,6 +223,11 @@ class RecommendationEngine:
                 raise ValueError("Search query cannot be empty")
         channels = {}
         neighbors = {}
+        community_affinity = (
+            self.community_interests(user_id, tick)
+            if self.native and self.platform == "reddit"
+            else {}
+        )
 
         def retrieve(name, extra="", order="p.post_id DESC"):
             rows = self.db.execute(
@@ -222,9 +266,28 @@ class RecommendationEngine:
                     "JOIN topic t ON t.topic_id = pt.topic_id WHERE "
                     f"pt.post_id = p.post_id AND t.name IN ({names}))",
                 )
-            retrieve(
-                "popular", order="(p.num_likes + 2 * p.num_shares) DESC, p.post_id DESC"
-            )
+            popular_order = "(p.num_likes + 2 * p.num_shares) DESC, p.post_id DESC"
+            if self.native:
+                if self.platform == "reddit":
+                    popular_order = "(p.num_likes-p.num_dislikes) DESC, p.post_id DESC"
+                elif self.platform == "xiaohongshu":
+                    popular_order = "(p.num_likes+3*(SELECT COUNT(*) FROM collection c WHERE c.post_id=p.post_id)) DESC, p.post_id DESC"
+            retrieve("popular", order=popular_order)
+            if self.native and self.platform == "x":
+                retrieve(
+                    "social_graph",
+                    "AND (EXISTS (SELECT 1 FROM follow first JOIN follow second ON second.follower_id=first.followee_id WHERE first.follower_id=:viewer AND second.followee_id=p.user_id) OR EXISTS (SELECT 1 FROM follow f JOIN \"like\" l ON l.user_id=f.followee_id WHERE f.follower_id=:viewer AND l.post_id=COALESCE(CASE WHEN p.post_type='repost' THEN p.original_post_id END,p.post_id)))",
+                )
+            if community_affinity:
+                params["liked_communities"] = json.dumps(
+                    sorted(
+                        key for key, value in community_affinity.items() if value > 0
+                    )
+                )
+                retrieve(
+                    "community_interest",
+                    "AND p.community IN (SELECT value FROM json_each(:liked_communities))",
+                )
             # Rotate a deterministic ID window over eligible posts for discovery;
             # no ORDER BY RANDOM() or unbounded hydration of the whole world.
             max_id = self.db.execute(
@@ -232,7 +295,7 @@ class RecommendationEngine:
             ).fetchone()[0]
             params["pivot"] = int(_noise(seed, user_id, tick, refresh, 0) * max_id)
             retrieve("explore", order="(p.post_id < :pivot), p.post_id")
-            if self.config.policy_version in {"agora-hybrid-v2", "agora-hybrid-v3"}:
+            if self.config.policy_version != "agora-hybrid-v1":
                 neighbors = {
                     row[0]: row[1]
                     for row in self.db.execute(
@@ -264,6 +327,23 @@ class RecommendationEngine:
                 "SELECT community FROM community_member WHERE user_id=?", (user_id,)
             )
         }
+        graph = defaultdict(float)
+        if self.native and self.platform == "x" and following:
+            for post, count in self.db.execute(
+                'SELECT l.post_id, COUNT(DISTINCT l.user_id) FROM "like" l '
+                "JOIN follow f ON f.followee_id=l.user_id WHERE f.follower_id=? "
+                "AND l.post_id IN (SELECT value FROM json_each(?)) GROUP BY l.post_id",
+                (user_id, json.dumps(candidates)),
+            ):
+                graph[post] = count / len(following)
+            for (author,) in self.db.execute(
+                "SELECT DISTINCT second.followee_id FROM follow first JOIN follow second "
+                "ON second.follower_id=first.followee_id WHERE first.follower_id=? "
+                "AND second.followee_id != ? AND second.followee_id IN "
+                "(SELECT user_id FROM post WHERE post_id IN (SELECT value FROM json_each(?)))",
+                (user_id, user_id, json.dumps(candidates)),
+            ):
+                graph[("author", author)] = 0.25
         exposure_counts = Counter()
         for post, count in self.db.execute(
             "SELECT post_id, COUNT(*) FROM agora_exposure WHERE user_id = ? "
@@ -272,7 +352,53 @@ class RecommendationEngine:
         ):
             exposure_counts[post] = count
         seen = set(seen_ids)
+        if self.native and self.platform == "x":
+            seen.update(
+                row[0]
+                for row in self.db.execute(
+                    "SELECT original_post_id FROM post WHERE post_type='repost' "
+                    "AND post_id IN (SELECT value FROM json_each(?))",
+                    (json.dumps(list(seen)),),
+                )
+            )
         records = {}
+        evidence = {}
+        if self.native:
+            metrics_ids = [
+                row[0]
+                for row in self.db.execute(
+                    "SELECT DISTINCT CASE WHEN post_type='repost' AND ?='x' "
+                    "THEN original_post_id ELSE post_id END FROM post "
+                    "WHERE post_id IN (SELECT value FROM json_each(?))",
+                    (self.platform, json.dumps(candidates)),
+                )
+            ]
+            target = (
+                "CASE WHEN shown.post_type='repost' THEN shown.original_post_id ELSE shown.post_id END"
+                if self.platform == "x"
+                else "shown.post_id"
+            )
+            for post, impressions, clicks, readers in self.db.execute(
+                f"SELECT {target}, COUNT(DISTINCT printf('%d:%d',e.user_id,e.request_id)), "
+                "COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM agora_feedback f "
+                "WHERE f.user_id=e.user_id AND f.request_id=e.request_id "
+                f"AND (f.post_id={target} OR f.post_id=e.post_id) AND f.kind='open_post') "
+                "THEN printf('%d:%d',e.user_id,e.request_id) END), "
+                "COUNT(DISTINCT CASE WHEN (SELECT COALESCE(SUM(f.value),0) "
+                "FROM agora_feedback f WHERE f.user_id=e.user_id AND f.request_id=e.request_id "
+                f"AND (f.post_id={target} OR f.post_id=e.post_id) AND f.kind='dwell') >= ? "
+                "THEN printf('%d:%d',e.user_id,e.request_id) END) "
+                "FROM agora_exposure e JOIN post shown ON shown.post_id=e.post_id "
+                f"JOIN post source ON source.post_id={target} WHERE e.tick>=? "
+                f"AND {target} IN (SELECT value FROM json_each(?)) "
+                f"AND e.user_id!=source.user_id GROUP BY {target}",
+                (
+                    feedback_weight(self.platform, "dwell", 0.4) / 2,
+                    tick - 2 * self.config.feedback_half_life_ticks,
+                    json.dumps(metrics_ids),
+                ),
+            ):
+                evidence[post] = (impressions, clicks, readers)
         collaborative = defaultdict(float)
         if neighbors:
             total = sum(neighbors.values())
@@ -290,15 +416,17 @@ class RecommendationEngine:
                     collaborative[post] += neighbors[peer] / total
         for offset in range(0, len(candidates), 400):
             chunk = candidates[offset : offset + 400]
+            metric = "m" if self.native and self.platform == "x" else "p"
             rows = self.db.execute(
-                "SELECT p.post_id, p.user_id, p.created_at, p.num_likes, "
-                "p.num_shares, p.num_dislikes, "
-                "(SELECT COUNT(*) FROM collection c WHERE c.post_id = p.post_id), "
-                "(SELECT COUNT(*) FROM comment c WHERE c.post_id = p.post_id AND c.deleted=0) + (SELECT COUNT(*) FROM post reply WHERE reply.reply_to_post_id=p.post_id AND reply.deleted=0), "
+                f"SELECT p.post_id, p.user_id, p.created_at, {metric}.num_likes, "
+                f"{metric}.num_shares, {metric}.num_dislikes, "
+                f"(SELECT COUNT(*) FROM collection c WHERE c.post_id = {metric}.post_id), "
+                f"(SELECT COUNT(*) FROM comment c WHERE c.post_id = {metric}.post_id AND c.deleted=0) + (SELECT COUNT(*) FROM post reply WHERE reply.reply_to_post_id={metric}.post_id AND reply.deleted=0), "
                 "(SELECT COUNT(*) FROM agora_feedback fb WHERE fb.post_id = p.post_id "
                 "AND fb.kind = 'open_post' AND fb.user_id != p.user_id), "
-                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id AND e.user_id != p.user_id), p.community "
-                "FROM post p WHERE p.post_id IN (" + ",".join("?" for _ in chunk) + ")",
+                "(SELECT COUNT(*) FROM agora_exposure e WHERE e.post_id = p.post_id AND e.user_id != p.user_id), p.community, p.original_post_id, p.post_type "
+                "FROM post p LEFT JOIN post m ON m.post_id=CASE WHEN p.post_type='repost' THEN p.original_post_id ELSE p.post_id END "
+                "WHERE p.post_id IN (" + ",".join("?" for _ in chunk) + ")",
                 chunk,
             ).fetchall()
             for (
@@ -313,6 +441,8 @@ class RecommendationEngine:
                 clicks,
                 impressions,
                 post_community,
+                original_id,
+                post_type,
             ) in rows:
                 age = (
                     max(0, tick - int(created))
@@ -325,11 +455,20 @@ class RecommendationEngine:
                 # Smoothed observed CTR plus bounded engagement volume. This
                 # prevents an old viral post overwhelming every personalized feed.
                 ctr = (min(clicks, impressions) + 1) / (impressions + 10)
+                readers = 0
+                if self.native:
+                    target_id = (
+                        original_id
+                        if self.platform == "x" and post_type == "repost"
+                        else post
+                    )
+                    impressions, clicks, readers = evidence.get(target_id, (0, 0, 0))
+                    ctr = (clicks + 1) / (impressions + 10)
                 volume = max(
                     0, likes + 2 * collections + 1.5 * comments + 2 * shares - dislikes
                 )
                 profile = PROFILES.get(self.platform, PROFILES["generic"])
-                if self.config.policy_version == "agora-hybrid-v3":
+                if self.config.policy_version in {"agora-hybrid-v3", "agora-hybrid-v4"}:
                     volume = max(
                         0,
                         likes * profile["likes"]
@@ -339,6 +478,17 @@ class RecommendationEngine:
                         - dislikes,
                     )
                 quality = ctr + min(1.0, math.log1p(volume) / 10)
+                if self.native:
+                    quality = platform_quality(
+                        self.platform,
+                        likes,
+                        dislikes,
+                        collections,
+                        comments,
+                        shares,
+                        ctr,
+                        (readers + 1) / (impressions + 10),
+                    )
                 components = {
                     "topic": self.config.topic_weight * affinity,
                     "following": self.config.following_weight
@@ -351,39 +501,74 @@ class RecommendationEngine:
                     "freshness": self.config.freshness_weight
                     * (
                         profile["freshness"]
-                        if self.config.policy_version == "agora-hybrid-v3"
+                        if self.config.policy_version
+                        in {"agora-hybrid-v3", "agora-hybrid-v4"}
                         else 1
                     )
-                    * 0.5 ** (age / self.config.freshness_half_life_ticks),
+                    * 0.5
+                    ** (
+                        age
+                        / (
+                            self.config.freshness_half_life_ticks
+                            * (
+                                {"xiaohongshu": 2.0, "x": 0.5}.get(self.platform, 1.0)
+                                if self.native
+                                else 1.0
+                            )
+                        )
+                    ),
                     "fatigue": -self.config.fatigue_weight
                     * math.log1p(exposure_counts[post]),
                     "collaborative": self.config.collaborative_weight
                     * collaborative[post],
                 }
-                if self.config.policy_version == "agora-hybrid-v3":
+                if self.config.policy_version in {"agora-hybrid-v3", "agora-hybrid-v4"}:
                     components["cold_start"] = (
                         profile["trial"]
                         * 10
                         / (impressions + 10)
                         * 0.5 ** (age / self.config.freshness_half_life_ticks)
                     )
+                if self.native and self.platform == "x":
+                    target = original_id if post_type == "repost" else post
+                    components["social_graph"] = self.config.graph_weight * (
+                        graph[target] + graph[("author", author)]
+                    )
+                if self.native and self.platform == "reddit":
+                    components["community"] = (
+                        self.config.community_weight
+                        * community_affinity.get(post_community, 0)
+                    )
                 records[post] = {
                     "post_id": post,
                     "author_id": author,
                     "topics": topics[post],
+                    "community": post_community,
+                    "content_id": original_id
+                    if self.platform == "x" and post_type == "repost"
+                    else post,
                     "components": components,
+                    "evidence": {
+                        "impressions": impressions,
+                        "clicks": clicks,
+                        "readers": readers,
+                    },
                     "score": sum(components.values()),
                     "channels": [name for name, ids in channels.items() if post in ids],
                     "noise": _noise(seed, user_id, tick, refresh, post),
                 }
         # Prefer unseen posts across refreshes; when the pool is exhausted,
         # permit repeats with fatigue rather than return a permanently empty feed.
-        remaining = {post: value for post, value in records.items() if post not in seen}
+        remaining = {
+            post: value
+            for post, value in records.items()
+            if post not in seen and (not self.native or value["content_id"] not in seen)
+        }
         repeated = False
         if not remaining:
             remaining = dict(records)
             repeated = bool(records)
-        authors, used_topics = Counter(), Counter()
+        authors, used_topics, used_communities = Counter(), Counter(), Counter()
         selected = []
         decisions = []
         interval = (
@@ -397,33 +582,54 @@ class RecommendationEngine:
                 feed_type == "discover" and interval and rank % interval == interval - 1
             )
 
-            def slate_score(post, explore=explore):
+            def slate_score(post, explore=explore, remaining=remaining):
                 record = remaining[post]
                 penalty = self.config.author_diversity_penalty * authors[
                     record["author_id"]
                 ] + self.config.topic_diversity_penalty * sum(
                     used_topics[t] for t in record["topics"]
                 ) / max(1, len(record["topics"]))
+                if self.native and self.platform == "reddit" and record["community"]:
+                    penalty += (
+                        self.config.community_diversity_penalty
+                        * used_communities[record["community"]]
+                    )
                 base = record["noise"] if explore else record["score"]
                 return base - penalty
 
             post = max(remaining, key=lambda post: (slate_score(post), post))
             record = remaining.pop(post)
+            community_penalty = (
+                self.config.community_diversity_penalty
+                * used_communities[record["community"]]
+                if self.native and self.platform == "reddit" and record["community"]
+                else 0
+            )
             decisions.append(
                 {
                     **record,
                     "rank": rank,
                     "slate_score": slate_score_from_record(
                         record, authors, used_topics, self.config, bool(explore)
-                    ),
+                    )
+                    - community_penalty,
                     "selection": "exploration" if explore else "ranked",
                 }
             )
             selected.append(post)
             authors[record["author_id"]] += 1
             used_topics.update(record["topics"])
+            used_communities[record["community"]] += 1
+            if self.native and self.platform == "x":
+                remaining = {
+                    pid: item
+                    for pid, item in remaining.items()
+                    if item["content_id"] != record["content_id"]
+                }
         diagnostics = {
             "policy_version": self.config.policy_version,
+            "platform": self.platform,
+            "community_interests": community_affinity,
             "seed": seed,
             "tick": tick,
             "refresh": refresh,

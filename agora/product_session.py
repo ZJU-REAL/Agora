@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 
 from agora.distribution import reddit_hot, wilson_lower
+from agora.feed_surfaces import WINDOWS, surface_ids
 from agora.platforms import (
+    PLATFORM_CONTEXT,
     contract_for,
     validate_creation,
     x_weighted_length,
@@ -327,6 +329,7 @@ class ProductSession:
             if self.state["screen"] == "studio"
             else 0,
             "contract": self.contract.to_dict(),
+            "platform_context": PLATFORM_CONTEXT.get(self.world.preset.name, {}),
             "time_ms": self.world.current_time_ms,
             "location": self.state.get("location"),
             "tick_duration_ms": self.db.execute(
@@ -338,6 +341,12 @@ class ProductSession:
         if self.world.preset.name == "reddit":
             value["communities"] = self.world.list_communities(self.user_id)
             value["community"] = self.state.get("community")
+            if self.state["screen"] == "detail" and self.state.get("current_post"):
+                name = self.state["current_post"].get("community")
+                value["community"] = next(
+                    (item for item in value["communities"] if item["name"] == name),
+                    None,
+                )
         if self.world.preset.name == "xiaohongshu":
             value["collections"] = [
                 {"folder_id": row[0], "name": row[1]}
@@ -606,15 +615,49 @@ class ProductSession:
             )
         self._store_cards(
             surface,
-            [self._public_post(post, True) for post in posts[: self.config.slate_size]],
+            [
+                self._public_post(post, True)
+                for post in self._unique_timeline(surface, posts)[
+                    : self.config.slate_size
+                ]
+            ],
             diagnostics,
         )
         self.state["feed_sort"] = sort
+
+    def _unique_timeline(self, surface, posts):
+        if (
+            not self.engine.native
+            or self.world.preset.name != "x"
+            or surface != "following"
+        ):
+            return posts
+        seen, result = set(), []
+        for post in posts:
+            target = (
+                post.get("original_post_id")
+                if post["post_type"] == "repost"
+                else post["post_id"]
+            )
+            if target not in seen:
+                result.append(post)
+                seen.add(target)
+        return result
 
     def product_feed(
         self, feed_type, community=None, location=None, sort=None, time_range="all"
     ):
         platform = self.world.preset.name
+        if (
+            self.engine.native
+            and feed_type == "following"
+            and platform in {"x", "xiaohongshu"}
+        ):
+            ids = surface_ids(
+                self.db, self.user_id, platform, feed_type, self.world.current_tick, 500
+            )
+            self._native_cards("following", ids, "following")
+            return True
         if platform == "x" and feed_type == "following":
             ids = [
                 row[0]
@@ -626,9 +669,41 @@ class ProductSession:
             self._native_cards("following", ids, "following")
             return True
         if platform == "xiaohongshu" and feed_type == "nearby":
+            location = location or self.state.get("location")
             if not isinstance(location, str) or not location.strip():
                 raise ValueError("Nearby discovery requires a location")
+            location = location.strip()
             self.state["location"] = location
+            if self.engine.native:
+                ids, diagnostics = self.engine.rank(
+                    self.user_id,
+                    self.world.current_tick,
+                    self.db.execute(
+                        "SELECT seed FROM simulation_state WHERE singleton=1"
+                    ).fetchone()[0],
+                    self.state["refresh"],
+                    seen_ids=self.state["seen_ids"],
+                    location=location,
+                )
+                posts = self.world.get_feed(
+                    self.user_id,
+                    len(ids),
+                    record_impressions=False,
+                    include_comments=False,
+                    eligible_post_ids=ids,
+                )
+                by_id = {post["post_id"]: post for post in posts}
+                self._store_cards(
+                    "nearby",
+                    [
+                        self._public_post(by_id[pid], True)
+                        for pid in ids
+                        if pid in by_id
+                    ],
+                    diagnostics,
+                )
+                self.state["feed_sort"] = "best"
+                return True
             ids = [
                 row[0]
                 for row in self.db.execute(
@@ -644,6 +719,30 @@ class ProductSession:
         if platform == "reddit" and feed_type in {"following", "popular", "latest"}:
             if sort is not None and sort not in {"best", "hot", "new", "top"}:
                 raise ValueError("Unavailable Reddit sort")
+            if self.engine.native:
+                selected_sort = (
+                    "new"
+                    if feed_type == "latest"
+                    else sort or ("best" if feed_type == "following" else "hot")
+                )
+                if selected_sort == "best":
+                    # Retrieve each personalized channel across all subscribed
+                    # communities, rather than truncating to the newest 500.
+                    self._personalized_cards(feed_type, time_range=time_range)
+                else:
+                    ids = surface_ids(
+                        self.db,
+                        self.user_id,
+                        platform,
+                        feed_type,
+                        self.world.current_tick,
+                        500,
+                        selected_sort,
+                        time_range=time_range,
+                    )
+                    self._native_cards(feed_type, ids, selected_sort)
+                self.state["time_range"] = time_range
+                return True
             if feed_type == "following":
                 ids = [
                     row[0]
@@ -692,6 +791,44 @@ class ProductSession:
             return True
         return False
 
+    def _personalized_cards(self, surface, community=None, time_range="all"):
+        if time_range not in WINDOWS:
+            raise ValueError("Unknown top-post time range")
+        tick_ms = self.db.execute(
+            "SELECT tick_duration_ms FROM simulation_state WHERE singleton=1"
+        ).fetchone()[0]
+        cutoff = (
+            None
+            if WINDOWS[time_range] is None
+            else (self.world.current_tick - WINDOWS[time_range] / tick_ms)
+        )
+        ids, diagnostics = self.engine.rank(
+            self.user_id,
+            self.world.current_tick,
+            self.db.execute(
+                "SELECT seed FROM simulation_state WHERE singleton=1"
+            ).fetchone()[0],
+            self.state["refresh"],
+            seen_ids=self.state["seen_ids"],
+            community=community,
+            min_created_tick=cutoff,
+            subscribed_only=surface == "following",
+        )
+        posts = self.world.get_feed(
+            self.user_id,
+            len(ids),
+            record_impressions=False,
+            include_comments=False,
+            eligible_post_ids=ids,
+        )
+        by_id = {p["post_id"]: p for p in posts}
+        self._store_cards(
+            surface,
+            [self._public_post(by_id[pid], True) for pid in ids if pid in by_id],
+            diagnostics,
+        )
+        self.state["feed_sort"] = "best"
+
     def dispatch_product(self, action, args):
         result, elapsed = {"success": True}, 300
         user, current = self.user_id, self.state.get("current_post")
@@ -707,8 +844,13 @@ class ProductSession:
                 (user, args["post_id"]),
             ).fetchone()
             result["changed"] = self.world.delete_post(user, row[0]) if row else False
+            if result["changed"]:
+                self._feedback(args["post_id"], "undo_repost")
             return result, 300
         if action in {"repost", "crosspost", "quote_post"}:
+            prior_id = self.db.execute(
+                "SELECT COALESCE(MAX(post_id),0) FROM post"
+            ).fetchone()[0]
             community = args.get("community")
             if action == "crosspost":
                 self.world.can_post_to(user, community)
@@ -724,6 +866,12 @@ class ProductSession:
             result["post_id"] = self.world.repost(
                 user, args["post_id"], quote_body=quote, community=community
             )
+            if action in {"repost", "quote_post"} and result["post_id"] > prior_id:
+                source_id = self.db.execute(
+                    "SELECT original_post_id FROM post WHERE post_id=?",
+                    (result["post_id"],),
+                ).fetchone()[0]
+                self._feedback(source_id, action)
             if action == "quote_post" and args.get("assets"):
                 creation = {"body": quote, "assets": args["assets"]}
                 self._validate_creation(creation)
@@ -780,6 +928,7 @@ class ProductSession:
                 result["post_id"],
                 content=args["body"],
             )
+            self._feedback(args["post_id"], "reply_post")
             return result, 10000
         if action in {"upvote_post", "downvote_post", "clear_post_vote"}:
             before_vote = int(
@@ -870,8 +1019,9 @@ class ProductSession:
                     "assets": [],
                 },
                 self.world.asset_library(
-                    user, asset_ids=[a["asset_id"] for a in creation.get("assets", [])]
+                    user, asset_ids=[a["asset_id"] for a in current.get("assets", [])]
                 ),
+                self.contract,
             )
             self.world.edit_post(user, **args)
         elif action in {"edit_comment", "delete_comment"}:
@@ -897,6 +1047,16 @@ class ProductSession:
             index = args["index"]
             if type(index) is not int or not 0 <= index < len(current["assets"]):
                 raise ValueError("Media index out of range")
+            viewed = self.state.setdefault(
+                "viewed_media", [self.state.get("media_index", 0)]
+            )
+            if index not in viewed:
+                viewed.append(index)
+                self._feedback(
+                    current["post_id"],
+                    "view_media",
+                    0.2 / max(1, len(current["assets"]) - 1),
+                )
             self.state["media_index"] = index
         elif action in {"play_video", "seek_video"}:
             video = next(
@@ -926,7 +1086,7 @@ class ProductSession:
                 if action == "play_video"
                 else 300
             )
-            if elapsed:
+            if action == "play_video" and elapsed:
                 self._feedback(
                     current["post_id"], "dwell", 0.4 * min(30000, elapsed) / 30000
                 )
@@ -939,6 +1099,29 @@ class ProductSession:
             }
             if community not in available or sort not in {"best", "hot", "new", "top"}:
                 raise ValueError("Unknown community or sort")
+            if self.engine.native:
+                time_range = args.get("time_range", "all")
+                self.state["community"] = available[community]
+                self.state["time_range"] = time_range
+                if sort == "best":
+                    self._personalized_cards(
+                        "community", community=community, time_range=time_range
+                    )
+                else:
+                    ids = surface_ids(
+                        self.db,
+                        user,
+                        "reddit",
+                        "community",
+                        self.world.current_tick,
+                        500,
+                        sort,
+                        community=community,
+                        time_range=time_range,
+                    )
+                    self._native_cards("community", ids, sort)
+                self.state["screen"] = "community"
+                return result, elapsed
             ids = [
                 row[0]
                 for row in self.db.execute(
@@ -994,7 +1177,15 @@ class ProductSession:
                 raise ValueError("Collection name must be 1–60 characters")
             result["folder_id"] = self.world.create_collection(user, name)
         elif action == "add_to_collection":
+            was_saved = bool(
+                self.db.execute(
+                    "SELECT 1 FROM collection WHERE user_id=? AND post_id=?",
+                    (user, args["post_id"]),
+                ).fetchone()
+            )
             self.world.add_to_collection(user, **args)
+            if not was_saved:
+                self._feedback(args["post_id"], "collect_post")
         elif action == "view_collection":
             if not self.db.execute(
                 "SELECT 1 FROM collection_folder WHERE folder_id=? AND user_id=?",

@@ -1,5 +1,5 @@
 {
-  "policy_version": "agora-hybrid-v2",
+  "policy_version": "agora-hybrid-v4",
   "channel_limit": 100,
   "slate_size": 30,
   "page_size": 6,
@@ -13,5 +13,8 @@
   "fatigue_weight": 1.2,
   "author_diversity_penalty": 0.9,
   "topic_diversity_penalty": 0.3,
-  "collaborative_weight": 0.6
+  "collaborative_weight": 0.6,
+  "graph_weight": 0.8,
+  "community_weight": 0.8,
+  "community_diversity_penalty": 0.75
 }

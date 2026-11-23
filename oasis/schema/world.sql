@@ -375,6 +375,9 @@ INSERT OR IGNORE INTO creator_asset(user_id, asset_id)
 
 CREATE INDEX IF NOT EXISTS idx_agora_like_user_post ON "like"(user_id, post_id);
 CREATE INDEX IF NOT EXISTS idx_agora_like_post_user ON "like"(post_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_agora_follow_pair ON follow(follower_id, followee_id);
+CREATE INDEX IF NOT EXISTS idx_agora_post_community ON post(community, post_id);
+CREATE INDEX IF NOT EXISTS idx_agora_feedback_request ON agora_feedback(request_id, user_id, post_id, kind);
 
 CREATE TABLE IF NOT EXISTS community (
  name TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',

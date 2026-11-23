@@ -10,6 +10,7 @@ import copy
 import json
 from dataclasses import asdict
 
+from agora.distribution import feedback_weight
 from agora.platforms import validate_creation
 from agora.product_session import NATIVE_SPECS, ProductSession
 from agora.recommendation import RecommendationConfig, RecommendationEngine
@@ -73,6 +74,11 @@ FEEDBACK_WEIGHTS = {
     "uncollect_post": -1.0,
     "create_comment": 0.3,
     "not_interested": -1.5,
+    "repost": 1.0,
+    "undo_repost": -1.0,
+    "quote_post": 0.6,
+    "reply_post": 0.4,
+    "view_media": 0.2,
 }
 
 
@@ -448,6 +454,29 @@ class SocialSession(ProductSession):
         )
 
     def _feedback(self, post_id, kind, value=None):
+        if self.engine.native and self.world.preset.name == "x":
+            source = self.db.execute(
+                "SELECT original_post_id FROM post WHERE post_id=? AND post_type='repost'",
+                (post_id,),
+            ).fetchone()
+            if source and source[0] is not None:
+                post_id = source[0]
+        base = FEEDBACK_WEIGHTS[kind]
+        value = base if value is None else value
+        if self.engine.native:
+            value *= feedback_weight(self.world.preset.name, kind, base) / base
+            # Per displayed request, only opening and actual bounded reading
+            # count. Reopening or replaying a video cannot inflate affinity.
+            if kind in {"open_post", "dwell", "view_media"}:
+                previous = self.db.execute(
+                    "SELECT COALESCE(SUM(value),0) FROM agora_feedback WHERE "
+                    "session_id=? AND post_id=? AND request_id IS ? AND kind=?",
+                    (self.session_id, post_id, self.state["request_id"], kind),
+                ).fetchone()[0]
+                limit = feedback_weight(self.world.preset.name, kind, base)
+                value = min(value, max(0, limit - previous))
+                if value <= 0:
+                    return
         author = self.db.execute(
             "SELECT user_id FROM post WHERE post_id = ?", (post_id,)
         ).fetchone()
@@ -462,7 +491,7 @@ class SocialSession(ProductSession):
                 post_id,
                 self.state["request_id"],
                 kind,
-                FEEDBACK_WEIGHTS[kind] if value is None else value,
+                value,
                 self.world.current_tick,
             ),
         )
@@ -768,6 +797,7 @@ class SocialSession(ProductSession):
             )
             self.state.update(screen="detail", dwell_ms=0)
             self._feedback(args["post_id"], "open_post")
+            self.state["viewed_media"] = [0]
             elapsed = 500
         elif action_type == "back":
             if self.state.get("nav_stack"):
