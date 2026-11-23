@@ -7,6 +7,7 @@ under pytest's temporary directory; no production account or API is touched.
 
 import asyncio
 import base64
+import hashlib
 import json
 import os
 import shutil
@@ -29,6 +30,78 @@ from agora.models import build_model_client
 
 MODEL = "agora-controlled-http-fixture"
 KEY = "local-transport-fixture-not-a-real-key"
+SOCIAL_MODEL = MODEL + "-social-audit"
+SOCIAL_STEPS = 15
+
+
+def social_action(payload):
+    """A single bounded journey, using objects from the current observation."""
+    observation = payload["observation"]
+    platform = observation["platform"]
+    stage = SOCIAL_STEPS - payload["remaining_total_actions"]
+    post = observation.get("post")
+    if stage == 0:
+        target = next(
+            card for card in observation["cards"] if card["post_type"] == "gallery"
+        )
+        action, args = "open_post", {"post_id": target["post_id"]}
+    elif stage == 1:
+        action, args = (
+            ("view_media", {"index": 1})
+            if platform == "xiaohongshu"
+            else ("dwell", {"duration_ms": 3000})
+        )
+    elif stage == 2:
+        action, args = "dwell", {"duration_ms": 3000}
+    elif stage == 3:
+        action = "upvote_post" if platform == "reddit" else "like_post"
+        args = {"post_id": post["post_id"]}
+    elif stage == 4:
+        action, field = (
+            ("reply_post", "body") if platform == "x" else ("create_comment", "content")
+        )
+        args = {
+            "post_id": post["post_id"],
+            field: "Which detail would you compare first?",
+        }
+    elif stage in {5, 12}:
+        action, args = "back", {}
+    elif stage in {6, 13}:
+        action, args = (
+            "refresh",
+            {"feed_type": "discover" if platform == "xiaohongshu" else "for_you"},
+        )
+    elif stage == 7:
+        action, args = "scroll", {}
+    elif stage == 8:
+        action, args = "open_studio", {}
+    elif stage == 9:
+        action = "save_draft"
+        args = {
+            "body": "Controlled social journey: image and text publication.",
+            "assets": [
+                {"asset_id": asset["asset_id"]}
+                for asset in observation["asset_library"][:2]
+            ],
+        }
+        if platform != "x":
+            args["title"] = "图文链路验收"
+        if platform == "reddit":
+            args["community"] = "r/photography"
+    elif stage == 10:
+        action, args = "publish_draft", {}
+    elif stage == 11:
+        created = next(
+            item["result"]["post_id"]
+            for item in reversed(payload["history"])
+            if item["action"]["action_type"] == "publish_draft"
+        )
+        action, args = "open_post", {"post_id": created}
+    elif stage == 14:
+        action, args = "end_session", {}
+    else:
+        raise AssertionError(f"Unexpected social journey stage {stage}")
+    return {"action_type": action, "arguments": args}
 
 
 @pytest.fixture
@@ -124,6 +197,8 @@ def chain(tmp_path_factory):
                     action = {"action_type": "save_draft", "arguments": args}
                 else:
                     action = {"action_type": "open_studio", "arguments": {}}
+                if model == SOCIAL_MODEL:
+                    action = social_action(payload)
                 assert action["action_type"] in observation["available_actions"]
                 assert (
                     set(
@@ -138,8 +213,21 @@ def chain(tmp_path_factory):
                 requests_seen.append(
                     {
                         "platform": platform,
+                        "model": model,
+                        "user_id": observation["user_id"],
+                        "stage": SOCIAL_STEPS - payload["remaining_total_actions"]
+                        if model == SOCIAL_MODEL
+                        else None,
                         "action": action["action_type"],
                         "images": len(images),
+                        "image_hashes": [
+                            hashlib.sha256(
+                                base64.b64decode(
+                                    part["image_url"]["url"].split(",", 1)[1]
+                                )
+                            ).hexdigest()
+                            for part in images
+                        ],
                     }
                 )
             body = json.dumps(
@@ -342,6 +430,68 @@ def test_model_http_to_native_viewer_and_export(browser, chain, platform):
         page.close()
 
 
+@pytest.mark.parametrize("platform", ["xiaohongshu", "x", "reddit"])
+def test_external_sdk_can_complete_the_social_journey(chain, platform, tmp_path):
+    from PIL import Image
+
+    seed_social_cards(chain, platform, tmp_path, suffix="_sdk")
+    client = AgoraClient(chain["native"])
+    client.register(platform, "sdk_social_" + platform[:7])
+    for index, color in enumerate(["#5264b6", "#b65264"]):
+        image = tmp_path / f"sdk-own-{platform}-{index}.png"
+        Image.new("RGB", (24, 20), color).save(image)
+        client.upload(image, alt_text="Uploaded social audit image")
+    runs_before = requests.get(
+        chain["console"] + "/api/runs", params={"platform": platform}, timeout=10
+    ).json()["runs"]
+    model = build_model_client(
+        {
+            "provider": "openai-compatible",
+            "model_id": SOCIAL_MODEL,
+            "base_url": chain["model_url"],
+            "api_key_env": "AGORA_CHAIN_FIXTURE_KEY",
+            "trust_env": True,
+            "limits": {
+                "timeout_seconds": 5,
+                "max_requests": SOCIAL_STEPS,
+                "max_output_tokens": 512,
+            },
+        }
+    )
+    result = asyncio.run(
+        client.run(
+            model,
+            "Controlled social interaction audit",
+            max_actions=SOCIAL_STEPS,
+            supports_vision=True,
+        )
+    )
+    assert len(result["model_calls"]) == SOCIAL_STEPS
+    assert all(call["status"] == "completed" for call in result["model_calls"])
+    assert all(step["result"]["success"] for step in result["history"])
+    actions = [step["action"]["action_type"] for step in result["history"]]
+    assert actions[3] == ("upvote_post" if platform == "reddit" else "like_post")
+    assert actions[4] == ("reply_post" if platform == "x" else "create_comment")
+    assert actions[10] == "publish_draft" and actions[-1] == "end_session"
+    trajectory = client.trajectory()
+    assert len(trajectory) == SOCIAL_STEPS + 1
+    scrolled = trajectory[8]
+    assert scrolled["action"]["action_type"] == "scroll" and not scrolled["result"].get(
+        "end_of_feed"
+    )
+    created = client.observe(step=trajectory[12]["step"])["post"]
+    assert created["post_id"] == result["history"][10]["result"]["post_id"]
+    assert len(created["assets"]) == 2
+    assert created["body"] == "Controlled social journey: image and text publication."
+    assert KEY not in json.dumps(trajectory)
+    runs_after = requests.get(
+        chain["console"] + "/api/runs", params={"platform": platform}, timeout=10
+    ).json()["runs"]
+    assert [run["run_id"] for run in runs_before] == [
+        run["run_id"] for run in runs_after
+    ]
+
+
 def test_external_sdk_can_use_the_same_https_model(chain, tmp_path):
     from PIL import Image
 
@@ -407,3 +557,185 @@ def test_http_probe_rejects_a_connected_non_json_model(chain):
     assert tested.ok and tested.json()["success"] is False
     assert tested.json()["error_type"] == "ModelContractError"
     assert KEY not in tested.text
+
+
+def seed_social_cards(chain, platform, tmp_path, suffix=""):
+    """Enough temporary image cards to verify real pagination rather than EOF."""
+    from PIL import Image
+
+    client = AgoraClient(chain["native"])
+    client.register(platform, "seed_" + platform + suffix)
+    client.start()
+    assets = []
+    for index, color in enumerate(["#df5264", "#5264df"]):
+        path = tmp_path / f"audit-{platform}-{index}.png"
+        Image.new("RGB", (32, 24), color).save(path)
+        assets.append({"asset_id": client.upload(path)["asset_id"]})
+    for index in range(14):
+        args = {
+            "body": f"Temporary social audit card {index}. #photography",
+            "assets": assets,
+        }
+        if platform != "x":
+            args["title"] = f"图文卡片 {index}"
+            args["topics"] = ["photography"]
+        if platform == "reddit":
+            args["community"] = "r/photography"
+        receipt = client.act("create_post", args)
+        assert receipt["status"] == "succeeded", receipt
+    assert client.act("end_session")["status"] == "succeeded"
+
+
+@pytest.mark.parametrize("platform", ["xiaohongshu", "x", "reddit"])
+def test_model_can_browse_read_react_create_and_replay(
+    browser, chain, platform, tmp_path
+):
+    seed_social_cards(chain, platform, tmp_path)
+    root = chain["console"]
+    before = source_counts(chain, platform)
+    saved = requests.post(
+        root + "/api/providers",
+        json={
+            "provider_id": "social-audit",
+            "display_name": "连续社媒操作验收（受控接口）",
+            "provider": "openai-compatible",
+            "model_id": SOCIAL_MODEL,
+            "base_url": chain["model_url"],
+            "api_key": KEY,
+            "supports_vision": True,
+            "trust_env": True,
+            "limits": {
+                "max_requests": 18,
+                "max_output_tokens": 512,
+                "timeout_seconds": 5,
+            },
+        },
+        timeout=10,
+    )
+    assert saved.status_code == 201 and KEY not in saved.text
+    page = browser.new_page(viewport={"width": 1440, "height": 1000})
+    errors = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    try:
+        page.goto(root + "/developer?platform=" + platform)
+        page.wait_for_function(
+            "world?.users?.length > 0 && !developerLoading", polling=100
+        )
+        page.locator("#focalUser").select_option("1")
+        page.locator("#focalModel").select_option("social-audit")
+        page.locator("#backgroundModel").select_option("social-audit")
+        page.locator("#agentCount").fill("2")
+        page.locator("#ticks").fill("1")
+        page.locator("#steps").fill(str(SOCIAL_STEPS))
+        page.locator(".advanced-settings summary").evaluate("el => el.click()")
+        page.locator("#slateSize").fill("24")
+        page.locator("#pageSize").fill("6")
+        page.locator("#pace").select_option("0")
+        page.locator("#launchButton").evaluate("el => el.click()")
+        page.wait_for_url("**/viewer?**")
+        page.wait_for_function(
+            "run?.status === 'completed' && actorData?.trajectory?.length > 0",
+            polling=100,
+        )
+        run_id = page.evaluate("run.run_id")
+        result = requests.get(root + "/api/runs/" + run_id, timeout=10).json()
+        assert result["failure_count"] == 0 and not result["report"]["failures"], (
+            result.get("report")
+        )
+        assert result["metrics"]["model_calls"] == SOCIAL_STEPS * 2
+        assert result["metrics"]["created_posts"] == 2
+        assert result["metrics"]["replies" if platform == "x" else "comments"] == 2
+        assert source_counts(chain, platform) == before
+        response = requests.get(root + "/api/runs/" + run_id + "/export", timeout=10)
+        assert response.ok and KEY not in response.text
+        export = response.json()
+        liked = "upvote_post" if platform == "reddit" else "like_post"
+        comment = "reply_post" if platform == "x" else "create_comment"
+        required = {
+            "open_post",
+            "dwell",
+            liked,
+            comment,
+            "refresh",
+            "scroll",
+            "open_studio",
+            "save_draft",
+            "publish_draft",
+            "end_session",
+        }
+        for actor in export["trajectories"]:
+            trajectory = actor["trajectory"]
+            actions = {step["action"]["action_type"] for step in trajectory}
+            assert required <= actions
+            assert all(step["result"].get("success", True) for step in trajectory)
+            reaction = next(
+                step for step in trajectory if step["action"]["action_type"] == liked
+            )
+            assert reaction["observation"]["post"]["liked"]
+            scrolling = next(
+                index
+                for index, step in enumerate(trajectory)
+                if step["action"]["action_type"] == "scroll"
+            )
+            old_cards = {
+                card["post_id"]
+                for card in trajectory[scrolling - 1]["observation"]["cards"]
+            }
+            new_cards = {
+                card["post_id"]
+                for card in trajectory[scrolling]["observation"]["cards"]
+            }
+            assert new_cards and new_cards.isdisjoint(old_cards)
+            published = next(
+                step
+                for step in trajectory
+                if step["action"]["action_type"] == "publish_draft"
+            )
+            created = next(
+                step
+                for step in trajectory
+                if step["action"]["action_type"] == "open_post"
+                and step["action"]["arguments"]["post_id"]
+                == published["result"]["post_id"]
+            )
+            assert created["observation"]["post"]["assets"]
+            assert (
+                created["observation"]["post"]["body"]
+                == "Controlled social journey: image and text publication."
+            )
+            assert trajectory[-1]["observation"]["status"] == "ended"
+        if platform == "xiaohongshu":
+            calls = [
+                call
+                for call in chain["requests"]
+                if call["model"] == SOCIAL_MODEL and call["platform"] == platform
+            ]
+            for user in {call["user_id"] for call in calls}:
+                frames = {
+                    call["stage"]: call for call in calls if call["user_id"] == user
+                }
+                assert frames[1]["image_hashes"] != frames[2]["image_hashes"]
+        call_count = len(chain["requests"])
+        for action in ["open_post", liked, comment, "scroll", "publish_draft"]:
+            index = page.evaluate(
+                "action => actorData.trajectory.findIndex(step => step.action.action_type === action)",
+                action,
+            )
+            assert index >= 0
+            page.evaluate("index => chooseFrame(index)", index)
+            page.wait_for_function(
+                "action => currentEvent()?.action.action_type === action",
+                arg=action,
+                polling=100,
+            )
+            child = next(frame for frame in page.frames if "/account?" in frame.url)
+            child.wait_for_function(
+                "step => typeof current === 'function' && current()?.screen && data?.trajectory?.[frame]?.step === step",
+                arg=page.evaluate("currentEvent().step"),
+                polling=100,
+            )
+            assert child.evaluate("!editable()")
+        assert len(chain["requests"]) == call_count
+        assert not errors
+    finally:
+        page.close()
