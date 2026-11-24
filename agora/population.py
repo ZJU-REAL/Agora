@@ -4,7 +4,7 @@ from agora.platform_behavior import relevant_communities
 from oasis import PersonaProfile
 
 
-def extend_population(world, users, count, seed):
+def extend_population(world, users, count, seed, provide_assets=True):
     english = world.preset.name in {"x", "reddit"}
     topics = (
         ("photography", "coffee", "technology", "design")
@@ -17,6 +17,8 @@ def extend_population(world, users, count, seed):
         "WHERE p.visibility='public' AND p.deleted=0 AND p.removed_by IS NULL "
         "AND (c.name IS NULL OR c.visibility='public') ORDER BY pa.asset_id LIMIT 2"
     ).fetchall()
+    if not provide_assets:
+        assets = []
     communities = [
         {"name": row[0], "title": row[1], "description": row[2], "visibility": "public"}
         for row in world.db.execute(
@@ -33,10 +35,24 @@ def extend_population(world, users, count, seed):
     while len(result) < count:
         index = len(result)
         topic = topics[(index + seed) % len(topics)]
+        profile_id = f"background-{seed}-{index}"
+        suffix = 0
+        while world.db.execute(
+            "SELECT 1 FROM persona WHERE profile_id=?", (profile_id,)
+        ).fetchone():
+            suffix += 1
+            profile_id = f"background-{seed}-{index}-{suffix}"
+        handle = f"sim_{seed % 100000}_{index}"
+        handle_suffix = 0
+        while world.db.execute(
+            "SELECT 1 FROM user WHERE user_name=?", (handle,)
+        ).fetchone():
+            handle_suffix += 1
+            handle = f"sim_{seed % 100000}_{index}_{handle_suffix}"
         user = world.add_persona(
             PersonaProfile(
-                profile_id=f"background-{seed}-{index}",
-                handle=f"sim_{seed % 100000}_{index}",
+                profile_id=profile_id,
+                handle=handle,
                 display_name=f"{topic.title()} reader {index + 1:02d}"
                 if english
                 else f"{topic}观察员 {index + 1:02d}",

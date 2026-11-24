@@ -166,6 +166,18 @@
                 role="group"
                 aria-label="选择模拟平台"
               ></div>
+              <div class="field-grid world-config">
+                <label class="field"
+                  >世界模式<select id="worldMode">
+                    <option value="background">背景世界 · 保留历史内容</option>
+                    <option value="ai_only">纯 AI 世界 · 不导入历史内容</option>
+                  </select></label
+                >
+                <div class="field world-start-description">
+                  <span>世界起点</span
+                  ><small id="worldStartNote" class="agent-identity"></small>
+                </div>
+              </div>
             </section>
             <section class="config-section">
               <div class="section-title">
@@ -183,8 +195,56 @@
                     <svg><use href="#i-eye" /></svg>受测账号
                   </h3>
                   <label class="field"
-                    >平台账号<select id="focalUser" required></select></label
-                  ><label class="field"
+                    >账号起点<select id="focalStart">
+                      <option value="existing">接手已有账号</option>
+                      <option value="new">新建账号</option>
+                    </select></label
+                  >
+                  <div id="newAccountFields" class="account-options" hidden>
+                    <label class="field"
+                      >新账号显示名<input
+                        id="newAccountName"
+                        maxlength="80"
+                        value="受测新号"
+                    /></label>
+                    <label class="field"
+                      >预置公开主帖（最多）<input
+                        id="starterPosts"
+                        type="number"
+                        min="0"
+                        max="20"
+                        value="0"
+                        aria-describedby="starterPostsHint"
+                    /></label>
+                    <small id="starterPostsHint" class="agent-identity"
+                      >0 表示全新空账号；大于 0
+                      时从下方模板复制少量内容。</small
+                    >
+                    <label class="checkbox-field"
+                      ><input
+                        id="starterAssets"
+                        type="checkbox"
+                        checked
+                      />为新账号提供公共素材库</label
+                    >
+                  </div>
+                  <label class="field"
+                    ><span id="focalSourceLabel">平台账号</span
+                    ><select id="focalUser" required></select
+                  ></label>
+                  <label class="field" id="sourceSearchField" hidden
+                    >查找更多已有账号<input
+                      id="sourceAccountQuery"
+                      type="search"
+                      maxlength="80"
+                      placeholder="按昵称或账号名搜索"
+                  /></label>
+                  <small
+                    id="sourceSearchStatus"
+                    class="agent-identity"
+                    role="status"
+                  ></small>
+                  <label class="field"
                     >受测账号模型<select id="focalModel" required></select
                   ></label>
                   <div id="focalIdentity" class="agent-identity"></div>
@@ -223,6 +283,12 @@
                   <label class="field"
                     >背景账号策略<select id="backgroundModel" required></select
                   ></label>
+                  <label class="field"
+                    >背景账号来源<select id="backgroundStart">
+                      <option value="existing">优先使用世界中的已有账号</option>
+                      <option value="new">全部新建背景账号</option>
+                    </select></label
+                  >
                   <div id="backgroundIdentity" class="agent-identity"></div>
                 </div>
               </div>
@@ -241,11 +307,19 @@
                 </div>
               </div>
               <label class="field goal-field"
-                >运行意图（可选）<textarea
+                >受测账号任务（可选）<textarea
                   id="goal"
                   rows="2"
                   maxlength="4000"
                   placeholder="留空时，账号根据自己的兴趣和风格自然浏览与互动。"
+                ></textarea>
+              </label>
+              <label class="field goal-field"
+                >背景账号任务（可选，每行一个）<textarea
+                  id="backgroundTasks"
+                  rows="2"
+                  maxlength="32000"
+                  placeholder="按背景账号顺序分配任务；空余账号按各自兴趣活动。"
                 ></textarea>
               </label>
               <div class="field-grid three">
@@ -329,22 +403,30 @@
             <div class="summary-agent" id="summaryAgent"></div>
             <dl class="summary-values">
               <div>
+                <dt>世界模式</dt>
+                <dd id="summaryWorldMode">背景世界</dd>
+              </div>
+              <div>
+                <dt>账号起点</dt>
+                <dd id="summaryAccountStart">接手已有账号</dd>
+              </div>
+              <div>
                 <dt>背景账号</dt>
                 <dd id="summaryPopulation">3 个</dd>
               </div>
-              <div>
+              <div class="summary-detail">
                 <dt>模拟轮数</dt>
                 <dd id="summaryTicks">6 轮</dd>
               </div>
-              <div>
+              <div class="summary-detail">
                 <dt>每账号动作上限</dt>
                 <dd id="summaryActions">48 次</dd>
               </div>
-              <div>
+              <div class="summary-detail">
                 <dt>受测模型</dt>
                 <dd id="summaryModel">开发策略</dd>
               </div>
-              <div>
+              <div class="summary-detail">
                 <dt>背景策略</dt>
                 <dd id="summaryBackground">开发策略</dd>
               </div>
@@ -353,7 +435,7 @@
                 <dd id="summaryTotal">192 次</dd>
               </div>
             </dl>
-            <label class="field"
+            <label class="field run-name-field"
               >实验名称<input
                 id="runName"
                 form="experimentForm"
@@ -408,6 +490,7 @@
           <p id="viewerSubtitle">
             选择实验，查看 AI 账号实际看到的内容与操作。
           </p>
+          <p id="viewerInitialState"></p>
         </div>
         <div class="viewer-heading-actions">
           <button class="secondary-button" id="exportRun" disabled>

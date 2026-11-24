@@ -150,6 +150,7 @@ async def run_sessions(
     on_progress=None,
     control=None,
     events=(),
+    goals=None,
 ):
     if (
         type(ticks) is not int
@@ -246,6 +247,7 @@ async def run_sessions(
             step = slots[user]
             history = session.trajectory(limit=8, include_observations=False)
             context = {
+                **({"goal": goals.get(str(user), "")} if goals is not None else {}),
                 "history": [
                     {"action": item["action"], "result": item["result"]}
                     for item in history

@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 from agora.api import AgentAPI, PlatformHub
 from agora.http_media import MediaResponse, byte_range
+from agora.initialization import PUBLIC_ORIGINAL_POST
 from agora.recommendation import RecommendationEngine
 from agora.session import SocialSession
 from agora.web_support import page, validate_mount
@@ -302,17 +303,46 @@ def make_handler(
                                 MediaResponse(snapshot.media.path_for(row[0])),
                                 row[1],
                             )
+                elif parsed.path == "/api/source-users":
+                    term = query.get("query", [""])[0]
+                    if len(term) > 80:
+                        raise ValueError("Account search is limited to 80 characters")
+                    user_id = int(query["id"][0]) if "id" in query else None
+                    rows = world.db.execute(
+                        f"SELECT u.user_id,u.user_name,u.name,(SELECT COUNT(*) FROM post p WHERE p.user_id=u.user_id AND {PUBLIC_ORIGINAL_POST}) "
+                        "FROM user u WHERE (? IS NULL OR u.user_id=?) AND (?='' OR instr(lower(COALESCE(u.name,'') || ' ' || u.user_name),lower(?))>0) ORDER BY u.user_id LIMIT 50",
+                        (user_id, user_id, term, term),
+                    )
+                    self.reply(
+                        200,
+                        {
+                            "users": [
+                                {
+                                    "user_id": r[0],
+                                    "handle": r[1],
+                                    "name": r[2],
+                                    "seedable_posts": r[3],
+                                }
+                                for r in rows
+                            ]
+                        },
+                    )
                 elif parsed.path == "/api/world":
                     users = [
-                        {"user_id": row[0], "handle": row[1], "name": row[2]}
+                        {
+                            "user_id": row[0],
+                            "handle": row[1],
+                            "name": row[2],
+                            "seedable_posts": row[3],
+                        }
                         for row in world.db.execute(
-                            "SELECT user_id, user_name, name FROM user ORDER BY user_id LIMIT 200"
+                            f"SELECT u.user_id,u.user_name,u.name,(SELECT COUNT(*) FROM post p WHERE p.user_id=u.user_id AND {PUBLIC_ORIGINAL_POST}) FROM user u ORDER BY u.user_id LIMIT 200"
                         )
                     ]
                     sessions = [
                         {"session_id": row[0], "user_id": row[1], "status": row[2]}
                         for row in world.db.execute(
-                            "SELECT session_id, user_id, status FROM agora_session ORDER BY session_id"
+                            "SELECT session_id, user_id, status FROM agora_session ORDER BY session_id DESC LIMIT 200"
                         )
                     ]
                     self.reply(
@@ -321,6 +351,12 @@ def make_handler(
                             "world_id": world.config.world_id,
                             "preset": world.preset.name,
                             "tick": world.current_tick,
+                            "user_count": world.db.execute(
+                                "SELECT COUNT(*) FROM user"
+                            ).fetchone()[0],
+                            "post_count": world.db.execute(
+                                "SELECT COUNT(*) FROM post WHERE deleted=0"
+                            ).fetchone()[0],
                             "users": users,
                             "sessions": sessions,
                         },

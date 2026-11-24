@@ -31,6 +31,7 @@ from agora.models import build_model_client
 MODEL = "agora-controlled-http-fixture"
 KEY = "local-transport-fixture-not-a-real-key"
 SOCIAL_MODEL = MODEL + "-social-audit"
+EMPTY_MODEL = MODEL + "-empty-world"
 SOCIAL_STEPS = 15
 
 
@@ -167,9 +168,16 @@ def chain(tmp_path_factory):
                     if isinstance(content, str)
                     else [p for p in content if p["type"] == "image_url"]
                 )
-                assert images, (
-                    "Visual observations must reach the configured vision model"
-                )
+                if (
+                    model == EMPTY_MODEL
+                    and not observation.get("cards")
+                    and observation["screen"] == "feed"
+                ):
+                    assert not images, "A zero-post initial feed has no post images"
+                else:
+                    assert images, (
+                        "Visual observations must reach the configured vision model"
+                    )
                 assert all(
                     base64.b64decode(p["image_url"]["url"].split(",", 1)[1]).startswith(
                         b"\xff\xd8"
@@ -214,6 +222,7 @@ def chain(tmp_path_factory):
                     {
                         "platform": platform,
                         "model": model,
+                        "goal": payload["goal"],
                         "user_id": observation["user_id"],
                         "stage": SOCIAL_STEPS - payload["remaining_total_actions"]
                         if model == SOCIAL_MODEL
@@ -737,5 +746,95 @@ def test_model_can_browse_read_react_create_and_replay(
             assert child.evaluate("!editable()")
         assert len(chain["requests"]) == call_count
         assert not errors
+    finally:
+        page.close()
+
+
+@pytest.mark.parametrize("platform", ["xiaohongshu", "x", "reddit"])
+def test_zero_content_agents_create_with_independent_tasks(browser, chain, platform):
+    root = chain["console"]
+    before = source_counts(chain, platform)
+    response = requests.post(
+        root + "/api/providers",
+        json={
+            "provider_id": "empty-controlled",
+            "display_name": "Empty-world transport fixture",
+            "provider": "openai-compatible",
+            "model_id": EMPTY_MODEL,
+            "base_url": chain["model_url"],
+            "api_key": KEY,
+            "supports_vision": True,
+            "trust_env": True,
+            "limits": {
+                "max_requests": 4,
+                "max_output_tokens": 512,
+                "timeout_seconds": 5,
+            },
+        },
+        timeout=10,
+    )
+    assert response.status_code == 201, response.text
+    page = browser.new_page(viewport={"width": 1440, "height": 1000})
+    start = len(chain["requests"])
+    try:
+        page.goto(root + "/developer?platform=" + platform)
+        page.wait_for_function("world && !developerLoading", polling=100)
+        page.locator("#worldMode").select_option("ai_only")
+        assert page.locator("#focalStart").input_value() == "new"
+        assert page.locator("#backgroundStart").input_value() == "new"
+        page.locator("#focalModel").select_option("empty-controlled")
+        page.locator("#backgroundModel").select_option("empty-controlled")
+        page.locator("#agentCount").fill("2")
+        page.locator("#ticks").fill("1")
+        page.locator("#steps").fill("4")
+        page.locator("#goal").fill("FOCAL: publish a photo story")
+        page.locator("#backgroundTasks").fill("BACKGROUND: introduce yourself")
+        page.locator(".advanced-settings summary").evaluate("el => el.click()")
+        page.locator("#pace").select_option("0")
+        page.locator("#launchButton").evaluate("el => el.click()")
+        page.wait_for_url("**/viewer?**")
+        page.wait_for_function(
+            "run?.status === 'completed' && actorData?.trajectory?.length > 0",
+            polling=100,
+        )
+        run_id = page.evaluate("run.run_id")
+        run = requests.get(root + "/api/runs/" + run_id, timeout=10).json()
+        state, config = run["config"]["initial_state"], run["config"]
+        assert state["posts"] == state["comments"] == 0
+        assert state["world_users"] == state["active_accounts"] == 2
+        assert run["metrics"]["created_posts"] == 2
+        assert run["metrics"]["model_calls"] == 8
+        assert run["failure_count"] == 0, run.get("report")
+        assert page.evaluate("selectedActor") == config["focal_user_id"]
+        assert (
+            "初始 0 条帖子 / 2 个账号"
+            in page.locator("#viewerInitialState").inner_text()
+        )
+        calls = chain["requests"][start:]
+        assert len(calls) == 8
+        assert [
+            call["images"] for call in calls if call["action"] == "open_studio"
+        ] == [0, 0]
+        for call in calls:
+            expected = (
+                "FOCAL: publish a photo story"
+                if call["user_id"] == config["focal_user_id"]
+                else "BACKGROUND: introduce yourself"
+            )
+            assert call["goal"] == expected
+        exported = requests.get(root + "/api/runs/" + run_id + "/export", timeout=10)
+        assert exported.ok and KEY not in exported.text
+        data = exported.json()
+        assert data["config"]["initial_state"]["posts"] == 0
+        assert len(data["trajectories"]) == 2
+        for actor in data["trajectories"]:
+            assert [step["action"]["action_type"] for step in actor["trajectory"]] == [
+                "start_session",
+                "open_studio",
+                "save_draft",
+                "publish_draft",
+                "end_session",
+            ]
+        assert source_counts(chain, platform) == before
     finally:
         page.close()
