@@ -7,6 +7,12 @@
 独立任务、初始条件记录、配置复用、回放和导出。所有新代码使用 `agora.core`。
 主目录整理与分支功能同时保留，旧集成进一步归档为 `archive/legacy_runtime/`。
 
+主目录应用后，Developer、Viewer 和平台 API 返回 200，页面包含世界模式/账号起点
+控件；三平台原有实验仍为 completed。23 个世界/实验数据库的核心计数、834 份媒体
+与私有配置校验和保持一致。服务 MemoryCurrent 约 23.35 MiB，原内存限额保持。
+`git worktree list` 仅剩 `/data/project/Agora`；已移除旧工作树与已合并的本地开发分支，
+原 `c275724` 仍是合并提交的父提交。没有向远端推送。
+
 完整回归命令：
 
 ```bash
