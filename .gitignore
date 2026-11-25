@@ -23,3 +23,5 @@ data/datasets/*
 benchmarks/outputs/
 configs/benchmarks/outputs/
 data/artifacts/
+
+third_party/oasis/data/

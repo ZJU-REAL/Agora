@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import platform as runtime_platform
+import sqlite3
 import sys
 import time
-import sqlite3
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from benchmarks.budget import EpisodeBudget
+from agora import __version__ as agora_version
+from agora.core import AgoraWorld
+from agora.core.audience import ScriptedDevelopmentAudience
+from agora.core.types import AssetInput
 from benchmarks.artifacts import WorldArtifact
+from benchmarks.budget import EpisodeBudget
 from benchmarks.metrics.report import write_run_report
 from benchmarks.multimodal import (
     artifact_asset_parts,
@@ -32,10 +36,6 @@ from benchmarks.state import (
     StateDelta,
     StateTransition,
 )
-from oasis import AgoraOasis
-from oasis.agora_types import AssetInput
-from oasis.audience import ScriptedDevelopmentAudience
-from oasis import __version__ as oasis_version
 
 
 @dataclass(frozen=True)
@@ -138,7 +138,8 @@ class ExclusiveRunner:
                         "audience_policy_version": audience_policy.policy_version,
                         "python_version": sys.version.split()[0],
                         "runtime_platform": runtime_platform.platform(),
-                        "agora_oasis_version": oasis_version,
+                        "agora_oasis_version": agora_version,
+                        "agora_version": agora_version,
                         "protocol_version": manifest.protocol_version,
                         "world_artifact_id": manifest.world_artifact_id,
                         "world_artifact_version": manifest.world_artifact_version,
@@ -162,7 +163,7 @@ class ExclusiveRunner:
                 + "\n",
                 encoding="utf-8",
             )
-        sandbox = AgoraOasis.local("world", output_dir, preset=manifest.platform)
+        sandbox = AgoraWorld.local("world", output_dir, preset=manifest.platform)
         if not resume:
             sandbox.set_seed(manifest.seed)
         audience_policy.sandbox = sandbox
@@ -794,7 +795,7 @@ class ExclusiveRunner:
                 )
 
     async def _apply_action(
-        self, sandbox: AgoraOasis, user_id: int, action: CandidateAction
+        self, sandbox: AgoraWorld, user_id: int, action: CandidateAction
     ) -> dict[str, Any]:
         args = dict(action.arguments)
         if action.action_type not in set(sandbox.available_actions()) | {
@@ -892,7 +893,7 @@ class ExclusiveRunner:
 
     @staticmethod
     def _content_pool_post_ids(
-        sandbox: AgoraOasis, candidate_user_id: int, frozen_post_ids: list[int] | None
+        sandbox: AgoraWorld, candidate_user_id: int, frozen_post_ids: list[int] | None
     ) -> list[int]:
         """Mix frozen human content with posts authored by the candidate."""
         if frozen_post_ids is None:
@@ -948,7 +949,7 @@ class ExclusiveRunner:
 
     @staticmethod
     def _direct_target_user_id(
-        sandbox: AgoraOasis, action: CandidateAction
+        sandbox: AgoraWorld, action: CandidateAction
     ) -> int | None:
         if action.arguments.get("parent_comment_id") is not None:
             row = sandbox.platform.db.execute(
@@ -998,7 +999,7 @@ class ExclusiveRunner:
     def _source_fingerprint() -> str:
         root = Path(__file__).parents[3]
         digest = hashlib.sha256()
-        for package in (root / "oasis", root / "benchmarks"):
+        for package in (root / "agora", root / "benchmarks"):
             for path in sorted(package.rglob("*.py")):
                 digest.update(path.relative_to(root).as_posix().encode("utf-8"))
                 digest.update(path.read_bytes())

@@ -2,29 +2,29 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import tempfile
-import hashlib
 from dataclasses import asdict
 from pathlib import Path
 
-from benchmarks.artifacts import WorldArtifact
+from agora.core import AgoraWorld
 from benchmarks.ablations import build_ablation_matrix
-from benchmarks.calibration import (calibration_report,
-                                    export_human_calibration_sample,
-                                    load_calibration_judgments)
-from benchmarks.metrics import (load_validated_main_run,
-                                write_aggregate_report)
+from benchmarks.artifacts import WorldArtifact
+from benchmarks.calibration import (
+    calibration_report,
+    export_human_calibration_sample,
+    load_calibration_judgments,
+)
+from benchmarks.metrics import load_validated_main_run, write_aggregate_report
 from benchmarks.policies import POLICIES
-from benchmarks.protocol import (ActorRole, ActorSpec, EpisodeManifest,
-                                 ExposureMode)
-from benchmarks.providers import load_provider_config
+from benchmarks.protocol import ActorRole, ActorSpec, EpisodeManifest, ExposureMode
 from benchmarks.provider_smoke import smoke_test_observer
+from benchmarks.providers import load_provider_config
 from benchmarks.reproducibility import compare_reproductions
 from benchmarks.runners.exclusive import ExclusiveBatchRunner, ExclusiveRunner
-from benchmarks.runtime import candidate_factory, observer_factory, audience_factory
+from benchmarks.runtime import audience_factory, candidate_factory, observer_factory
 from benchmarks.scenarios import load_scenario_suite, materialize_scenario
-from oasis import AgoraOasis
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -208,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
             "incomplete_seeds": report["incomplete_seeds"]}, ensure_ascii=False, indent=2))
         return 1 if report["failed_seeds"] or report["incomplete_seeds"] else 0
     elif args.command == "artifact-create":
-        sandbox = AgoraOasis.local(args.world_id, args.data_root)
+        sandbox = AgoraWorld.local(args.world_id, args.data_root)
         try:
             resources = {}
             for assignment in args.candidate_asset:

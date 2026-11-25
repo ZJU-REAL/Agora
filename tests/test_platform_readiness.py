@@ -6,17 +6,22 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from benchmarks import (ActorRole, ActorSpec, CandidateAction, EpisodeManifest,
-                        WorldArtifact)
+from agora.core import AgoraWorld
+from agora.core.cli import main
+from agora.core.types import PersonaProfile
+from benchmarks import (
+    ActorRole,
+    ActorSpec,
+    CandidateAction,
+    EpisodeManifest,
+    WorldArtifact,
+)
 from benchmarks.observers import ScriptedDevelopmentObserver
 from benchmarks.runners.exclusive import ExclusiveRunner
-from oasis import AgoraOasis
-from oasis.agora_types import PersonaProfile
-from oasis.cli import main
 
 
 def test_view_post_beyond_feed_limit_preserves_visibility(tmp_path):
-    sandbox = AgoraOasis.local("large", tmp_path, preset="xiaohongshu")
+    sandbox = AgoraWorld.local("large", tmp_path, preset="xiaohongshu")
     try:
         author = sandbox.create_user("author", "Author")
         viewer = sandbox.create_user("viewer", "Viewer")
@@ -65,7 +70,7 @@ def test_cli_publishes_single_image_and_ordered_gallery(tmp_path, capsys, preset
             "旧街散步", "图文正文", "上海")
         assert post["topics"] == ["城市漫游"]
         assert post["language"] == "zh-CN"
-        sandbox = AgoraOasis.local(preset, tmp_path / "worlds")
+        sandbox = AgoraWorld.local(preset, tmp_path / "worlds")
         try:
             for asset, original in zip(post["assets"], selected):
                 stored = sandbox.media.path_for(asset["object_key"])
@@ -83,7 +88,7 @@ def test_full_episode_publishes_gallery_and_npc_can_interact(tmp_path, preset):
         image = tmp_path / f"{index}.png"
         Image.new("RGB", (12, 8), color).save(image)
         resources[image.name] = image
-    source = AgoraOasis.local("source", tmp_path / "worlds", preset=preset)
+    source = AgoraWorld.local("source", tmp_path / "worlds", preset=preset)
     candidate_id = source.create_user("candidate", "博主")
     npc_id = source.add_persona(PersonaProfile(
         "reader", "reader", "读者", posting_probability=0,
@@ -124,7 +129,7 @@ def test_full_episode_publishes_gallery_and_npc_can_interact(tmp_path, preset):
         manifest, Candidate(), ScriptedDevelopmentObserver()))
     assert result.status == "completed"
     assert result.ticks_completed == 2
-    episode = AgoraOasis.local("world", result.output_dir)
+    episode = AgoraWorld.local("world", result.output_dir)
     try:
         post = next(post for post in episode.get_feed(npc_id)
                     if post["post_type"] == "gallery")
@@ -136,7 +141,7 @@ def test_full_episode_publishes_gallery_and_npc_can_interact(tmp_path, preset):
         assert (result.output_dir / "attribution.json").is_file()
     finally:
         episode.close()
-    source = AgoraOasis.local("source", tmp_path / "worlds")
+    source = AgoraWorld.local("source", tmp_path / "worlds")
     try:
         assert source.platform.db.execute(
             "SELECT COUNT(*) FROM post").fetchone()[0] == 1

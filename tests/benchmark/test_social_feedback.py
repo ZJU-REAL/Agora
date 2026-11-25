@@ -3,6 +3,8 @@ import json
 
 import pytest
 
+from agora.core import AgoraWorld
+from agora.core.types import Observation, PersonaProfile
 from benchmarks import (
     ActorRole,
     ActorSpec,
@@ -20,14 +22,12 @@ from benchmarks.calibration import (
 )
 from benchmarks.observers import JsonModelObserver, ScriptedDevelopmentObserver
 from benchmarks.runners.exclusive import ExclusiveRunner
-from oasis import AgoraOasis
-from oasis.agora_types import Observation, PersonaProfile
 
 
 def make_episode(
     tmp_path, preset="xiaohongshu", ticks=2, metadata=None, resources=None
 ):
-    world = AgoraOasis.local("source", tmp_path, preset=preset)
+    world = AgoraWorld.local("source", tmp_path, preset=preset)
     world.set_seed(73)
     creator = world.create_user("candidate", "Creator")
     reader = world.add_persona(
@@ -105,7 +105,7 @@ def test_seed_history_exposure_and_persistent_relationships(tmp_path, preset):
     )
     assert candidate.contexts[1]["history"][0]["outcome"]["success"]
     assert candidate.contexts[0]["task"]["objective"] == "修复信任"
-    episode = AgoraOasis.local("world", result.output_dir)
+    episode = AgoraWorld.local("world", result.output_dir)
     try:
         assert (
             episode.platform.db.execute("SELECT seed FROM simulation_state").fetchone()[
@@ -133,7 +133,7 @@ def test_seed_history_exposure_and_persistent_relationships(tmp_path, preset):
 
 
 def test_content_and_prior_trust_change_future_behavior(tmp_path):
-    world = AgoraOasis.local("world", tmp_path, preset="xiaohongshu")
+    world = AgoraWorld.local("world", tmp_path, preset="xiaohongshu")
     creator = world.create_user("creator", "Creator")
     reader = world.add_persona(
         PersonaProfile(
@@ -416,7 +416,7 @@ def test_unverifiable_or_excess_token_usage_cannot_modify_world(tmp_path, tokens
                 manifest, JsonModelCandidate("candidate", "1", client)
             )
         )
-    world = AgoraOasis.local("world", tmp_path / "outputs" / "run")
+    world = AgoraWorld.local("world", tmp_path / "outputs" / "run")
     assert (
         world.platform.db.execute(
             "SELECT COUNT(*) FROM post WHERE user_id=?", (creator,)
@@ -460,7 +460,7 @@ def test_failed_step_restores_world_and_resume_preserves_calls(tmp_path):
                 RecoveringObserver(),
             )
         )
-    world = AgoraOasis.local("world", tmp_path / "outputs" / "run")
+    world = AgoraWorld.local("world", tmp_path / "outputs" / "run")
     assert world.current_tick == 0
     assert (
         world.platform.db.execute(
@@ -608,7 +608,7 @@ def test_media_only_post_reaches_model_audience_and_observer(tmp_path):
 
 
 def test_model_audience_decision_is_not_overridden_by_trust_threshold(tmp_path):
-    world = AgoraOasis.local("world", tmp_path, preset="xiaohongshu")
+    world = AgoraWorld.local("world", tmp_path, preset="xiaohongshu")
     creator = world.create_user("creator", "Creator")
     reader = world.add_persona(
         PersonaProfile("reader", "reader", "Reader", posting_probability=0)
@@ -637,6 +637,7 @@ def test_model_audience_decision_is_not_overridden_by_trust_threshold(tmp_path):
 
 def test_aggregate_does_not_mix_feedback_conditions(tmp_path):
     import shutil
+
     from benchmarks.metrics import aggregate_runs
 
     artifact, manifest, *_ = make_episode(tmp_path, ticks=1)

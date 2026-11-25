@@ -3,8 +3,8 @@ import json
 
 from PIL import Image
 
+from agora.core import AgoraWorld, DatasetImporter
 from benchmarks.cli import main as benchmark_main
-from oasis import AgoraOasis, DatasetImporter
 
 
 def _write_jsonl(path, rows):
@@ -41,7 +41,7 @@ def test_imports_platform_fields_relations_interactions_and_media_metadata(
         "media_root": "media"}, "import": {"id_namespace": "import-v1"}}
     (dataset / "manifest.json").write_text(json.dumps(manifest),
                                              encoding="utf-8")
-    sandbox = AgoraOasis.local("import", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("import", tmp_path / "worlds",
                                preset="xiaohongshu")
     report = asyncio.run(DatasetImporter(sandbox).import_manifest(
         dataset / "manifest.json"))
@@ -72,7 +72,7 @@ def test_imported_world_can_run_complete_isolated_episode(tmp_path, capsys):
         "files": {"users": "users.jsonl", "posts": "posts.jsonl"},
         "import": {"id_namespace": "ready-v1"},
     }), encoding="utf-8")
-    sandbox = AgoraOasis.local("ready", worlds, preset="xiaohongshu")
+    sandbox = AgoraWorld.local("ready", worlds, preset="xiaohongshu")
     report = asyncio.run(DatasetImporter(sandbox).import_manifest(
         dataset / "manifest.json"))
     assert (report.users, report.posts) == (2, 1)
@@ -106,8 +106,8 @@ def test_imported_world_can_run_complete_isolated_episode(tmp_path, capsys):
     assert (run_dir / "metrics.json").is_file()
     assert (run_dir / "attribution.json").is_file()
 
-    source = AgoraOasis.local("ready", worlds)
-    episode = AgoraOasis.local("world", run_dir)
+    source = AgoraWorld.local("ready", worlds)
+    episode = AgoraWorld.local("world", run_dir)
     assert source.platform.db.execute(
         "SELECT COUNT(*) FROM comment").fetchone()[0] == 0
     assert episode.platform.db.execute(
@@ -118,7 +118,7 @@ def test_imported_world_can_run_complete_isolated_episode(tmp_path, capsys):
 
 def test_artifact_can_freeze_human_content_by_task_topic(tmp_path, capsys):
     worlds = tmp_path / "worlds"
-    sandbox = AgoraOasis.local("topics", worlds, preset="xiaohongshu")
+    sandbox = AgoraWorld.local("topics", worlds, preset="xiaohongshu")
     candidate_id = sandbox.create_user("candidate", "Candidate")
     human_id = sandbox.create_user("human", "Human")
     selected = sandbox.create_post(human_id, body="Travel reference",

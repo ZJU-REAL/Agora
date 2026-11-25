@@ -8,10 +8,10 @@ import subprocess
 import pytest
 from PIL import Image
 
+from agora.core import AssetInput, PersonaProfile
 from agora.recommendation import RecommendationConfig, RecommendationEngine
 from agora.session import SocialSession
 from agora.world import open_world
-from oasis import AssetInput, PersonaProfile
 
 
 @pytest.fixture

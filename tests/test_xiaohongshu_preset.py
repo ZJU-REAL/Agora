@@ -1,8 +1,8 @@
-from oasis import AgoraOasis
+from agora.core import AgoraWorld
 
 
 def test_xiaohongshu_actions_and_feeds(tmp_path):
-    sandbox = AgoraOasis.local("xhs", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("xhs", tmp_path / "worlds",
                                preset="xiaohongshu")
     creator = sandbox.create_user("creator", "旅行博主")
     viewer = sandbox.create_user("viewer", "读者")
@@ -47,9 +47,9 @@ def test_xiaohongshu_actions_and_feeds(tmp_path):
 
 
 def test_world_reopens_with_its_stored_preset(tmp_path):
-    first = AgoraOasis.local("xhs", tmp_path / "worlds",
+    first = AgoraWorld.local("xhs", tmp_path / "worlds",
                              preset="xiaohongshu")
     first.close()
-    reopened = AgoraOasis.local("xhs", tmp_path / "worlds")
+    reopened = AgoraWorld.local("xhs", tmp_path / "worlds")
     assert reopened.preset.name == "xiaohongshu"
     reopened.close()

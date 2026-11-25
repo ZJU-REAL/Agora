@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any, Callable
-import hashlib
 
+from agora.core.audience import ScriptedDevelopmentAudience
 from benchmarks.adapters import JsonModelCandidate
-from benchmarks.observers import (ConfiguredScriptedObserver,
-                                  JsonModelObserver, ObserverPool,
-                                  ScriptedDevelopmentObserver)
+from benchmarks.audience import JsonModelAudience
+from benchmarks.observers import (
+    ConfiguredScriptedObserver,
+    JsonModelObserver,
+    ObserverPool,
+    ScriptedDevelopmentObserver,
+)
 from benchmarks.policies import POLICIES
 from benchmarks.providers import build_model_client, load_provider_config
-from benchmarks.audience import JsonModelAudience
-from oasis.audience import ScriptedDevelopmentAudience
 
 
 def _resolve_provider_config(spec: dict[str, Any], config_dir: Path) -> dict:

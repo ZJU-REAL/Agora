@@ -1,9 +1,9 @@
+from agora.core import AgoraWorld
 from benchmarks.metrics import compute_creator_account_metrics
-from oasis import AgoraOasis
 
 
 def test_creator_account_metrics_cover_operation_dimensions(tmp_path):
-    sandbox = AgoraOasis.local("world", tmp_path, preset="xiaohongshu")
+    sandbox = AgoraWorld.local("world", tmp_path, preset="xiaohongshu")
     candidate = sandbox.create_user("creator", "Creator")
     post = sandbox.create_post(candidate, title="旅行日记", body="旅行的一天",
                                topics=["旅行"])

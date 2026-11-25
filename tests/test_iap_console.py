@@ -13,11 +13,11 @@ from pathlib import Path
 import pytest
 import requests
 
+from agora.core import PersonaProfile
 from agora.experiments import ExperimentManager
 from agora.models import ModelResponse
 from agora.provider_registry import ProviderRegistry
 from agora.world import open_world
-from oasis import PersonaProfile
 
 PUBLIC_ORIGIN = "https://lidingm.iap.platform.shaipower.com"
 

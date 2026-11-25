@@ -19,13 +19,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
+from agora.core.media import LocalMediaStore
+from agora.core.types import PLATFORM_PRESETS
+from agora.core.world import AgoraWorld, WorldConfig
 from agora.read_views import prepare_read_views
 from agora.recommendation import RecommendationConfig
 from agora.runner import JsonSessionPolicy, run_sessions
 from agora.world import open_world
-from oasis.agora_types import PLATFORM_PRESETS
-from oasis.media import LocalMediaStore
-from oasis.world import AgoraWorld, WorldConfig
 
 
 class ExperimentManager:

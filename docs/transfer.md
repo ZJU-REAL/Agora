@@ -9,7 +9,7 @@
 在仓库根目录运行，输出目录必须不存在：
 
 ```bash
-PYTHONPATH=. .venv/bin/python examples/agora_oasis/transfer_demo.py \
+PYTHONPATH=. .venv/bin/python examples/social_simulation/transfer_demo.py \
   --output /tmp/agora-transfer-demo --seeds 1,2
 ```
 
@@ -20,7 +20,7 @@ PYTHONPATH=. .venv/bin/python examples/agora_oasis/transfer_demo.py \
 只生成模板、不运行：
 
 ```bash
-PYTHONPATH=. .venv/bin/python examples/agora_oasis/transfer_demo.py \
+PYTHONPATH=. .venv/bin/python examples/social_simulation/transfer_demo.py \
   --output /tmp/agora-transfer-config --prepare-only
 .venv/bin/agora-benchmark transfer-run /tmp/agora-transfer-config/transfer.json
 .venv/bin/agora-benchmark transfer-run /tmp/agora-transfer-config/transfer.json --resume

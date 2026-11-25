@@ -1,12 +1,12 @@
 import asyncio
 
+from agora.core import AgoraWorld
 from benchmarks import CandidateAction, WorldArtifact
 from benchmarks.runners.exclusive import ExclusiveRunner
-from oasis import AgoraOasis
 
 
 def test_xiaohongshu_search_location_and_author_pinned_comment(tmp_path):
-    sandbox = AgoraOasis.local("xhs-native", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("xhs-native", tmp_path / "worlds",
                                preset="xiaohongshu")
     creator = sandbox.create_user("creator", "博主")
     viewer = sandbox.create_user("viewer", "读者")
@@ -23,7 +23,7 @@ def test_xiaohongshu_search_location_and_author_pinned_comment(tmp_path):
 
 
 def test_reddit_community_filter_and_downvote(tmp_path):
-    sandbox = AgoraOasis.local("reddit-native", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("reddit-native", tmp_path / "worlds",
                                preset="reddit")
     author = sandbox.create_user("author", "Author")
     viewer = sandbox.create_user("viewer", "Viewer")
@@ -40,7 +40,7 @@ def test_reddit_community_filter_and_downvote(tmp_path):
 
 
 def test_x_quote_post_and_runner_native_actions(tmp_path):
-    sandbox = AgoraOasis.local("x-native", tmp_path / "worlds", preset="x")
+    sandbox = AgoraWorld.local("x-native", tmp_path / "worlds", preset="x")
     author = sandbox.create_user("author", "Author")
     candidate = sandbox.create_user("candidate", "Candidate")
     post_id = sandbox.create_post(author, body="A public claim")
@@ -48,7 +48,7 @@ def test_x_quote_post_and_runner_native_actions(tmp_path):
         sandbox, tmp_path / "artifact", artifact_id="x", version="1")
     sandbox.close()
     artifact.clone_episode(tmp_path / "episode", "episode")
-    episode = AgoraOasis.local("world", tmp_path / "episode")
+    episode = AgoraWorld.local("world", tmp_path / "episode")
     runner = ExclusiveRunner(artifact, tmp_path / "outputs")
     outcome = asyncio.run(runner._apply_action(
         episode, candidate, CandidateAction("quote_post", {
@@ -61,7 +61,7 @@ def test_x_quote_post_and_runner_native_actions(tmp_path):
 
 
 def test_feed_enforces_private_and_followers_visibility(tmp_path):
-    sandbox = AgoraOasis.local("visibility", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("visibility", tmp_path / "worlds",
                                preset="xiaohongshu")
     author = sandbox.create_user("author", "Author")
     follower = sandbox.create_user("follower", "Follower")

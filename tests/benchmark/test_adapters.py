@@ -2,8 +2,8 @@ import json
 
 import pytest
 
+from agora.core.types import Observation
 from benchmarks.adapters import JsonModelCandidate, ModelResponse
-from oasis.agora_types import Observation
 
 
 class FakeClient:

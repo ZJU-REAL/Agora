@@ -1,6 +1,6 @@
 """Public world entry point. No upstream agent/platform scheduler is used."""
 
-from oasis.world import AgoraWorld, WorldConfig
+from agora.core.world import AgoraWorld, WorldConfig
 
 
 def open_world(world_id, data_root="data/worlds", preset=None):

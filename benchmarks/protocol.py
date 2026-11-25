@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol
 
-from oasis.agora_types import Observation
+from agora.core.types import Observation
 
 
 class ActorRole(str, Enum):

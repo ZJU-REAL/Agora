@@ -1,6 +1,6 @@
 """Create background accounts inside an experiment, preserving its source world."""
 
-from oasis import PersonaProfile
+from agora.core import PersonaProfile
 
 
 def extend_population(world, users, count, seed):

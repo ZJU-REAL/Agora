@@ -10,13 +10,13 @@ import time
 import pytest
 from PIL import Image
 
+from agora.core import AssetInput, PersonaProfile
 from agora.experiments import ExperimentManager
 from agora.models import ModelResponse
 from agora.recommendation import RecommendationConfig, RecommendationEngine
 from agora.runner import JsonSessionPolicy, run_sessions
 from agora.session import SocialSession
 from agora.world import open_world
-from oasis import AssetInput, PersonaProfile
 
 
 @pytest.fixture
@@ -53,7 +53,7 @@ def test_native_world_does_not_import_old_runtime(tmp_path):
         [
             sys.executable,
             "-c",
-            "from agora.world import open_world; import sys; w=open_world('native', sys.argv[1]); assert type(w.store).__name__=='WorldStore'; assert 'oasis.social_platform.platform' not in sys.modules; assert 'oasis.clock.clock' not in sys.modules; assert 'benchmarks' not in sys.modules; w.close()",
+            "from agora.world import open_world; import sys; w=open_world('native', sys.argv[1]); assert type(w.store).__name__=='WorldStore'; assert not any(name == 'oasis' or name.startswith(('oasis.', 'third_party.', 'camel', 'torch')) for name in sys.modules); assert 'benchmarks' not in sys.modules; w.close()",
             str(tmp_path),
         ],
         check=False,

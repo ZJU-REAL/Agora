@@ -353,7 +353,7 @@ Official branding preserves transparent edges and uses `object-fit: contain`. Ke
 
 The masthead links the official `agora/web/agora-wordmark.webp` image to the Developer entry with an accessible Agora home name. Its rendered size is (144px by 57px), with the mobile size above. Developer heading and Viewer empty state use `agora/web/agora-world.webp`; the empty-state image is (170px by 150px), becoming (150px by 134px) on mobile. Decorative instances have empty alternative text and are hidden from assistive technology. `agora/web/agora-favicon.png` remains the favicon. `agora/web/agora-mark.png` remains a retained identity asset and is not a current sidebar component.
 
-The user supplied `agora_icon.png` and `agora_text.png` as the official identity. Their derivatives crop transparent padding and resize proportionally without repainting. Original PNGs, derivative files, source hashes and transformation metadata in `licenses/agora-artwork.json` remain unchanged. Application assets resolve through the existing `/static/` deployment routing. Use the artwork for branding and orientation; do not present it as account data, simulation outcome or evidence of model capability.
+The user supplied `assets/source/agora_icon.png` and `assets/source/agora_text.png` as the official identity. Their derivatives crop transparent padding and resize proportionally without repainting. Original PNGs, derivative files, source hashes and transformation metadata in `licenses/agora-artwork.json` remain unchanged. Application assets resolve through the existing `/static/` deployment routing. Use the artwork for branding and orientation; do not present it as account data, simulation outcome or evidence of model capability.
 
 ### Buttons
 

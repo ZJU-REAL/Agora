@@ -2,17 +2,17 @@ import json
 
 import pytest
 
-from benchmarks import (ActorRole, ActorSpec, EpisodeManifest, WorldArtifact)
+from agora.core import AgoraWorld
+from benchmarks import ActorRole, ActorSpec, EpisodeManifest, WorldArtifact
 from benchmarks.metrics import aggregate_runs
 from benchmarks.observers import ScriptedDevelopmentObserver
 from benchmarks.policies import TemplateDeescalationCandidate
 from benchmarks.runners.exclusive import ExclusiveBatchRunner
-from oasis import AgoraOasis
 
 
 @pytest.mark.asyncio
 async def test_batch_runner_isolates_seeds_and_aggregates(tmp_path):
-    sandbox = AgoraOasis.local("source", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("source", tmp_path / "worlds",
                                preset="xiaohongshu")
     npc_id = sandbox.create_user("npc", "NPC")
     candidate_id = sandbox.create_user("candidate", "Candidate")

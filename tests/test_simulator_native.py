@@ -7,14 +7,14 @@ import zlib
 
 import pytest
 
+from agora.core import PersonaProfile
+from agora.core.data_import import DatasetImporter
+from agora.core.media import LocalMediaStore, MediaValidationError
 from agora.demo import populate
 from agora.distribution import reddit_hot
 from agora.experiments import ExperimentManager
 from agora.session import SocialSession
 from agora.world import open_world
-from oasis import PersonaProfile
-from oasis.data_import import DatasetImporter
-from oasis.media import LocalMediaStore, MediaValidationError
 
 
 def act(session, kind, args=None):
@@ -333,7 +333,7 @@ def test_fixture_is_small_and_has_platform_specific_styles(tmp_path):
 def test_asset_library_pages_keep_selected_draft_media(world, tmp_path):
     from PIL import Image
 
-    from oasis import AssetInput
+    from agora.core import AssetInput
 
     world, author, _ = world
     for index in range(24):

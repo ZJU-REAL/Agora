@@ -2,15 +2,15 @@ import asyncio
 
 import pytest
 
-from oasis import AgoraOasis
-from oasis.agora_types import PersonaProfile
+from agora.core import AgoraWorld
+from agora.core.types import PersonaProfile
 
 
 @pytest.mark.parametrize("preset", ["xiaohongshu", "reddit", "x"])
 def test_platform_runs_deterministic_multi_tick_episode(tmp_path, preset):
     worlds = []
     for suffix in ("a", "b"):
-        sandbox = AgoraOasis.local(
+        sandbox = AgoraWorld.local(
             f"{preset}-{suffix}", tmp_path / "worlds", preset=preset)
         sandbox.set_seed(42)
         sandbox.add_persona(PersonaProfile(

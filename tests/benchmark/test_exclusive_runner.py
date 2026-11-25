@@ -2,13 +2,19 @@ import json
 
 import pytest
 
-from benchmarks import (ActorRole, ActorSpec, CandidateAction, EpisodeManifest,
-                        ExposureMode, WorldArtifact)
+from agora.core import AgoraWorld
+from agora.core.types import PersonaProfile
+from benchmarks import (
+    ActorRole,
+    ActorSpec,
+    CandidateAction,
+    EpisodeManifest,
+    ExposureMode,
+    WorldArtifact,
+)
 from benchmarks.metrics import validate_main_run
 from benchmarks.observers import ScriptedDevelopmentObserver
 from benchmarks.runners.exclusive import ExclusiveRunner
-from oasis import AgoraOasis
-from oasis.agora_types import PersonaProfile
 
 
 class CommentCandidate:
@@ -54,7 +60,7 @@ def _manifest(candidate_user_id):
 
 @pytest.mark.asyncio
 async def test_artifact_clone_and_exclusive_run(tmp_path):
-    sandbox = AgoraOasis.local("source", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("source", tmp_path / "worlds",
                                preset="xiaohongshu")
     npc_id = sandbox.create_user("skeptic", "质疑者")
     candidate_id = sandbox.create_user("candidate", "候选博主")
@@ -87,7 +93,7 @@ async def test_artifact_clone_and_exclusive_run(tmp_path):
     assert transition["action_id"] == records[0]["action_id"]
     assert transition["after"]["attitude"] > 0
 
-    source = AgoraOasis.local("source", tmp_path / "worlds")
+    source = AgoraWorld.local("source", tmp_path / "worlds")
     assert source.platform.db.execute(
         "SELECT COUNT(*) FROM comment").fetchone()[0] == 0
     source.close()
@@ -101,7 +107,7 @@ async def test_artifact_clone_and_exclusive_run(tmp_path):
 
 @pytest.mark.asyncio
 async def test_candidate_post_is_mixed_into_npc_tick_pool(tmp_path):
-    sandbox = AgoraOasis.local("source", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("source", tmp_path / "worlds",
                                preset="xiaohongshu")
     candidate_id = sandbox.create_user("candidate", "Candidate")
     npc_id = sandbox.add_persona(PersonaProfile(
@@ -153,7 +159,7 @@ def test_main_protocol_rejects_multiple_candidates():
 
 
 def test_artifact_detects_tampering(tmp_path):
-    sandbox = AgoraOasis.local("source", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("source", tmp_path / "worlds",
                                preset="xiaohongshu")
     artifact = WorldArtifact.create(
         sandbox, tmp_path / "artifact", artifact_id="world",
@@ -166,7 +172,7 @@ def test_artifact_detects_tampering(tmp_path):
 
 
 def test_artifact_freezes_versioned_resources(tmp_path):
-    sandbox = AgoraOasis.local("source", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("source", tmp_path / "worlds",
                                preset="xiaohongshu")
     resource = tmp_path / "suite.json"
     resource.write_text('{"version":"1"}', encoding="utf-8")

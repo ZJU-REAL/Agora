@@ -2,9 +2,9 @@
 
 import json
 
+from agora.core.audience import AudienceReaction
 from benchmarks.adapters import JsonModelCandidate
 from benchmarks.multimodal import post_media_parts
-from oasis.audience import AudienceReaction
 
 
 class JsonModelAudience:

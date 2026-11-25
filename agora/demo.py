@@ -9,7 +9,7 @@ from pathlib import Path
 def populate(world):
     if world.db.execute("SELECT COUNT(*) FROM user").fetchone()[0]:
         raise ValueError("Demo requires an empty world; use a new world_id")
-    from oasis import AssetInput, PersonaProfile
+    from agora.core import AssetInput, PersonaProfile
 
     root = Path(__file__).parent / "fixtures"
     fixture = json.loads((root / "sample_worlds.json").read_text())

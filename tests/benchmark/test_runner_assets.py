@@ -3,16 +3,16 @@ import asyncio
 import pytest
 from PIL import Image
 
+from agora.core import AgoraWorld
+from agora.core.media import LocalMediaStore
 from benchmarks import CandidateAction, WorldArtifact
 from benchmarks.runners.exclusive import ExclusiveRunner
-from oasis import AgoraOasis
-from oasis.social_platform.media_store import LocalMediaStore
 
 
 def test_runner_only_accepts_frozen_candidate_assets(tmp_path):
     image = tmp_path / "photo.png"
     Image.new("RGB", (8, 8), (10, 20, 30)).save(image)
-    source = AgoraOasis.local("source", tmp_path / "worlds",
+    source = AgoraWorld.local("source", tmp_path / "worlds",
                               preset="xiaohongshu")
     user_id = source.create_user("candidate", "Candidate")
     artifact = WorldArtifact.create(
@@ -21,7 +21,7 @@ def test_runner_only_accepts_frozen_candidate_assets(tmp_path):
         metadata={"candidate_asset_keys": ["photo.png"]})
     source.close()
     artifact.clone_episode(tmp_path / "episode", "episode")
-    episode = AgoraOasis.local("world", tmp_path / "episode")
+    episode = AgoraWorld.local("world", tmp_path / "episode")
     runner = ExclusiveRunner(artifact, tmp_path / "outputs")
     outcome = asyncio.run(runner._apply_action(
         episode, user_id, CandidateAction("create_post", {
@@ -36,7 +36,7 @@ def test_runner_only_accepts_frozen_candidate_assets(tmp_path):
 
 
 def test_artifact_rejects_unfrozen_candidate_asset_key(tmp_path):
-    source = AgoraOasis.local("missing-source", tmp_path / "worlds",
+    source = AgoraWorld.local("missing-source", tmp_path / "worlds",
                               preset="xiaohongshu")
     with pytest.raises(ValueError, match="missing from resources"):
         WorldArtifact.create(
@@ -52,7 +52,7 @@ def test_runner_creates_ordered_gallery_from_frozen_assets(tmp_path):
         path = tmp_path / f"photo-{index}.png"
         Image.new("RGB", (8, 8), color).save(path)
         resources[path.name] = path
-    source = AgoraOasis.local("gallery-source", tmp_path / "worlds",
+    source = AgoraWorld.local("gallery-source", tmp_path / "worlds",
                               preset="xiaohongshu")
     user_id = source.create_user("candidate", "Candidate")
     artifact = WorldArtifact.create(
@@ -61,7 +61,7 @@ def test_runner_creates_ordered_gallery_from_frozen_assets(tmp_path):
         metadata={"candidate_asset_keys": list(resources)})
     source.close()
     artifact.clone_episode(tmp_path / "gallery-episode", "episode")
-    episode = AgoraOasis.local("world", tmp_path / "gallery-episode")
+    episode = AgoraWorld.local("world", tmp_path / "gallery-episode")
     runner = ExclusiveRunner(artifact, tmp_path / "outputs")
 
     outcome = asyncio.run(runner._apply_action(
@@ -89,7 +89,7 @@ def test_runner_creates_video_with_explicit_cover(tmp_path, monkeypatch):
         lambda _path: {"format": "mp4", "mime_type": "video/mp4",
                        "width": 16, "height": 9, "duration_ms": 1000,
                        "video_codec": "test"}))
-    source = AgoraOasis.local("video-source", tmp_path / "worlds",
+    source = AgoraWorld.local("video-source", tmp_path / "worlds",
                               preset="xiaohongshu")
     user_id = source.create_user("candidate", "Candidate")
     artifact = WorldArtifact.create(
@@ -98,7 +98,7 @@ def test_runner_creates_video_with_explicit_cover(tmp_path, monkeypatch):
         metadata={"candidate_asset_keys": ["clip.mp4", "cover.png"]})
     source.close()
     artifact.clone_episode(tmp_path / "video-episode", "episode")
-    episode = AgoraOasis.local("world", tmp_path / "video-episode")
+    episode = AgoraWorld.local("world", tmp_path / "video-episode")
     runner = ExclusiveRunner(artifact, tmp_path / "outputs")
 
     outcome = asyncio.run(runner._apply_action(
@@ -120,7 +120,7 @@ def test_video_cover_role_is_not_inferred_from_position(tmp_path, monkeypatch):
     Image.new("RGB", (16, 9), (12, 34, 56)).save(cover)
     monkeypatch.setattr(LocalMediaStore, "_inspect_video", staticmethod(
         lambda _path: {"mime_type": "video/mp4", "duration_ms": 1000}))
-    source = AgoraOasis.local("role-source", tmp_path / "worlds",
+    source = AgoraWorld.local("role-source", tmp_path / "worlds",
                               preset="xiaohongshu")
     user_id = source.create_user("candidate", "Candidate")
     artifact = WorldArtifact.create(
@@ -129,7 +129,7 @@ def test_video_cover_role_is_not_inferred_from_position(tmp_path, monkeypatch):
         metadata={"candidate_asset_keys": ["clip.mp4", "cover.png"]})
     source.close()
     artifact.clone_episode(tmp_path / "role-episode", "episode")
-    episode = AgoraOasis.local("world", tmp_path / "role-episode")
+    episode = AgoraWorld.local("world", tmp_path / "role-episode")
     runner = ExclusiveRunner(artifact, tmp_path / "outputs")
 
     with pytest.raises(ValueError, match="cover role"):

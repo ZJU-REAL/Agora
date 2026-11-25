@@ -1,4 +1,4 @@
-"""Agora benchmark components built on top of Agora-OASIS."""
+"""Controlled social evaluation on Agora's native world infrastructure."""
 
 from benchmarks.artifacts import WorldArtifact, WorldArtifactManifest
 from benchmarks.protocol import (ActorRole, ActorSpec, CandidateAction,

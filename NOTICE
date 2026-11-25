@@ -1,0 +1,11 @@
+Agora includes code and design ideas derived from CAMEL-AI OASIS.
+Upstream: https://github.com/camel-ai/oasis
+Baseline: 2048ee6dd8d2a9e62f53773f00200ef51a086468 (camel-oasis 0.2.5)
+Copyright 2023 @ CAMEL-AI.org. All Rights Reserved.
+Licensed under the Apache License, Version 2.0.
+
+Agora contributors have modified and extended the derived code, including
+native world storage, social platform behavior, media support, account APIs,
+recommendation, experiment management and replay. Historical integrations
+are retained separately under third_party/oasis and are not part of the
+default Agora runtime. See docs/upstream.md for attribution and changes.

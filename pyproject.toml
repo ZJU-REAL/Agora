@@ -9,7 +9,7 @@ description = "Agora: observable AI social simulation experiments and platform i
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = "Apache-2.0"
-license-files = ["LICENSE", "licenses/*-OFL.txt"]
+license-files = ["LICENSE", "NOTICE", "licenses/*-OFL.txt"]
 authors = [{name = "Agora contributors"}]
 dependencies = ["pillow>=10.3,<12", "requests>=2.32,<3", "regex>=2024.5"]
 
@@ -19,13 +19,20 @@ dev = ["ruff>=0.14,<1"]
 
 [project.scripts]
 agora = "agora.cli:main"
-agora-world = "oasis.cli:main"
+agora-world = "agora.core.cli:main"
 agora-benchmark = "benchmarks.cli:main"
 agora-stress-world = "scripts.stress_world:main"
 
 [tool.setuptools.packages.find]
-include = ["agora*", "oasis*", "benchmarks*", "scripts*"]
+include = ["agora*", "benchmarks*", "scripts*"]
 
 [tool.setuptools.package-data]
 agora = ["web/*.html", "web/*.js", "web/*.css", "web/*.woff2", "web/*.png", "web/*.webp", "web/*.webp.json", "fixtures/*.json", "fixtures/media/*.jpg"]
-oasis = ["schema/*.sql", "social_platform/schema/*.sql"]
+"agora.core" = ["schema/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+extend-exclude = ["third_party"]

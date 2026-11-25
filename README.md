@@ -136,17 +136,22 @@ agora/decisions.py       决策事务、幂等回执、调用归因
 agora/web/               开发者配置台、Viewer 与三平台页面
 agora/provider_registry.py 私有模型配置与连接测试
 deploy/iap/             Nginx 路径与 systemd 服务
-oasis/world.py           原生世界与社交实体
-oasis/platform_actions.py 社区、投票、编辑与收藏
-oasis/storage.py         schema 迁移与事务
+agora/core/world.py      原生世界与社交实体
+agora/core/platform_actions.py 社区、投票、编辑与收藏
+agora/core/storage.py    schema 迁移与事务
+third_party/oasis/       历史 OASIS 集成、工具与测试（非默认运行）
+assets/source/          正式插画的原始素材
+examples/social_simulation/ 数据导入与社会反馈示例
 benchmarks/              受控评测
 ```
+
+目录职责、清理范围与本地工作树说明见 [仓库结构](docs/repository-layout.md)。
 
 ## 验证与后续
 
 ```bash
 pip install -e '.[test,dev]'
-python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database
+python -m pytest -q
 ```
 
 当前先完成任务无关的模拟器，运行意图可以留空；验收方向见 [simulator-first.md](docs/simulator-first.md)。
@@ -158,5 +163,7 @@ python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database
 ## 致谢
 
 感谢 [CAMEL-AI OASIS](https://github.com/camel-ai/oasis) 为早期社媒模拟提供参考。当前主运行
-由 Agora 自己的世界、平台工具与实验管理实现；`oasis/` 保留历史目录名，旧 runtime 归档
-到 `oasis/legacy/`。原派生代码保留 Apache-2.0 版权与来源声明，见 [upstream.md](docs/upstream.md)。
+由 Agora 自己维护的世界、平台工具与实验管理实现，核心代码位于 `agora/core/`。历史
+CAMEL 调度、旧平台和神经推荐器集中到 `third_party/oasis/`，不进入默认运行或安装包。
+该归档包含曾经做过的修改，并非原封不动的上游副本；派生源码保留 Apache-2.0 版权与
+来源声明。基线与改动范围见 [upstream.md](docs/upstream.md)。

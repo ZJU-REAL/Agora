@@ -1,28 +1,28 @@
 [
   {
     "file": "agora/web/agora-mark.png",
-    "origin": "User-supplied agora_icon.png; requested as official Agora project icon on 2026-11-20",
+    "origin": "User-supplied assets/source/agora_icon.png; requested as official Agora project icon on 2026-11-20",
     "source_sha256": "1747ba366636f07ac8ddf7558e28802cda472bfa9ec569b6d910820b2c63555f",
     "sha256": "dc2f8ec70900c3dde090ba440d17e90a121243c3b291c8714253a72d421d9647",
     "transformation": "Crop outer transparent padding and isolated near-transparent edge pixels (alpha <= 8), aspect-preserving resize; no artwork repainting. Original supplied source retained unchanged."
   },
   {
     "file": "agora/web/agora-favicon.png",
-    "origin": "User-supplied agora_icon.png; requested as official Agora project icon on 2026-11-20",
+    "origin": "User-supplied assets/source/agora_icon.png; requested as official Agora project icon on 2026-11-20",
     "source_sha256": "1747ba366636f07ac8ddf7558e28802cda472bfa9ec569b6d910820b2c63555f",
     "sha256": "4d15a716248d1517ced6c2ead15c5ff97137a905909af14c327f0737e9a7c76c",
     "transformation": "Crop outer transparent padding and isolated near-transparent edge pixels (alpha <= 8), aspect-preserving resize; no artwork repainting. Original supplied source retained unchanged."
   },
   {
     "file": "agora/web/agora-world.webp",
-    "origin": "User-supplied agora_icon.png; requested as official Agora project icon on 2026-11-20",
+    "origin": "User-supplied assets/source/agora_icon.png; requested as official Agora project icon on 2026-11-20",
     "source_sha256": "1747ba366636f07ac8ddf7558e28802cda472bfa9ec569b6d910820b2c63555f",
     "sha256": "c6525494afd973abd8ce50cc37db6b12ce7bfcebeee0c350688c8eedab9be886",
     "transformation": "Crop outer transparent padding and isolated near-transparent edge pixels (alpha <= 8), aspect-preserving resize; no artwork repainting. Original supplied source retained unchanged."
   },
   {
     "file": "agora/web/agora-wordmark.webp",
-    "origin": "User-supplied agora_text.png; requested as official Agora wordmark on 2026-11-20",
+    "origin": "User-supplied assets/source/agora_text.png; requested as official Agora wordmark on 2026-11-20",
     "source_sha256": "b8c9fdc63f7318331f8bfea0d5efd7990dfa0b57984980bb1d99df50d6527335",
     "sha256": "d3cee5bdb2bc4f2465e788d0faf19cdcd3763e9225fb2cc11de9a26049429163",
     "transformation": "Crop outer transparent padding and isolated near-transparent edge pixels (alpha <= 8), aspect-preserving resize; no artwork repainting. Original supplied source retained unchanged."

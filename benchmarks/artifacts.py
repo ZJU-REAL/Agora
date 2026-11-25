@@ -8,8 +8,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from oasis import AgoraOasis
-
+from agora.core import AgoraWorld
 
 ARTIFACT_FORMAT_VERSION = 2
 
@@ -84,7 +83,7 @@ class WorldArtifact:
 
     @classmethod
     def create(cls,
-               sandbox: AgoraOasis,
+               sandbox: AgoraWorld,
                root: str | Path,
                *,
                artifact_id: str,

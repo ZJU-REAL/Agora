@@ -7,8 +7,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from oasis import AgoraOasis
-from oasis.agora_types import PersonaProfile
+from agora.core import AgoraWorld
+from agora.core.types import PersonaProfile
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -22,7 +22,7 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError("--npcs and --ticks must be positive")
 
     with tempfile.TemporaryDirectory(prefix="agora-stress-") as temp:
-        sandbox = AgoraOasis.local("stress", Path(temp), preset=args.preset)
+        sandbox = AgoraWorld.local("stress", Path(temp), preset=args.preset)
         sandbox.set_seed(42)
         started = time.monotonic()
         for index in range(args.npcs):

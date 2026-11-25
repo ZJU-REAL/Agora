@@ -27,7 +27,7 @@
 在仓库根目录执行，输出目录必须是新的：
 
 ```bash
-PYTHONPATH=. .venv/bin/python examples/agora_oasis/feedback_demo.py \
+PYTHONPATH=. .venv/bin/python examples/social_simulation/feedback_demo.py \
   --output /tmp/agora-feedback-demo
 ```
 

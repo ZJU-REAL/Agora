@@ -1,3 +1,5 @@
+exclude: ^third_party/
+
 default_language_version:
   python: python3
 
@@ -16,11 +18,6 @@ repos:
         name: Check toml
       - id: check-yaml
         name: Check yaml
-        exclude: |
-          (?x)^(
-              conda/pytorch-geometric/meta.yaml|
-              conda/pyg/meta.yaml
-          )$
 
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.35.1
@@ -58,10 +55,3 @@ repos:
           - mdformat-gfm
           - mdformat_frontmatter
           - mdformat_footnote
-  - repo: local
-    hooks:
-      - id: check-license
-        name: Check License
-        entry: python licenses/update_license.py . licenses/license_template.txt
-        language: system
-        types: [python]

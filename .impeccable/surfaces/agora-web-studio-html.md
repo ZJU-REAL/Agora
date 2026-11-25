@@ -14,7 +14,7 @@ related_targets: ["agora/web/studio.css", "agora/web/studio.js"]
 THESIS：以实际账号画面为中心的社交模拟工作台。采用用户提供的产品重构建议，减少重复
 导航和装饰容器，连接配置、启动、观察和复用配置的完整路径。模式 Operate。
 
-OWN-WORLD：用户指定的 `agora_icon.png` 是正式图标和主视觉，保留原画。近白底、蓝紫色
+OWN-WORLD：用户指定的 `assets/source/agora_icon.png` 是正式图标和主视觉，保留原画。近白底、蓝紫色
 标题与选中状态，少量桃粉、奶油金和薄荷色承接原图配色。文字标识保留在顶部，小幅
 插画用于 Developer 标题区和 Viewer 空状态。白色内容区域、蓝紫选中状态和细线分组。
 

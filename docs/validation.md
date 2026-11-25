@@ -1,5 +1,28 @@
 # 验证状态
 
+## 2026-11-25 仓库整理与原生命名空间迁移
+
+原生世界、存储、媒体、导入与平台动作从 `oasis/` 迁至 `agora/core/`；所有当前
+服务、CLI、评测和示例导入同步更新。旧 CAMEL 集成、神经推荐器、工具和测试归档至
+`third_party/oasis/`，默认 wheel 与测试不加载这些历史代码。原始插画迁入 `assets/source/`，
+历史路线图迁入 `docs/archive/`；版权与修改说明保留，增加根目录 NOTICE。
+
+验证结果：当前产品回归 **266 passed**；结合显式历史数据库/小红书测试，原验收范围
+**304 passed**。Ruff 的基础语法/名称检查通过（已有 E731 不在本轮修改范围）。原生 schema
+及两份原始插画的 SHA-256 与迁移前一致。通过实际 setuptools 构建 wheel，检查原生 SQL、
+新的 `agora-world` 入口和 NOTICE，确认不含 `oasis/` 或 `third_party/` 包；脱离源码目录后
+验证主要模块导入、三个世界创建和 CLI 查询，未加载 CAMEL 或 Torch。
+
+目录迁移不改变版本号与平台行为。独立 `improve/platform-behavior` 工作树仍位于
+`c275724`，其新功能保持待整合状态。路径和兼容范围见 [仓库结构](repository-layout.md)
+与 [来源说明](upstream.md)。
+
+主目录应用后，重新安装 editable 包以更新命令行与模块映射；代码版本仍为 0.8.0。
+服务重启后 Developer、Viewer、平台 API 返回 200，三平台原有实验仍为 completed。
+对比迁移前记录：23 个世界/实验数据库的账号、帖子、评论、关系和媒体计数一致，
+834 份媒体与私有配置文件的校验和一致。安装后的原生世界/CLI 验收与归档检查
+另有 **64 passed**，归档 Channel/Platform 的显式导入也通过。
+
 ## 2026-11-23 Agora 0.8 平台差异与分发
 
 完整命令 `.venv/bin/python -m pytest -q tests/test_*.py tests/benchmark tests/infra/database`

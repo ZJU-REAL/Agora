@@ -6,13 +6,13 @@ import json
 import pytest
 
 from agora import RecommendationConfig, RecommendationEngine, SocialSession
+from agora.core import AgoraWorld, PersonaProfile
 from agora.runner import JsonSessionPolicy, run_sessions
-from oasis import AgoraOasis, PersonaProfile
 
 
 @pytest.fixture
 def world(tmp_path):
-    sandbox = AgoraOasis.local("sessions", tmp_path, preset="xiaohongshu")
+    sandbox = AgoraWorld.local("sessions", tmp_path, preset="xiaohongshu")
     sandbox.set_seed(42)
     yield sandbox
     sandbox.close()
@@ -173,7 +173,7 @@ def test_small_pools_repeat_and_snapshots_reopen_session(tmp_path, world):
 def test_same_seed_has_same_slate_and_multi_user_semantic_trajectory(tmp_path):
     outputs = []
     for name in ("one", "two"):
-        world = AgoraOasis.local(name, tmp_path, preset="xiaohongshu")
+        world = AgoraWorld.local(name, tmp_path, preset="xiaohongshu")
         try:
             world.set_seed(42)
             viewer, authors, _ = seed(world)
@@ -233,7 +233,7 @@ def test_model_vision_receives_visible_cover_bytes_without_leaking_into_replay(
     from PIL import Image
 
     from agora.backends.visual import session_visual_parts
-    from oasis import AssetInput
+    from agora.core import AssetInput
 
     viewer = world.create_user("viewer", "Viewer")
     author = world.create_user("author", "Author")
@@ -297,14 +297,14 @@ def test_failed_account_policy_is_audited_and_other_accounts_continue(world):
 
 
 def test_session_persists_after_world_connection_is_closed(tmp_path):
-    first = AgoraOasis.local("persist", tmp_path, preset="xiaohongshu")
+    first = AgoraWorld.local("persist", tmp_path, preset="xiaohongshu")
     viewer, _, _ = seed(first)
     session = SocialSession.start(first, viewer)
     act(session, "open_post", {"post_id": session.observe()["cards"][0]["post_id"]})
     expected = session.observe()
     sid = session.session_id
     first.close()
-    reopened = AgoraOasis.local("persist", tmp_path)
+    reopened = AgoraWorld.local("persist", tmp_path)
     try:
         restored = SocialSession(reopened, sid)
         assert restored.observe() == expected

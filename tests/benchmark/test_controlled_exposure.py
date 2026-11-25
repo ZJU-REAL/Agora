@@ -1,12 +1,12 @@
 import asyncio
 
+from agora.core import AgoraWorld
+from agora.core.types import PersonaProfile
 from benchmarks import WorldArtifact
-from oasis import AgoraOasis
-from oasis.agora_types import PersonaProfile
 
 
 def test_controlled_exposure_hides_episode_posts(tmp_path):
-    sandbox = AgoraOasis.local("source", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("source", tmp_path / "worlds",
                                preset="xiaohongshu")
     npc = sandbox.create_user("npc", "NPC")
     candidate = sandbox.create_user("candidate", "Candidate")
@@ -16,7 +16,7 @@ def test_controlled_exposure_hides_episode_posts(tmp_path):
     sandbox.close()
 
     artifact.clone_episode(tmp_path / "episode", "episode")
-    episode = AgoraOasis.local("world", tmp_path / "episode")
+    episode = AgoraWorld.local("world", tmp_path / "episode")
     episode.create_post(candidate, body="Candidate-created post")
     observation = episode.observe_controlled(
         candidate, artifact.manifest.metadata["controlled_post_ids"])
@@ -25,7 +25,7 @@ def test_controlled_exposure_hides_episode_posts(tmp_path):
 
 
 def test_npcs_share_frozen_pool_but_rerank_after_earlier_likes(tmp_path):
-    sandbox = AgoraOasis.local("world", tmp_path, preset="xiaohongshu")
+    sandbox = AgoraWorld.local("world", tmp_path, preset="xiaohongshu")
     human = sandbox.create_user("human", "Human")
     candidate = sandbox.create_user("candidate", "Candidate")
     human_post = sandbox.create_post(human, body="Human reference",

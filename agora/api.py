@@ -11,15 +11,15 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
+from agora.core import PersonaProfile
+from agora.core.types import PLATFORM_PRESETS
+from agora.core.world import WorldConfig
 from agora.decisions import DecisionJournal
 from agora.experiments import ExperimentManager
 from agora.http_media import MediaResponse
 from agora.platforms import contract_for
 from agora.session import SocialSession
 from agora.world import open_world
-from oasis import PersonaProfile
-from oasis.agora_types import PLATFORM_PRESETS
-from oasis.world import WorldConfig
 
 
 class PlatformHub:

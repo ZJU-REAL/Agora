@@ -4,6 +4,8 @@ from dataclasses import replace
 
 import pytest
 
+from agora.core import AgoraWorld
+from agora.core.audience import ScriptedDevelopmentAudience
 from benchmarks import WorldArtifact
 from benchmarks.adapters import JsonModelCandidate, ModelResponse
 from benchmarks.cli import _episode_from_config, main
@@ -16,9 +18,7 @@ from benchmarks.experience import (
 from benchmarks.observers import ScriptedDevelopmentObserver
 from benchmarks.policies import FeedbackAdaptiveDevelopmentCandidate
 from benchmarks.transfer import STAGES, TransferPlan, TransferRunner, window_scores
-from examples.agora_oasis.transfer_demo import build_demo
-from oasis import AgoraOasis
-from oasis.audience import ScriptedDevelopmentAudience
+from examples.social_simulation.transfer_demo import build_demo
 
 
 def fixture_plan(tmp_path, seeds=(1,)):
@@ -94,7 +94,7 @@ def test_full_paired_transfer_has_fresh_worlds_and_explicit_memory(tmp_path):
     assert memories[6]["origin_context"] == plan.target_context
     assert memories[4]["origin_context"] == plan.source_context
     for run in report["items"][0]["runs"].values():
-        world = AgoraOasis.local("world", runner.output_root / "runs" / run["run_id"])
+        world = AgoraWorld.local("world", runner.output_root / "runs" / run["run_id"])
         assert (
             world.platform.db.execute("SELECT seed FROM simulation_state").fetchone()[0]
             == 1
@@ -368,7 +368,7 @@ def test_experience_budget_is_fixed_and_hash_reaches_model(tmp_path):
                 '{"action_type":"do_nothing","arguments":{}}', "fake", 1, 1
             )
 
-    from oasis.agora_types import Observation
+    from agora.core.types import Observation
 
     client = Client()
     asyncio.run(

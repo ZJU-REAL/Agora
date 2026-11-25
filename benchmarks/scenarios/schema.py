@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from oasis import AgoraOasis
-from oasis.agora_types import PersonaProfile
+from agora.core import AgoraWorld
+from agora.core.types import PersonaProfile
 
 
 @dataclass(frozen=True)
@@ -75,9 +75,9 @@ def load_scenario_suite(path: str | Path) -> tuple[str, tuple[ConflictScenario, 
 def materialize_scenario(scenario: ConflictScenario,
                          world_id: str,
                          data_root: str | Path,
-                         seed: int = 0) -> tuple[AgoraOasis, dict[str, int]]:
+                         seed: int = 0) -> tuple[AgoraWorld, dict[str, int]]:
     platform = scenario.metadata.get("platform", "xiaohongshu")
-    sandbox = AgoraOasis.local(world_id, data_root, preset=platform)
+    sandbox = AgoraWorld.local(world_id, data_root, preset=platform)
     sandbox.set_seed(seed)
     user_ids = {}
     for user in scenario.users:

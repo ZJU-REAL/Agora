@@ -4,16 +4,18 @@ import subprocess
 
 from PIL import Image
 
+from agora.core import AgoraWorld
+from agora.core.types import AssetInput, Observation
+from benchmarks import WorldArtifact
 from benchmarks.adapters import JsonModelCandidate, ModelResponse
+from benchmarks.multimodal import (
+    artifact_asset_parts,
+    sandbox_observation_parts,
+    video_frame_parts,
+)
 from benchmarks.observers import JsonModelObserver
 from benchmarks.protocol import CandidateAction
-from benchmarks.multimodal import (artifact_asset_parts,
-                                   sandbox_observation_parts,
-                                   video_frame_parts)
 from benchmarks.providers import _gemini_parts, _text_content
-from benchmarks import WorldArtifact
-from oasis import AgoraOasis
-from oasis.agora_types import AssetInput, Observation
 
 
 def test_provider_converts_openai_image_part_to_gemini_inline_data():
@@ -31,7 +33,7 @@ def test_provider_converts_openai_image_part_to_gemini_inline_data():
 def test_observation_and_candidate_assets_become_visual_parts(tmp_path):
     image = tmp_path / "large.png"
     Image.new("RGB", (1400, 700), (30, 60, 90)).save(image)
-    sandbox = AgoraOasis.local("visual", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("visual", tmp_path / "worlds",
                                preset="xiaohongshu")
     creator = sandbox.create_user("creator", "Creator")
     viewer = sandbox.create_user("viewer", "Viewer")
@@ -108,7 +110,7 @@ def test_video_produces_three_ordered_frames_and_transcript(tmp_path):
         "data:image/jpeg;base64,") for part in frames
                if part["type"] == "image_url")
 
-    sandbox = AgoraOasis.local("video-context", tmp_path / "worlds",
+    sandbox = AgoraWorld.local("video-context", tmp_path / "worlds",
                                preset="xiaohongshu")
     creator = sandbox.create_user("creator", "Creator")
     viewer = sandbox.create_user("viewer", "Viewer")

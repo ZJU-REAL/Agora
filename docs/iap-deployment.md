@@ -127,7 +127,7 @@ Developer 和 Viewer 采用用户指定的 Family 参考风格，平台 iframe �
 
 ## 0.6.3 插画品牌
 
-`agora_icon.png` 和 `agora_text.png` 是用户提供的正式图标与文字标识，原文件保持不变。
+`assets/source/agora_icon.png` 和 `assets/source/agora_text.png` 是用户提供的正式图标与文字标识，原文件保持不变。
 浏览器使用透明缩放版 PNG/WebP，来源、转换和指纹见 `licenses/agora-artwork.json`。
 四个网页派生资源总计约 163 KiB，全部由 `/agora/static/` 本地提供，不依赖外部图片服务。
 
