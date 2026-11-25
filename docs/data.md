@@ -144,6 +144,19 @@ NPC 使用 `scripted`，避免调用费用和不可复现性。
 Persona 可以指定 `user_external_id`，绑定到已导入用户，保留该用户的 handle/name/bio；
 不指定时才创建新账号。每个用户当前最多绑定一个 Persona。
 
+### 规则账号的活动与平台行为
+
+本地优化中的规则策略会实际读取发帖、点赞和回复概率，显式设为 0 的活动不产生
+对应动作。发帖按可创作的虚拟 tick 抽样，发布后默认间隔 3 tick；此前没有帖子的新
+账号也可按正发帖概率开始创作。`content_formats` 根据实际素材选择文本、单图、
+图集或视频，`tone` 和示例影响提问与正文。
+
+可选 `culture` 包括 `posting_cooldown_ticks`、`save_probability`、`follow_probability`、
+`gallery_probability`；小红书可指定 `location`，X 可指定 `repost_probability`，Reddit
+可指定 `join_probability`。概率在 0–1 之间。Reddit 规则账号根据相关主题和发布权限
+选择社区，并固定已查看规则的草稿目标；没有通用自然语言自动治理能力。
+示例、地点别名和本地验收范围见 [本轮平台优化](platform-followup.md)。
+
 ## 6. 帖子数据
 
 `posts.jsonl` 每行表示一个帖子。

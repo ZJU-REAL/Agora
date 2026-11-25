@@ -9,7 +9,7 @@
 | `agora/web/`、`agora/fixtures/` | 网页与小型虚构测试世界 |
 | `benchmarks/`、`configs/` | 受控评测、环境及运行配置 |
 | `tests/` | 当前产品与评测回归 |
-| `third_party/oasis/` | 历史派生集成、工具、schema 和测试 |
+| `archive/legacy_runtime/` | 历史派生集成、工具、schema 和测试 |
 | `examples/social_simulation/` | 数据导入、社会反馈与迁移示例 |
 | `assets/source/`、`licenses/` | 原始插画、字体与来源记录 |
 | `docs/`、`docs/archive/` | 当前说明、验证记录与历史路线图 |
@@ -21,16 +21,17 @@
 `requirements-sandbox.txt` 删除，当前依赖统一由 `pyproject.toml` 与 `uv.lock` 管理。
 旧版权头注入脚本随历史工具归档，提交钩子不再给所有新文件自动写入 CAMEL-AI 版权。
 
-## Agora-platform-behavior 为什么保留
+## 统一主目录
 
-`/data/project/Agora-platform-behavior` 是同一 Git 仓库的 linked worktree，分支
-`improve/platform-behavior`。本次整理时它位于 `c275724`，包含主目录尚未合并的 3 个提交：
-平台人物行为/推荐优化、连续模型链路验收、世界模式与账号起点。
+原 `/data/project/Agora-platform-behavior` 是独立开发工作树，曾在
+`improve/platform-behavior` 的 `c275724` 验收平台行为/推荐优化、连续模型链路、
+两种世界模式和账号起点。2026-11-25 已将这些功能与原生命名空间迁移整合到当前主目录，
+并处理旧导入、目录重命名和验证文档冲突。原提交保留在合并历史中。
 
-它有实际用途，本次保留其提交和工作目录。当前整理不把这些产品功能自动合并到主目录。
-以后整合该分支时，需要把其中新增代码的 `oasis` 导入同步迁至 `agora.core`，并处理
-`platform_actions.py` 的目录重命名。确认功能已整合后，可用 `git worktree remove`
-移除工作树；不能把它当作缓存直接删除。
+整合验收后移除多余工作树，`/data/project/Agora` 是唯一开发与部署目录。
+当前运行代码位于 `agora/`；含有我们历次修改的旧 OASIS 派生集成放在
+`archive/legacy_runtime/`。它属于历史实现，不作为未经修改的第三方依赖；来源与原版权
+声明继续保留。归档不进入默认 wheel、主流程或当前产品测试。
 
 本次清理只删除可再生成的缓存、旧构建产物和历史日志。本地数据库、媒体、实验记录、
 私有配置、虚拟环境、用户文档与原始插画保留。数据规模和内容用途不能仅凭文件名判断，

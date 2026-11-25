@@ -33,4 +33,4 @@ flowchart LR
 调用不等于实际零成本；页面只展示已知用量。
 
 当前实现与边界见 [运行协议](simulation.md)、[路线](agora-roadmap.md) 和
-[验证记录](validation.md)。历史 runtime 位于 `third_party/oasis/`，不进入原生主路径。
+[验证记录](validation.md)。历史 runtime 位于 `archive/legacy_runtime/`，不进入原生主路径。

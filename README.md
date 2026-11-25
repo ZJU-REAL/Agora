@@ -31,6 +31,11 @@ Viewer 以原生平台画面为中心，支持精确回放、按账号恢复查�
 回放位置，不把不同账号的动作序号当作同一时刻。复用配置不会自动启动，也不会覆盖原
 实验；生成的新背景账号只进入新实验副本。产品取舍见 [工作台使用流程](docs/workbench-experience.md)。
 
+平台支持“背景世界”和“纯 AI 世界”，账号起点独立选择接手已有账号、新建空账号或
+带少量预置内容的新号；受测与背景任务分别配置。初始内容和实际账号映射进入 Viewer 与
+导出，预置帖子不计作 AI 创作。使用规则见 [世界模式与账号起点](docs/world-and-account-modes.md)。
+两种世界模式与账号起点已整合到主目录，软件版本保持 0.8.0。
+
 受测 agent 与背景账号分别选择策略，网页服务默认最多 32 个活跃账号、1 个并发运行。新增背景账号只进入实验
 副本，源世界保持不变。模型配置持久保存；密钥只写入服务器的私有文件，不返回页面或
 实验导出。页面角色用于区分配置与观察，当前使用 IAP 的工作区访问权限，没有另设账号
@@ -139,7 +144,7 @@ deploy/iap/             Nginx 路径与 systemd 服务
 agora/core/world.py      原生世界与社交实体
 agora/core/platform_actions.py 社区、投票、编辑与收藏
 agora/core/storage.py    schema 迁移与事务
-third_party/oasis/       历史 OASIS 集成、工具与测试（非默认运行）
+archive/legacy_runtime/       历史 OASIS 集成、工具与测试（非默认运行）
 assets/source/          正式插画的原始素材
 examples/social_simulation/ 数据导入与社会反馈示例
 benchmarks/              受控评测
@@ -164,6 +169,6 @@ python -m pytest -q
 
 感谢 [CAMEL-AI OASIS](https://github.com/camel-ai/oasis) 为早期社媒模拟提供参考。当前主运行
 由 Agora 自己维护的世界、平台工具与实验管理实现，核心代码位于 `agora/core/`。历史
-CAMEL 调度、旧平台和神经推荐器集中到 `third_party/oasis/`，不进入默认运行或安装包。
+CAMEL 调度、旧平台和神经推荐器集中到 `archive/legacy_runtime/`，不进入默认运行或安装包。
 该归档包含曾经做过的修改，并非原封不动的上游副本；派生源码保留 Apache-2.0 版权与
 来源声明。基线与改动范围见 [upstream.md](docs/upstream.md)。

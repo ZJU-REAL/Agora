@@ -24,4 +24,4 @@ benchmarks/outputs/
 configs/benchmarks/outputs/
 data/artifacts/
 
-third_party/oasis/data/
+archive/legacy_runtime/data/

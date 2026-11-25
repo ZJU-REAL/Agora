@@ -71,6 +71,15 @@ class PlatformHub:
 
     def admit(self, config):
         count = config.get("agent_count", len(config.get("user_ids", [])))
+        if (
+            "agent_count" not in config
+            and config.get(
+                "focal_start",
+                "new" if config.get("world_mode") == "ai_only" else "existing",
+            )
+            == "new"
+        ):
+            count += 1
         if type(count) is not int or count < 1:
             raise ValueError("Select a positive agent count")
         ticks, steps = config.get("ticks", 6), config.get("steps_per_tick", 8)

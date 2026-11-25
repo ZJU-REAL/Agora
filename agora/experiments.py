@@ -22,6 +22,13 @@ from types import SimpleNamespace
 from agora.core.media import LocalMediaStore
 from agora.core.types import PLATFORM_PRESETS
 from agora.core.world import AgoraWorld, WorldConfig
+from agora.initialization import (
+    MODE_FIELDS,
+    file_sha256,
+    has_user,
+    initialize_accounts,
+    resolve_accounts,
+)
 from agora.read_views import prepare_read_views
 from agora.recommendation import RecommendationConfig
 from agora.runner import JsonSessionPolicy, run_sessions
@@ -105,31 +112,10 @@ class ExperimentManager:
             "agent_count",
             "focal_user_id",
             "background_provider_id",
+            *MODE_FIELDS,
         }:
             raise ValueError("Unknown experiment configuration fields")
-        known = {row[0] for row in self.source.db.execute("SELECT user_id FROM user")}
-        count = config.get("agent_count")
-        focal = config.get("focal_user_id")
-        if count is not None and (type(count) is not int or not 1 <= count <= 100):
-            raise ValueError("agent_count must be between 1 and 100")
-        if focal is not None and (type(focal) is not int or focal not in known):
-            raise ValueError("Choose a source account as the tested agent")
-        if count is not None and focal is None:
-            focal = min(known) if known else None
-        users = config.get(
-            "user_ids", ([focal] + sorted(known - {focal}))[:count] if count else []
-        )
-        if (
-            not isinstance(users, list)
-            or not 1 <= len(users) <= 100
-            or any(type(user) is not int or user not in known for user in users)
-            or len(users) != len(set(users))
-        ):
-            raise ValueError("Select 1–100 distinct users from the source world")
-        if focal is not None and focal not in users:
-            raise ValueError("The tested agent must participate in the run")
-        if count is not None and len(users) > count:
-            raise ValueError("agent_count is smaller than the selected accounts")
+        users, focal, count, account_options = resolve_accounts(self.source, config)
         ticks, steps = config.get("ticks", 6), config.get("steps_per_tick", 8)
         pace = config.get("pace_ms", 0)
         if type(pace) is not int or not 0 <= pace <= 2000:
@@ -191,11 +177,13 @@ class ExperimentManager:
                 or set(event) - {"tick", "user_id", "body", "title", "topics"}
                 or type(event.get("tick")) is not int
                 or not 0 <= event["tick"] < ticks
-                or event.get("user_id") not in known
+                or not has_user(self.source, event.get("user_id"))
                 or not isinstance(event.get("body"), str)
                 or not event["body"].strip()
             ):
                 raise ValueError("Invalid intervention tick, user or content")
+        if events and account_options["world_mode"] == "ai_only":
+            raise ValueError("纯 AI 世界请用账号任务启动；背景事件仅用于背景世界。")
         config = {
             "name": "社交模拟",
             "ticks": ticks,
@@ -209,6 +197,7 @@ class ExperimentManager:
             ),
             **config,
         }
+        config.update(account_options)
         config["user_ids"] = users
         if focal is not None:
             config["focal_user_id"] = focal
@@ -232,63 +221,63 @@ class ExperimentManager:
             world_dir = directory / "world"
             try:
                 world_dir.mkdir(parents=True)
-                destination = sqlite3.connect(world_dir / "sandbox.db")
-                try:
-                    self.source.db.backup(destination)
-                    destination.execute("DELETE FROM agent_api_token")
-                    destination.commit()
-                finally:
-                    destination.close()
-                shutil.copytree(self.source.config.media_path, world_dir / "media")
-                media_manifest = []
-                for asset, key, checksum, size in self.source.db.execute(
-                    "SELECT asset_id, object_key, checksum_sha256, byte_size FROM media_asset WHERE status = 'ready' ORDER BY asset_id"
-                ):
-                    path = (world_dir / "media" / key).resolve()
-                    if (world_dir / "media").resolve() not in path.parents:
-                        raise ValueError("Media key escapes the experiment")
-                    digest = hashlib.sha256()
-                    with path.open("rb") as stream:
-                        while chunk := stream.read(1024 * 1024):
-                            digest.update(chunk)
-                    if digest.hexdigest() != checksum or path.stat().st_size != size:
-                        raise ValueError("Source media checksum mismatch")
-                    media_manifest.append(
-                        {
-                            "asset_id": asset,
-                            "object_key": key,
-                            "sha256": checksum,
-                            "bytes": size,
-                        }
-                    )
+                if config["world_mode"] == "background":
+                    destination = sqlite3.connect(world_dir / "sandbox.db")
+                    try:
+                        self.source.db.backup(destination)
+                        destination.execute("DELETE FROM agent_api_token")
+                        destination.commit()
+                    finally:
+                        destination.close()
+                    shutil.copytree(self.source.config.media_path, world_dir / "media")
+                source_manifest = json.loads(
+                    (self.source.config.world_dir / "world.json").read_text()
+                )
                 (world_dir / "world.json").write_text(
                     json.dumps(
                         {
                             "world_id": "world",
                             "preset": self.source.preset.name,
                             "format_version": 1,
-                            "product_limits": json.loads(
-                                (
-                                    self.source.config.world_dir / "world.json"
-                                ).read_text()
-                            ).get("product_limits", {}),
+                            "product_limits": source_manifest.get("product_limits", {}),
+                            "location_aliases": source_manifest.get(
+                                "location_aliases", {}
+                            ),
                         }
                     )
                 )
-                if count is not None and len(users) < count:
-                    from agora.population import extend_population
-
-                    population = open_world("world", directory)
-                    try:
-                        users = extend_population(
-                            population, users, count, config["seed"]
-                        )
-                    finally:
-                        population.close()
-                    config["user_ids"] = users
-                initial_sha = hashlib.sha256(
-                    (world_dir / "sandbox.db").read_bytes()
-                ).hexdigest()
+                population = open_world("world", directory)
+                try:
+                    initialize_accounts(self.source, population, config)
+                    users = config["user_ids"]
+                    media_manifest = []
+                    media_count = 0
+                    index_path = directory / "initial-media.jsonl"
+                    with index_path.open("w", encoding="utf-8") as index:
+                        for asset, key, checksum, size in population.db.execute(
+                            "SELECT asset_id,object_key,checksum_sha256,byte_size FROM media_asset WHERE status='ready' ORDER BY asset_id"
+                        ):
+                            path = (world_dir / "media" / key).resolve()
+                            if (world_dir / "media").resolve() not in path.parents:
+                                raise ValueError("Media key escapes the experiment")
+                            if (
+                                file_sha256(path) != checksum
+                                or path.stat().st_size != size
+                            ):
+                                raise ValueError("Source media checksum mismatch")
+                            item = {
+                                "asset_id": asset,
+                                "object_key": key,
+                                "sha256": checksum,
+                                "bytes": size,
+                            }
+                            index.write(json.dumps(item, ensure_ascii=False) + "\n")
+                            media_count += 1
+                            if len(media_manifest) < 128:
+                                media_manifest.append(item)
+                finally:
+                    population.close()
+                initial_sha = file_sha256(world_dir / "sandbox.db")
                 value = {
                     "run_id": run_id,
                     "name": config["name"],
@@ -298,6 +287,9 @@ class ExperimentManager:
                     "source_world": self.source.config.world_id,
                     "engine_version": "0.6.0",
                     "media_manifest": media_manifest,
+                    "media_manifest_count": media_count,
+                    "media_manifest_truncated": media_count > len(media_manifest),
+                    "initial_media_sha256": file_sha256(index_path),
                     "initial_database_sha256": initial_sha,
                     "config_sha256": hashlib.sha256(
                         json.dumps(config, sort_keys=True).encode()
@@ -393,14 +385,17 @@ class ExperimentManager:
                     time.sleep(config["pace_ms"] / 1000)
 
             factory = None
-            if self.run_providers[run_id] or config.get("focal_user_id") is not None:
+            legacy = config.get("legacy_shared_policy", False)
+            if self.run_providers[run_id] or (
+                not legacy and config.get("focal_user_id") is not None
+            ):
                 from agora.backends.visual import session_visual_parts
                 from agora.models import build_model_client
 
                 def factory(user):
                     selected = (
                         config["provider_id"]
-                        if config.get("focal_user_id", user) == user
+                        if legacy or config.get("focal_user_id", user) == user
                         else config.get("background_provider_id", "development")
                     )
                     row = world.db.execute(
@@ -411,7 +406,7 @@ class ExperimentManager:
                         from agora.policies import PersonaPolicy
 
                         creator = (
-                            user == config.get("focal_user_id")
+                            (not legacy and user == config.get("focal_user_id"))
                             or bool(
                                 world.db.execute(
                                     "SELECT 1 FROM post WHERE user_id=? LIMIT 1",
@@ -426,7 +421,7 @@ class ExperimentManager:
                     spec = self.run_providers[run_id][selected]
                     return JsonSessionPolicy(
                         build_model_client(spec),
-                        config["goal"],
+                        config["agent_goals"].get(str(user), config["goal"]),
                         persona,
                         visual_builder=(
                             lambda observation: session_visual_parts(world, observation)
@@ -447,6 +442,7 @@ class ExperimentManager:
                     progress,
                     lambda: self._gate(run_id),
                     config.get("events", []),
+                    goals=config["agent_goals"],
                 )
             )
             if not self.run_providers[run_id]:
@@ -670,6 +666,13 @@ class ExperimentManager:
                     model_calls_truncated=False,
                 )
                 write(encode(metadata)[:-1])
+                if metadata.get("media_manifest_truncated"):
+                    index = self.root / run_id / "initial-media.jsonl"
+                    if file_sha256(index) != metadata["initial_media_sha256"]:
+                        raise ValueError("Initial media index checksum mismatch")
+                    write(',"initial_media_manifest":')
+                    with index.open(encoding="utf-8") as media:
+                        array(line.strip() for line in media if line.strip())
                 write(',"events":')
 
                 def events():

@@ -27,14 +27,14 @@ Channel、Clock 或 CAMEL agent，也不要求 Docker、Torch 或本地模型权
 代码未经修改，也不会因为目录迁移而删除；本次迁移在这些原生文件中标明了 Agora 修改。
 此前架构与研究依据见 [调研记录](research.md) 和 [设计说明](design.md)。
 
-## 历史 OASIS 集成
+## 历史派生实现
 
-`third_party/oasis/` 集中保存旧 environment、agent、Clock、platform、神经推荐器、
-schema、生成/可视化工具和相关测试。该目录是 **OASIS 派生历史集成归档**，包含此前
-Agora 的修改，并非原封不动的上游镜像。详情见其 [README](../third_party/oasis/README.md)。
+`archive/legacy_runtime/` 集中保存旧 environment、agent、Clock、platform、神经推荐器、
+schema、生成/可视化工具和相关测试。该目录是 **我们维护过的 OASIS 派生历史实现**，包含此前
+Agora 的修改；它不作为原封不动的第三方依赖，也不宣称原上游代码由 Agora 原创。详情见其 [README](../archive/legacy_runtime/README.md)。
 
 历史集成只供显式的源码实验使用，不随 `agora-social` wheel 安装，也不被默认测试
-或服务加载。额外依赖位于 `third_party/oasis/requirements.txt`；上游代码、旧改动和
+或服务加载。额外依赖位于 `archive/legacy_runtime/requirements.txt`；上游代码、旧改动和
 测试记录继续保留，避免把归档误认作当前产品实现。
 
 ## 导入迁移与历史数据

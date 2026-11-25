@@ -99,8 +99,8 @@
 
 ## 6. 证据入口
 
-- [连续 HTTPS 模型与 SDK 测试](../../Agora-platform-behavior/tests/test_model_http_chain.py)：本轮新用例在本地优化分支。
+- [连续 HTTPS 模型与 SDK 测试](../tests/test_model_http_chain.py)：新用例已整合到主目录。
 - [原生界面检查](../tests/test_native_ui.py)、[AI 平台行为检查](../tests/test_ai_platforms.py)。
-- [验证状态](../../Agora-platform-behavior/docs/validation.md)、[本地平台优化](../../Agora-platform-behavior/docs/platform-followup.md)、[三平台现状](platform-status-report.md)。
+- [验证状态](validation.md)、[本地平台优化](platform-followup.md)、[三平台现状](platform-status-report.md)。
 - [Developer](https://lidingm.iap.platform.shaipower.com/agora/developer)与
   [Viewer](https://lidingm.iap.platform.shaipower.com/agora/viewer)。

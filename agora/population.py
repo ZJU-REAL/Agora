@@ -1,9 +1,10 @@
 """Create background accounts inside an experiment, preserving its source world."""
 
 from agora.core import PersonaProfile
+from agora.platform_behavior import relevant_communities
 
 
-def extend_population(world, users, count, seed):
+def extend_population(world, users, count, seed, provide_assets=True):
     english = world.preset.name in {"x", "reddit"}
     topics = (
         ("photography", "coffee", "technology", "design")
@@ -16,20 +17,42 @@ def extend_population(world, users, count, seed):
         "WHERE p.visibility='public' AND p.deleted=0 AND p.removed_by IS NULL "
         "AND (c.name IS NULL OR c.visibility='public') ORDER BY pa.asset_id LIMIT 2"
     ).fetchall()
+    if not provide_assets:
+        assets = []
     communities = [
+        {"name": row[0], "title": row[1], "description": row[2], "visibility": "public"}
+        for row in world.db.execute(
+            "SELECT name,title,description FROM community WHERE visibility='public' ORDER BY name"
+        )
+    ]
+    locations = [
         row[0]
         for row in world.db.execute(
-            "SELECT name FROM community WHERE visibility='public' ORDER BY name"
+            "SELECT DISTINCT location FROM post WHERE visibility='public' AND deleted=0 AND location IS NOT NULL ORDER BY location LIMIT 8"
         )
     ]
     result = list(users)
     while len(result) < count:
         index = len(result)
         topic = topics[(index + seed) % len(topics)]
+        profile_id = f"background-{seed}-{index}"
+        suffix = 0
+        while world.db.execute(
+            "SELECT 1 FROM persona WHERE profile_id=?", (profile_id,)
+        ).fetchone():
+            suffix += 1
+            profile_id = f"background-{seed}-{index}-{suffix}"
+        handle = f"sim_{seed % 100000}_{index}"
+        handle_suffix = 0
+        while world.db.execute(
+            "SELECT 1 FROM user WHERE user_name=?", (handle,)
+        ).fetchone():
+            handle_suffix += 1
+            handle = f"sim_{seed % 100000}_{index}_{handle_suffix}"
         user = world.add_persona(
             PersonaProfile(
-                profile_id=f"background-{seed}-{index}",
-                handle=f"sim_{seed % 100000}_{index}",
+                profile_id=profile_id,
+                handle=handle,
                 display_name=f"{topic.title()} reader {index + 1:02d}"
                 if english
                 else f"{topic}观察员 {index + 1:02d}",
@@ -48,7 +71,19 @@ def extend_population(world, users, count, seed):
                     f"最近关于{topic}的一点新发现。先尝试一个小改变，再看看自己的体验。",
                 ),
                 interests={topic: 1.0, topics[(index + seed + 1) % len(topics)]: 0.35},
-                posting_probability=0,
+                posting_probability=(0.0, 0.08, 0.03, 0.0)[index % 4],
+                like_probability=(0.2, 0.3, 0.1, 0.0)[index % 4],
+                comment_probability=(0.05, 0.25, 0.4, 0.01)[index % 4],
+                culture={
+                    "role": ("reader", "contributor", "questioner", "observer")[
+                        index % 4
+                    ],
+                    **(
+                        {"location": locations[index % len(locations)]}
+                        if locations and not english
+                        else {}
+                    ),
+                },
             )
         )
         with world.atomic():
@@ -56,7 +91,10 @@ def extend_population(world, users, count, seed):
                 "INSERT OR IGNORE INTO creator_asset(user_id,asset_id,alt_text,transcript) VALUES (?,?,?,?)",
                 [(user, *asset) for asset in assets],
             )
-        for community in communities:
-            world.join_community(user, community)
+        profile = {
+            "interests": {topic: 1.0, topics[(index + seed + 1) % len(topics)]: 0.35}
+        }
+        for community in relevant_communities(profile, communities)[: 1 + index % 2]:
+            world.join_community(user, community["name"])
         result.append(user)
     return result

@@ -26,7 +26,15 @@ def populate(world):
                 tone=tuple(row["tone"]),
                 example_posts=tuple(row["examples"]),
                 locale="zh-CN" if name == "xiaohongshu" else "en-US",
-                posting_probability=0,
+                posting_probability=row.get(
+                    "posting_probability", 0.12 if index < 3 else 0
+                ),
+                like_probability=row.get("like_probability", 0.3),
+                comment_probability=row.get("comment_probability", 0.2),
+                content_formats=row.get(
+                    "content_formats", {"text": 0.2, "image": 0.6, "gallery": 0.2}
+                ),
+                culture=row.get("culture", {}),
             )
         )
         for index, row in enumerate(spec["users"])
@@ -60,7 +68,7 @@ def populate(world):
             ],
             topics=row.get("topics", []),
             community=row.get("community"),
-            location="示例城市" if name == "xiaohongshu" else None,
+            location=row.get("location", "示例城市") if name == "xiaohongshu" else None,
             language="zh-CN" if name == "xiaohongshu" else "en",
         )
         world.db.execute(

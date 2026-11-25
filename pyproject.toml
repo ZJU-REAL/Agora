@@ -35,4 +35,4 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.ruff]
-extend-exclude = ["third_party"]
+extend-exclude = ["archive"]

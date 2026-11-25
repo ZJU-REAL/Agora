@@ -1844,6 +1844,23 @@ body[data-connection="error"] .connection-dot {
   width: 15px;
   height: 15px;
 }
+
+.world-config {
+  margin-top: 16px;
+}
+
+.account-options {
+  display: grid;
+  gap: 12px;
+}
+
+.account-options[hidden] {
+  display: none;
+}
+
+.account-options .checkbox-field {
+  min-height: 44px;
+}
 .auth-field {
   flex: 1;
   min-width: 150px;
@@ -2157,6 +2174,8 @@ body[data-connection="error"] .connection-dot {
   }
   .run-summary {
     position: static;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     order: 2;
     padding: 12px;
@@ -2166,6 +2185,9 @@ body[data-connection="error"] .connection-dot {
   }
   .summary-platform {
     padding-bottom: 12px;
+  }
+  .summary-platform small {
+    display: none;
   }
   .summary-agent {
     margin-top: 12px;
@@ -2182,6 +2204,13 @@ body[data-connection="error"] .connection-dot {
     font-size: 10px;
     gap: 5px;
   }
+  .summary-values > .summary-detail,
+  .world-start-description {
+    display: none;
+  }
+  .world-config {
+    display: block;
+  }
   .summary-values > div:last-child {
     border: 0;
     padding: 0;
@@ -2195,6 +2224,10 @@ body[data-connection="error"] .connection-dot {
   }
   .run-summary .field {
     margin-bottom: 10px;
+  }
+  .run-name-field {
+    order: 1;
+    margin-top: 12px;
   }
   .launch-readiness {
     margin: 10px 0;

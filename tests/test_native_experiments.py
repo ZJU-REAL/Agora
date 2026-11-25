@@ -53,7 +53,7 @@ def test_native_world_does_not_import_old_runtime(tmp_path):
         [
             sys.executable,
             "-c",
-            "from agora.world import open_world; import sys; w=open_world('native', sys.argv[1]); assert type(w.store).__name__=='WorldStore'; assert not any(name == 'oasis' or name.startswith(('oasis.', 'third_party.', 'camel', 'torch')) for name in sys.modules); assert 'benchmarks' not in sys.modules; w.close()",
+            "from agora.world import open_world; import sys; w=open_world('native', sys.argv[1]); assert type(w.store).__name__=='WorldStore'; assert not any(name == 'oasis' or name.startswith(('oasis.', 'third_party.', 'archive.', 'camel', 'torch')) for name in sys.modules); assert 'benchmarks' not in sys.modules; w.close()",
             str(tmp_path),
         ],
         check=False,
@@ -182,6 +182,16 @@ def test_content_addressed_imports_are_stable_and_deduplicate(source, tmp_path):
 
 def test_experiment_clones_source_and_replays_same_semantic_trace(source):
     world, creator, reader = source
+    # Make creation explicit now that the rule policy respects activity values.
+    world.db.execute(
+        "UPDATE persona SET persona_json=json_set(persona_json,'$.posting_probability',1.0) WHERE user_id=?",
+        (creator,),
+    )
+    world.db.execute(
+        "UPDATE persona SET persona_json=json_set(persona_json,'$.posting_probability',0.0) WHERE user_id=?",
+        (reader,),
+    )
+    world.db.commit()
     before = (
         world.current_tick,
         world.db.execute("SELECT COUNT(*) FROM post").fetchone()[0],

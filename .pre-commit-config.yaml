@@ -1,4 +1,4 @@
-exclude: ^third_party/
+exclude: ^archive/
 
 default_language_version:
   python: python3

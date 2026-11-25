@@ -16,5 +16,7 @@
   "collaborative_weight": 0.6,
   "graph_weight": 0.8,
   "community_weight": 0.8,
-  "community_diversity_penalty": 0.75
+  "community_diversity_penalty": 0.75,
+  "text_weight": 0.45,
+  "relationship_half_life_ticks": 48.0
 }

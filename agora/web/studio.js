@@ -416,6 +416,96 @@ function selectValue(id, value) {
 function number(id) {
   return Number($(id).value);
 }
+let sourceResults = [],
+  sourceSelectedExtra = null,
+  sourceSearchVersion = 0,
+  sourceSearchTimer = null,
+  focalProfileBase = {};
+function sourceAccounts() {
+  return [
+    ...new Map(
+      [
+        ...(world?.users || []),
+        ...sourceResults,
+        ...(sourceSelectedExtra ? [sourceSelectedExtra] : []),
+      ].map((u) => [u.user_id, u]),
+    ).values(),
+  ];
+}
+function renderSourceAccounts(selected = $("focalUser").value) {
+  const rows = $("sourceAccountQuery").value.trim()
+    ? sourceResults
+    : world?.users || [];
+  const current = sourceAccounts().find(
+    (u) => String(u.user_id) === String(selected),
+  );
+  const list = [
+    ...new Map(
+      [...rows, ...(current ? [current] : [])].map((u) => [u.user_id, u]),
+    ).values(),
+  ];
+  $("focalUser").innerHTML =
+    '<option value="">默认新账号人设</option>' +
+    list
+      .map(
+        (u) =>
+          `<option value="${u.user_id}">${esc(u.name || u.handle)} · @${esc(u.handle)}</option>`,
+      )
+      .join("");
+  $("focalUser").value = selected;
+}
+async function searchSourceAccounts(id = null) {
+  const version = ++sourceSearchVersion,
+    platformVersion = developerVersion,
+    selected = $("focalUser").value;
+  $("sourceSearchStatus").textContent = "正在查找账号…";
+  try {
+    const data = await api(
+      "/api/source-users?platform=" +
+        selectedPlatform +
+        (id !== null
+          ? "&id=" + id
+          : "&query=" + encodeURIComponent($("sourceAccountQuery").value)),
+    );
+    if (version !== sourceSearchVersion || platformVersion !== developerVersion)
+      return;
+    if (id !== null) sourceSelectedExtra = data.users[0] || null;
+    else {
+      sourceSelectedExtra =
+        sourceAccounts().find((u) => String(u.user_id) === selected) || null;
+      sourceResults = data.users;
+    }
+    renderSourceAccounts(id !== null ? id : selected);
+    $("sourceSearchStatus").textContent = data.users.length
+      ? `找到 ${data.users.length} 个账号`
+      : "没有匹配账号，请调整搜索。";
+    updateSummary();
+  } catch (error) {
+    if (version === sourceSearchVersion && platformVersion === developerVersion)
+      $("sourceSearchStatus").textContent = "查找失败，请重新输入后重试。";
+  }
+}
+function accountControls() {
+  const pure = $("worldMode").value === "ai_only";
+  if (pure && $("focalStart").value !== "new") {
+    $("focalStart").value = "new";
+    $("focalUser").value = "";
+  }
+  if (pure) $("backgroundStart").value = "new";
+  $("focalStart").options[0].disabled = pure;
+  $("backgroundStart").options[0].disabled = pure;
+  const fresh = $("focalStart").value === "new";
+  $("newAccountFields").hidden = !fresh;
+  $("newAccountName").required = fresh;
+  $("starterPosts").disabled = !fresh;
+  $("starterAssets").disabled = !fresh;
+  $("focalUser").required = !fresh || number("starterPosts") > 0;
+  $("focalSourceLabel").textContent = fresh ? "模板账号（可选）" : "平台账号";
+  $("focalUser").options[0].text = fresh ? "默认新账号人设" : "请选择已有账号";
+  $("sourceSearchField").hidden =
+    (world?.user_count || 0) <= (world?.users?.length || 0);
+  return fresh;
+}
 function experimentConfig() {
   const slate = number("slateSize");
   return {
@@ -423,7 +513,23 @@ function experimentConfig() {
       $("runName").value.trim() ||
       `${platforms[selectedPlatform].name} · 主账号运营`,
     agent_count: number("agentCount"),
-    focal_user_id: number("focalUser"),
+    world_mode: $("worldMode").value,
+    focal_profile: focalProfileBase,
+    focal_start: $("focalStart").value,
+    background_start: $("backgroundStart").value,
+    ...($("focalStart").value === "existing"
+      ? { focal_user_id: number("focalUser") }
+      : {
+          focal_template_user_id: number("focalUser") || undefined,
+          focal_starter_posts: number("starterPosts"),
+          new_account_name: $("newAccountName").value.trim(),
+          include_starter_assets: $("starterAssets").checked,
+        }),
+    background_tasks: $("backgroundTasks").value.trim()
+      ? $("backgroundTasks")
+          .value.split("\n")
+          .map((t) => t.trim())
+      : [],
     provider_id: $("focalModel").value,
     background_provider_id: $("backgroundModel").value,
     ticks: number("ticks"),
@@ -441,7 +547,17 @@ function experimentConfig() {
 }
 function updateSummary() {
   if (!world) return;
-  const focal = world.users.find((u) => u.user_id === number("focalUser"));
+  const fresh = accountControls();
+  const sourceAccount = sourceAccounts().find(
+    (u) => u.user_id === number("focalUser"),
+  );
+  const focal = fresh
+    ? {
+        name: $("newAccountName").value || "受测新号",
+        handle: "启动时创建",
+        user_id: 0,
+      }
+    : sourceAccount;
   const count = number("agentCount") || 1,
     config = experimentConfig();
   $("populationNote").textContent =
@@ -451,7 +567,7 @@ function updateSummary() {
     `<div><strong>${platforms[selectedPlatform].name}</strong><small>${platforms[selectedPlatform].subtitle}</small></div>`;
   $("summaryAgent").innerHTML =
     avatar(focal) +
-    `<div><strong>${esc(focal?.name || "选择账号")}</strong><small>@${esc(focal?.handle || "")}</small></div><span class="small-badge">受测</span>`;
+    `<div><strong>${esc(focal?.name || "选择账号")}</strong><small>${fresh ? "启动时分配独立账号" : "@" + esc(focal?.handle || "")}</small></div><span class="small-badge">受测</span>`;
   $("summaryPopulation").textContent = `${Math.max(0, count - 1)} 个`;
   $("summaryTicks").textContent = `${config.ticks} 轮`;
   $("summaryActions").textContent =
@@ -461,21 +577,41 @@ function updateSummary() {
   $("summaryModel").textContent = modelName(config.provider_id);
   $("summaryBackground").textContent = modelName(config.background_provider_id);
   $("summarySeed").textContent = config.seed;
-  $("focalIdentity").textContent = focal
-    ? `来自 ${platforms[selectedPlatform].name} 的已有账号，保留原有个人资料。`
-    : "请选择已有平台账号。";
-  const backgrounds = world.users
-    .filter((u) => u.user_id !== focal?.user_id)
-    .sort((a, b) => a.user_id - b.user_id)
-    .slice(0, Math.max(0, count - 1));
+  const pure = config.world_mode === "ai_only";
+  const preloaded = fresh
+    ? Math.min(config.focal_starter_posts, sourceAccount?.seedable_posts || 0)
+    : 0;
+  $("summaryWorldMode").textContent = pure ? "纯 AI 世界" : "背景世界";
+  $("summaryAccountStart").textContent = fresh
+    ? preloaded
+      ? `新号 · 预置 ${preloaded} 条`
+      : "全新空账号"
+    : "接手已有账号";
+  $("worldStartNote").textContent = pure
+    ? `不导入历史账号或帖子。${preloaded ? `受测账号另有 ${preloaded} 条预置内容。` : "从零内容开始。"}可使用空社区结构和素材库。`
+    : `源世界 ${world.user_count ?? world.users.length} 个账号、${world.post_count ?? "已有"} 条帖子；本轮只激活 ${count} 个账号。`;
+  $("focalIdentity").textContent = fresh
+    ? preloaded
+      ? `新建独立账号，复制模板最多 ${config.focal_starter_posts} 条公开主帖。预置内容属于初始条件。`
+      : "启动时新建，没有已有帖子或关注关系。"
+    : sourceAccount
+      ? `接手已有账号，保留其内容、关系和个人资料。`
+      : "请选择要接手的平台账号。";
+  const backgrounds =
+    config.background_start === "new"
+      ? []
+      : world.users
+          .filter((u) => fresh || u.user_id !== sourceAccount?.user_id)
+          .sort((a, b) => a.user_id - b.user_id)
+          .slice(0, Math.max(0, count - 1));
   const generated = Math.max(0, count - 1 - backgrounds.length);
   $("backgroundIdentity").textContent =
     count === 1
-      ? "没有背景账号，仅观察受测账号。"
-      : `${backgrounds.length} 个已有账号${generated ? ` + ${generated} 个新生成账号` : ""}。${backgrounds
+      ? "没有背景账号。"
+      : `${backgrounds.length} 个已有账号${generated ? ` + ${generated} 个新建账号` : ""}。${backgrounds
           .slice(0, 3)
           .map((u) => u.name || u.handle)
-          .join("、")}${backgrounds.length > 3 ? "等" : ""}`;
+          .join("、")}`;
   const descriptions = [
     ["受测", config.provider_id],
     ["背景", config.background_provider_id],
@@ -502,20 +638,26 @@ function updateSummary() {
   );
   let problem = developerLoading
     ? "正在切换平台，请稍候。"
-    : !focal
-      ? "这个平台没有可用账号，请先导入账号数据。"
-      : invalid
-        ? `请检查${invalid.labels?.[0]?.childNodes?.[0]?.textContent?.trim() || "配置参数"}。`
-        : unavailable
-          ? "所选模型缺少可用凭据，请连接模型或选择开发策略。"
-          : config.ticks * config.steps_per_tick * count >
-              capacity.max_run_actions
-            ? `总动作上限超过 ${capacity.max_run_actions} 次，请减少账号、轮数或每轮动作。`
-            : number("pageSize") > number("slateSize")
-              ? "每页展示数量不能超过推荐列表长度。"
-              : capacity.active_runs >= capacity.max_active_runs
-                ? "已有模拟运行中，请到 Viewer 暂停或结束该实验。"
-                : launchError;
+    : !fresh && !sourceAccount
+      ? "没有可接手的账号，请导入账号或选择新建账号。"
+      : fresh &&
+          config.focal_starter_posts > 0 &&
+          (!sourceAccount || !sourceAccount.seedable_posts)
+        ? "预置内容需要有公开主帖的模板；请选择模板或将数量设为 0。"
+        : config.background_tasks.length > Math.max(0, count - 1)
+          ? "背景任务行数超过背景账号数，请减少任务或增加参与账号。"
+          : invalid
+            ? `请检查${invalid.labels?.[0]?.childNodes?.[0]?.textContent?.trim() || "配置参数"}。`
+            : unavailable
+              ? "所选模型缺少可用凭据，请连接模型或选择开发策略。"
+              : config.ticks * config.steps_per_tick * count >
+                  capacity.max_run_actions
+                ? `总动作上限超过 ${capacity.max_run_actions} 次，请减少账号、轮数或每轮动作。`
+                : number("pageSize") > number("slateSize")
+                  ? "每页展示数量不能超过推荐列表长度。"
+                  : capacity.active_runs >= capacity.max_active_runs
+                    ? "已有模拟运行中，请到 Viewer 暂停或结束该实验。"
+                    : launchError;
   $("launchReadiness").className =
     "launch-readiness" + (problem ? " error" : "");
   $("launchReadiness").innerHTML =
@@ -562,6 +704,13 @@ async function loadDeveloperPlatform() {
   const version = ++developerVersion,
     platform = selectedPlatform;
   developerLoading = true;
+  sourceSearchVersion++;
+  clearTimeout(sourceSearchTimer);
+  sourceResults = [];
+  sourceSelectedExtra = null;
+  focalProfileBase = {};
+  $("sourceAccountQuery").value = "";
+  $("sourceSearchStatus").textContent = "";
   $("launchButton").disabled = true;
   renderPlatforms();
   rememberPlatform();
@@ -574,12 +723,14 @@ async function loadDeveloperPlatform() {
     capacity = capabilities.capacity || capacity;
     $("agentCount").max = capacity.max_active_agents;
     world = nextWorld;
-    $("focalUser").innerHTML = world.users
-      .map(
-        (u) =>
-          `<option value="${u.user_id}">${esc(u.name || u.handle)} · @${esc(u.handle)}</option>`,
-      )
-      .join("");
+    $("focalUser").innerHTML =
+      '<option value="">默认新账号人设</option>' +
+      world.users
+        .map(
+          (u) =>
+            `<option value="${u.user_id}">${esc(u.name || u.handle)} · @${esc(u.handle)}</option>`,
+        )
+        .join("");
     $("experimentForm").reset();
     recommendationBase = {};
     launchError = "";
@@ -713,11 +864,32 @@ function applyConfiguration(value) {
   value = {
     ...value,
     agent_count: value.agent_count ?? value.user_ids?.length,
+    world_mode: value.world_mode || "background",
+    focal_start:
+      value.focal_start ||
+      (value.world_mode === "ai_only" ? "new" : "existing"),
+    background_start:
+      value.background_start ||
+      (value.world_mode === "ai_only" ? "new" : "existing"),
+    new_account_name: value.new_account_name || "受测新号",
+    focal_starter_posts: value.focal_starter_posts || 0,
+    include_starter_assets: value.include_starter_assets ?? true,
+    background_tasks:
+      value.separate_tasks === false || !value.world_mode
+        ? Array(
+            Math.max(0, (value.agent_count ?? value.user_ids?.length ?? 4) - 1),
+          ).fill(value.goal || "")
+        : value.background_tasks || [],
   };
   for (const [key, id] of Object.entries({
     name: "runName",
     agent_count: "agentCount",
-    focal_user_id: "focalUser",
+    world_mode: "worldMode",
+    focal_start: "focalStart",
+    background_start: "backgroundStart",
+    new_account_name: "newAccountName",
+    focal_starter_posts: "starterPosts",
+
     provider_id: "focalModel",
     background_provider_id: "backgroundModel",
     ticks: "ticks",
@@ -731,6 +903,21 @@ function applyConfiguration(value) {
       selectValue(id, value[key]);
     else $(id).value = value[key];
   }
+  focalProfileBase = value.focal_profile || {};
+  const sourceId =
+    value.focal_start === "new"
+      ? value.focal_template_user_id
+      : (value.source_focal_user_id ??
+        value.focal_user_id ??
+        value.user_ids?.[0]);
+  if (sourceId !== undefined && sourceId !== null) {
+    selectValue("focalUser", sourceId);
+    if (!sourceAccounts().some((u) => u.user_id === sourceId))
+      searchSourceAccounts(sourceId);
+  } else if (value.focal_start === "new") $("focalUser").value = "";
+  $("backgroundTasks").value = value.background_tasks.join("\n");
+  if (value.include_starter_assets !== undefined)
+    $("starterAssets").checked = value.include_starter_assets;
   if (value.recommendation) {
     $("slateSize").value = value.recommendation.slate_size ?? 6;
     $("pageSize").value =
@@ -882,6 +1069,10 @@ function renderRun() {
   $("viewerTitle").title = run.name;
   $("viewerSubtitle").textContent =
     `${platforms[selectedPlatform].name} · ${run.config.user_ids.length} 个账号 · seed ${run.config.seed} · 独立实验 ${run.run_id}`;
+  const initial = run.config.initial_state;
+  $("viewerInitialState").textContent = initial
+    ? `${initial.world_mode === "ai_only" ? "纯 AI 世界" : "背景世界"} · ${initial.focal_start === "new" ? "新建账号" : "接手账号"} · 初始 ${initial.posts} 条帖子 / ${initial.world_users} 个账号`
+    : "历史实验 · 初始条件未单独记录";
   $("viewerStatus").className = `run-status ${run.status}`;
   $("viewerStatus").textContent = states[run.status] || run.status;
   const option = Array.from($("viewerRun").options).find(
@@ -1469,7 +1660,9 @@ async function exportRun() {
   link.click();
 }
 function wireDeveloper() {
-  const configurationChanged = () => {
+  const configurationChanged = (event) => {
+    if (event?.target?.id === "focalStart" && $("focalStart").value === "new")
+      $("focalUser").value = "";
     launchError = "";
     updateSummary();
     rememberDraft();
@@ -1490,6 +1683,10 @@ function wireDeveloper() {
       toast(e.message);
     }
   };
+  $("sourceAccountQuery").addEventListener("input", () => {
+    clearTimeout(sourceSearchTimer);
+    sourceSearchTimer = setTimeout(() => searchSourceAccounts(), 220);
+  });
   $("experimentForm").addEventListener("input", configurationChanged);
   $("experimentForm").addEventListener("change", configurationChanged);
   $("runName").addEventListener("input", configurationChanged);

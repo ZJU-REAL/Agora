@@ -104,7 +104,15 @@ class SocialSession(ProductSession):
         for key, value in {"draft": None, "profile": None, "notifications": []}.items():
             self.state.setdefault(key, value)
         self.config = RecommendationConfig(**json.loads(row[2]))
-        self.engine = RecommendationEngine(self.db, self.config, world.preset.name)
+        manifest = world.config.world_dir / "world.json"
+        self.engine = RecommendationEngine(
+            self.db,
+            self.config,
+            world.preset.name,
+            json.loads(manifest.read_text()).get("location_aliases", {})
+            if manifest.exists()
+            else {},
+        )
 
     @classmethod
     def start(cls, world, user_id: int, config: RecommendationConfig | None = None):
